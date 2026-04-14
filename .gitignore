@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+.wrangler
+.env
+.env.*
+.cache
+.venv
+__pycache__
+*.vsix
+*.log
+.DS_Store
+bun.lockb
+dist-release
+out

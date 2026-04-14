@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "id": "ov-1",
+      "url": "https://cdn.openverse.org/example1.jpg",
+      "thumbnail": "https://cdn.openverse.org/example1_thumb.jpg",
+      "width": 1600,
+      "height": 1600,
+      "title": "Drake performing",
+      "creator": "Some Person",
+      "foreign_landing_url": "https://www.flickr.com/photos/example/1",
+      "license": "by",
+      "license_version": "4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "response": {
+    "docs": [
+      {
+        "identifier": "apollo11-launch-001",
+        "title": "Apollo 11 Launch Photograph",
+        "creator": "NASA",
+        "licenseurl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "rights": "public domain",
+        "mediatype": "image"
+      }
+    ]
+  }
+}

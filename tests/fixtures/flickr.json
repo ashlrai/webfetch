@@ -1,0 +1,16 @@
+{
+  "photos": {
+    "photo": [
+      {
+        "id": "12345",
+        "owner": "99887766@N00",
+        "ownername": "Jane Photographer",
+        "title": "Apollo 11 Launch",
+        "license": "4",
+        "url_l": "https://live.staticflickr.com/12345_l.jpg",
+        "url_z": "https://live.staticflickr.com/12345_z.jpg"
+      }
+    ]
+  },
+  "stat": "ok"
+}

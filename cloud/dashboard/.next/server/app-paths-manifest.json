@@ -1,0 +1,16 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/proxy/[...path]/route": "app/api/proxy/[...path]/route.js",
+  "/audit/page": "app/audit/page.js",
+  "/billing/page": "app/billing/page.js",
+  "/keys/page": "app/keys/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/providers/page": "app/providers/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/signup/page": "app/signup/page.js",
+  "/team/page": "app/team/page.js",
+  "/usage/page": "app/usage/page.js",
+  "/usage/stream/route": "app/usage/stream/route.js"
+}

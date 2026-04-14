@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "webfetch": {
+      "command": "bun",
+      "args": ["run", "REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+      "disabled": false,
+      "alwaysAllow": [
+        "search_images",
+        "search_artist_images",
+        "search_album_cover",
+        "probe_page",
+        "license_for_url",
+        "list_providers"
+      ],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "",
+        "BRAVE_API_KEY": ""
+      }
+    }
+  }
+}

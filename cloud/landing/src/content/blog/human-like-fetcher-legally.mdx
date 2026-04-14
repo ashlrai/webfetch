@@ -1,0 +1,101 @@
+---
+title: "Building a human-like fetcher without getting sued"
+slug: "human-like-fetcher-legally"
+excerpt: "The legal landscape around browser-based fetching in 2026, and the architecture we shipped to stay on the right side of it."
+date: "2026-04-13"
+readTime: "11 min"
+author: "Mason Wyatt"
+cover: "/blog/human-fetcher.svg"
+---
+
+# Building a human-like fetcher without getting sued
+
+The single hardest product decision in webfetch was the browser layer. Not the architecture — that part is straightforward. The hard part was: *how do we ship this without inheriting a decade of CFAA, ToS, and copyright litigation?*
+
+Here is the landscape we studied, the architecture we shipped, and the legal posture we took.
+
+## What the case law actually says
+
+Three decisions shape the 2026 browser-scraping landscape in the US:
+
+**hiQ Labs v. LinkedIn (9th Cir., 2019, reaffirmed 2022).** Scraping publicly-available data does not violate the Computer Fraud and Abuse Act. This is the foundation — if a human can browse to it without authentication, a script can too, *under the CFAA*.
+
+**Van Buren v. United States (SCOTUS, 2021).** Narrowed CFAA dramatically. "Authorized access" means gates, not rules. Violating a terms-of-service document is not the same as hacking.
+
+**Meta v. Bright Data (ND Cal., 2024).** Meta lost. Scraping public Facebook/Instagram data was ruled not to violate Meta's ToS in a way that created CFAA liability — mostly because Bright Data was scraping while logged out.
+
+But this is all **CFAA**. None of it touches **copyright**. You can scrape a page legally and still infringe the copyright on the image you downloaded from it. You can also scrape lawfully and still breach the site's ToS — that just isn't a federal crime anymore; it is a contract dispute.
+
+The practical lesson: *staying on the right side of CFAA is table stakes. The real risk surface is copyright and ToS breach, and those do not get solved by legal architecture — they get solved by product architecture.*
+
+## Our three-layer posture
+
+We ship browser fetching under three stacked constraints:
+
+1. **Default-off.** The browser provider is opt-in, per-call, in code. The default license policy rejects every image the browser returns (since they are tagged `UNKNOWN`). If you did nothing but install webfetch, the browser layer will never fire.
+2. **User-in-the-loop opt-in.** The cloud API rejects browser calls unless the request carries an explicit `consent: "browser-sourced"` flag. The caller acknowledges they are responsible for compliance. We log the consent timestamp.
+3. **Attribution sidecar on every result.** Every browser-fetched image comes back with a JSON sidecar containing the source URL, screenshot thumbnail, timestamp, user-agent string, and any extracted metadata. If downstream legal review needs to know where an image came from, it is one field lookup away.
+
+## The stack, in layers
+
+Inside `@webfetch/browser`, the primary path at launch is **Bright Data's Scraping Browser API**. Here is why we outsource the legally-sensitive piece:
+
+- Bright Data has been litigated to a stalemate with Meta and LinkedIn. They have a compliance team. They have lawyers. They have paid for the precedents.
+- Their Scraping Browser handles captchas, IP rotation, fingerprint randomization, and regional routing as a managed service. At ~$1.50 per thousand calls, the unit economics work at Pro-tier pricing.
+- If a scrape target suddenly ratchets up its defenses, Bright Data's stealth team ships the patch. We do not.
+
+Self-hosted Rebrowser-Playwright + Camoufox is the Enterprise option — the tenant runs it on their own infra, under their own counsel. We ship the adapter; they ship the risk.
+
+Captchas, when they fire, go through CapSolver (~$0.80 per thousand reCAPTCHAs). We gate this to Pro and above; free users never trigger it.
+
+## The UX of consent
+
+Consent has to be one-click or nobody ever flips it on. Our approach:
+
+- The CLI prompts once, stores the answer in `~/.webfetchrc`, and shows a subtle banner on every browser-sourced result: *"this image came from a browser fetch; sidecar written to ./image.json."*
+- The dashboard has a single toggle per workspace: *"enable browser fallback for this workspace."* Flipping it on records who, when, and from what IP.
+- The MCP server refuses to expose browser tools unless the server was started with `WEBFETCH_ALLOW_BROWSER=1`. Agents cannot silently flip the switch.
+
+The goal is: no user ever gets a browser-sourced image by accident. If one shows up, they know; they opted in; they have the sidecar.
+
+## What we refuse to ship
+
+There are a few things we have looked at and declined, for now:
+
+- **Instagram scraping.** Technically viable, legally heated (Meta v. Bright Data bought us breathing room, not immunity), and operationally painful (aggressive anti-bot). Revisit after $10K MRR if a customer asks.
+- **TikTok.** Same reasoning, plus geopolitics.
+- **Rendered video frames.** Out of scope for webfetch. Different product.
+- **Reverse-image search against logged-in properties.** Requires credentials we do not want to custody.
+
+## The attribution sidecar as mitigation
+
+Here is the single most important thing we shipped for defensibility: the sidecar JSON.
+
+```json
+{
+  "url": "https://example.com/article/hero.jpg",
+  "sourceUrl": "https://example.com/article",
+  "fetchedAt": "2026-04-13T09:14:22Z",
+  "fetchedBy": "webfetch/1.0 via brightdata/scraping-browser",
+  "license": "UNKNOWN",
+  "consent": { "flag": "browser-sourced", "user": "user_...", "at": "2026-04-13T09:14:22Z" },
+  "robotsAllowed": true,
+  "screenshot": "./hero.thumbnail.png"
+}
+```
+
+If a photographer reaches out six months later asking where an image was pulled from, every piece of information they need is in that JSON. If legal asks whether consent was given before the fetch, the timestamp is there. If the question is "did we respect robots.txt," the answer is in the file.
+
+Attribution sidecars are not a legal defense by themselves. They are the thing that makes every other legal defense cheap instead of expensive.
+
+## The posture, in one sentence
+
+*webfetch extracts images from public web content; you own responsibility for copyright and terms-of-service compliance; we provide license-first ranking, robots.txt checks, automatic attribution sidecars, and opt-in consent for browser-sourced images.*
+
+That sentence is on the pricing page. It is in the ToS. It is in the CLI's first-run prompt. It is not hiding.
+
+Human-like fetching is not the moat because it is technically hard. It is the moat because most competitors either pretend the legal risk does not exist (and will eventually lose a lawsuit) or refuse to ship it at all (and lose the market to whoever does). We split the difference: ship it, outsource the risk, make the user an informed participant.
+
+---
+
+*Mason Wyatt is the founder of Ashlar AI and the author of webfetch. [Read the license policy](/legal/license-policy).*

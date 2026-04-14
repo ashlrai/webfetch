@@ -1,0 +1,16 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/proxy/[...path]/route": "/api/proxy/[...path]",
+  "/audit/page": "/audit",
+  "/billing/page": "/billing",
+  "/keys/page": "/keys",
+  "/login/page": "/login",
+  "/page": "/",
+  "/providers/page": "/providers",
+  "/settings/page": "/settings",
+  "/signup/page": "/signup",
+  "/team/page": "/team",
+  "/usage/page": "/usage",
+  "/usage/stream/route": "/usage/stream"
+}

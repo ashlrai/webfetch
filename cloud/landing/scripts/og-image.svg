@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="orangeGlow" cx="0.12" cy="0.08" r="0.7">
+      <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.42"/>
+      <stop offset="45%" stop-color="#ff7a3d" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ff7a3d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coolGlow" cx="0.95" cy="1.0" r="0.6">
+      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#5b8cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tileA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a20"/>
+      <stop offset="100%" stop-color="#0f0f13"/>
+    </linearGradient>
+    <linearGradient id="tileAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ff5a1f" stop-opacity="0.85"/>
+    </linearGradient>
+    <linearGradient id="tileCool" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#3a6cff" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="dimLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2a2a32"/>
+      <stop offset="100%" stop-color="#1a1a20"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0a0c"/>
+  <rect width="1200" height="630" fill="url(#orangeGlow)"/>
+  <rect width="1200" height="630" fill="url(#coolGlow)"/>
+
+  <!-- Subtle grid lines for depth -->
+  <g stroke="#15151b" stroke-width="1" opacity="0.5">
+    <line x1="0" y1="158" x2="1200" y2="158"/>
+    <line x1="0" y1="316" x2="1200" y2="316"/>
+    <line x1="0" y1="474" x2="1200" y2="474"/>
+  </g>
+
+  <!-- Wordmark mark -->
+  <g transform="translate(80,80)">
+    <rect width="22" height="22" rx="5" fill="#ff7a3d"/>
+    <rect x="6" y="6" width="10" height="10" rx="2" fill="#0a0a0c"/>
+    <text x="36" y="19" fill="#ededf0" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" letter-spacing="-0.4">webfetch</text>
+  </g>
+
+  <!-- Hero wordmark -->
+  <text x="80" y="320" fill="#ededf0" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="148" font-weight="700" letter-spacing="-5">webfetch</text>
+
+  <!-- Subline -->
+  <text x="80" y="392" fill="#a1a1aa" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="28" font-weight="400" letter-spacing="-0.3">
+    The license-first image layer for AI agents and humans.
+  </text>
+
+  <!-- Stacked-tiles illustration (federated providers) -->
+  <g transform="translate(820,150)">
+    <!-- Back tile -->
+    <g transform="translate(60,40) rotate(-8)">
+      <rect width="220" height="160" rx="14" fill="url(#tileA)" stroke="#2a2a32" stroke-width="1"/>
+      <rect x="16" y="16" width="40" height="6" rx="3" fill="url(#dimLine)"/>
+      <rect x="16" y="30" width="80" height="4" rx="2" fill="#1f1f24"/>
+      <circle cx="188" cy="28" r="6" fill="url(#tileCool)"/>
+      <rect x="16" y="56" width="188" height="88" rx="8" fill="#0a0a0c" stroke="#1f1f24"/>
+      <rect x="28" y="68" width="80" height="60" rx="4" fill="#15151b"/>
+      <rect x="118" y="68" width="74" height="28" rx="4" fill="#15151b"/>
+      <rect x="118" y="102" width="74" height="26" rx="4" fill="#15151b"/>
+    </g>
+
+    <!-- Middle tile -->
+    <g transform="translate(20,90) rotate(4)">
+      <rect width="240" height="170" rx="14" fill="url(#tileA)" stroke="#2f2f38" stroke-width="1"/>
+      <rect x="16" y="16" width="60" height="6" rx="3" fill="url(#tileCool)"/>
+      <rect x="16" y="30" width="100" height="4" rx="2" fill="#1f1f24"/>
+      <rect x="16" y="56" width="208" height="98" rx="8" fill="#0a0a0c" stroke="#1f1f24"/>
+      <rect x="28" y="68" width="92" height="74" rx="4" fill="#15151b"/>
+      <rect x="130" y="68" width="84" height="34" rx="4" fill="#15151b"/>
+      <rect x="130" y="108" width="84" height="34" rx="4" fill="#15151b"/>
+    </g>
+
+    <!-- Front tile (accent) -->
+    <g transform="translate(80,160) rotate(-3)">
+      <rect width="260" height="180" rx="14" fill="url(#tileA)" stroke="#3a2a20" stroke-width="1"/>
+      <rect x="18" y="18" width="70" height="8" rx="4" fill="url(#tileAccent)"/>
+      <rect x="18" y="34" width="120" height="5" rx="2" fill="#26262e"/>
+      <circle cx="232" cy="28" r="7" fill="url(#tileAccent)"/>
+      <rect x="18" y="60" width="224" height="104" rx="9" fill="#0a0a0c" stroke="#26262e"/>
+      <!-- mock image -->
+      <defs>
+        <linearGradient id="frontImg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#5b8cff" stop-opacity="0.4"/>
+        </linearGradient>
+      </defs>
+      <rect x="30" y="72" width="100" height="80" rx="5" fill="url(#frontImg)"/>
+      <rect x="140" y="72" width="92" height="36" rx="4" fill="#15151b"/>
+      <rect x="140" y="116" width="92" height="36" rx="4" fill="#15151b"/>
+      <rect x="146" y="124" width="40" height="4" rx="2" fill="url(#tileAccent)"/>
+      <rect x="146" y="134" width="60" height="3" rx="1.5" fill="#2a2a32"/>
+    </g>
+
+    <!-- connection dots -->
+    <g fill="#ff7a3d" opacity="0.7">
+      <circle cx="40" cy="40" r="3"/>
+      <circle cx="350" cy="60" r="3"/>
+      <circle cx="370" cy="320" r="3"/>
+    </g>
+  </g>
+
+  <!-- Bottom-right badge -->
+  <g transform="translate(820,548)">
+    <rect width="300" height="42" rx="21" fill="#111114" stroke="#26262e" stroke-width="1"/>
+    <circle cx="22" cy="21" r="5" fill="#ff7a3d"/>
+    <text x="40" y="27" fill="#ededf0" font-family="Geist Mono, ui-monospace, Menlo, monospace" font-size="14" font-weight="500" letter-spacing="0.2">
+      MIT  ·  19 providers  ·  175 tests
+    </text>
+  </g>
+
+  <!-- URL bottom-left -->
+  <text x="80" y="572" fill="#71717a" font-family="Geist Mono, ui-monospace, Menlo, monospace" font-size="18" letter-spacing="0.3">webfetch.dev</text>
+</svg>

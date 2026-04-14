@@ -1,0 +1,14 @@
+{
+  "name": "@webfetch/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "icons": "bun run make-icons.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268"
+  }
+}

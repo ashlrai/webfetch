@@ -1,0 +1,81 @@
+---
+title: "Why license-first matters"
+slug: "why-license-first-matters"
+excerpt: "The commercial-image licensing landscape in 2026 punishes guesswork. Here is how we stopped guessing."
+date: "2026-04-13"
+readTime: "8 min"
+author: "Mason Wyatt"
+cover: "/blog/license-first.svg"
+---
+
+# Why license-first matters
+
+In 2023 Getty sued Stability AI for training on "millions" of Getty-owned images. In 2024 the New York Times sued OpenAI. In 2025 a mid-sized e-commerce brand I worked with got a five-figure demand letter for a single CC-tagged-but-actually-editorial photo on a product page. In 2026 the question is no longer *"can I get away with it?"* — it is *"how many hours of engineering do I waste proving I did the right thing?"*
+
+webfetch exists because that question has a boring, mechanical answer.
+
+## The landscape in 2026
+
+Three things changed between 2023 and 2026:
+
+1. **Reverse-image search is trivial.** Google Lens, TinEye, and a dozen downstream scrapers now find every copy of an image on the public internet in seconds. If you shipped a photo you did not license, somebody — a bot, a bounty hunter, or the original photographer — will find it.
+2. **License databases are structured.** Wikimedia's `extmetadata`, Openverse's `license` field, Unsplash's platform license — these are all machine-readable. The excuse "we did not know" stopped being credible in 2020 and stopped being a legal defense by 2024.
+3. **Statutory damages in the US still start at $750 per image** and climb to $150,000 for willful infringement. One misattributed photo is an afternoon of engineering. One misattributed photo in a bulk pipeline is the difference between a profitable year and a lawsuit.
+
+If you are shipping images at any scale — content, e-commerce, media, AI training sets — the question is not *whether* to track licenses. The question is *where* you track them.
+
+## The real cost, in numbers
+
+A content team I consulted with in late 2025 was scaling to ~2,000 new pages per month, each with 3–5 images. They were sourcing from a mix of free stock sites, a rights-managed vendor, and "whatever Google Images returned that looked good."
+
+Three quarters in, legal flagged ~40 images across the catalog as unclear. Their internal estimate for a full audit: **$50,000** in photographer outreach, stock re-purchasing, and paralegal time. Their second-order cost: a six-week freeze on new content while they sorted it out.
+
+After switching their pipeline to a CC0-first sourcing layer (with `UNKNOWN` hard-rejected at ingest), the same team hit 5,000 pages/month with zero license flags and a full audit trail exportable as CSV. The delta wasn't volume. The delta was that every ingest **logged its provenance on the way in**, so the post-hoc audit simply... wasn't needed.
+
+## License as a first-class output
+
+Most image APIs treat attribution as an afterthought — a footnote, a tooltip, a "photo credits" page at the bottom of a site. In webfetch it is a first-class field on every result:
+
+```ts
+{
+  url: "https://upload.wikimedia.org/...Drake_OVO_2019.jpg",
+  license: "CC_BY_SA",
+  confidence: 0.95,
+  attributionLine: "\"Drake at OVO Fest 2019\" by Jane Photog ...",
+  sidecar: { sourceUrl: "...", extractedAt: "2026-04-13T...", ... }
+}
+```
+
+The `attributionLine` is ready to render. The `sidecar` is ready to write next to the JPG in any content-addressed store. The `confidence` tells you whether to trust the tag or flag it for human review.
+
+This matters because a legal audit in 2026 is usually a single question: *"show me the provenance for every image shipped last quarter."* If the answer is a JSON file exported from your content store, you have a three-minute conversation. If the answer is "we'll have to reverse-search each one," you have a three-week conversation.
+
+## The rejection rule
+
+webfetch's default is to **reject `UNKNOWN`**. We think this is the only sane default:
+
+- Most of the web is all-rights-reserved by default under the Berne Convention.
+- A missing license is not "probably fine." It is "probably copyrighted by someone you did not ask."
+- The cost of a rejection is a second search. The cost of shipping infringement is a lawsuit.
+
+You can turn the rule off (`licensePolicy: "prefer-safe"` keeps UNKNOWN results ranked last, `licensePolicy: "allow-all"` keeps them in the mix) — but you have to turn it off explicitly, per call, in code. That friction is the point.
+
+## Attribution as cheap insurance
+
+Even on CC0 and public-domain images — which require no attribution legally — we emit attribution. Why? Because cheap insurance is still insurance. If a photographer later claims the image was mis-tagged upstream, your attribution record is the first line of defense: *"we pulled this from Wikimedia Commons on 2026-04-13, tagged CC0 with confidence 0.95. Here is the JSON."* That is the difference between "we will take it down" and "we owe you damages."
+
+## What it looks like in practice
+
+Shipping a legally-defensible image pipeline used to mean: licensing contract with a stock vendor, internal ingest tool, audit log, and a junior engineer maintaining a CSV of photographer names. In 2026 it means:
+
+```bash
+webfetch search "drake portrait" --license-policy safe-only --limit 5
+```
+
+That command returns five candidates, ranked license-first, with attribution strings already built and sidecars ready to write. If it returns zero candidates, you have a clean signal: *no safe image exists for this query — go license one.* That signal is worth more than another ten results of maybe-OK-probably-not photos.
+
+License-first is not a feature. It is the only defensible default.
+
+---
+
+*Mason Wyatt is the founder of Ashlar AI and the author of webfetch. [Get started free](/).*

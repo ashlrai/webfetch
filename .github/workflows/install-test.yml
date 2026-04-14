@@ -1,0 +1,38 @@
+name: Install script test
+
+on:
+  pull_request:
+    paths:
+      - 'install/**'
+      - 'packages/**'
+      - '.github/workflows/install-test.yml'
+
+jobs:
+  install-ubuntu:
+    name: install.sh on fresh ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Syntax check install.sh
+        run: bash -n install/install.sh
+
+      - name: Run installer against local checkout
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          # Run the installer in non-interactive mode, skip Claude settings + symlink.
+          bash install/install.sh \
+            --yes \
+            --no-claude \
+            --no-symlink \
+            --prefix "$HOME/.webfetch-test" \
+            --repo "$REPO_URL" \
+            --ref "$REF"
+
+      - name: Verify CLI built
+        run: |
+          test -f "$HOME/.webfetch-test/repo/packages/cli/dist/index.js"
+          echo "CLI build verified."

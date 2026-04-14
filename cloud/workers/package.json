@@ -1,0 +1,33 @@
+{
+  "name": "@webfetch/cloud-workers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Workers backend for webfetch Cloud: auth, API keys, metering, quota, billing.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "migrate:local": "wrangler d1 migrations apply webfetch --local",
+    "migrate:remote": "wrangler d1 migrations apply webfetch --remote",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@webfetch/core": "workspace:*",
+    "hono": "^4.6.0",
+    "better-auth": "^1.0.0",
+    "stripe": "^17.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "@types/bun": "latest",
+    "typescript": "^5.6.0",
+    "wrangler": "^3.90.0",
+    "miniflare": "^3.20241106.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

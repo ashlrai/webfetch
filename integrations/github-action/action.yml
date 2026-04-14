@@ -1,0 +1,142 @@
+name: "webfetch"
+description: "Federated, license-aware image search. Downloads top-N candidates with attribution sidecars."
+author: "ashlr-ai"
+branding:
+  icon: "image"
+  color: "blue"
+
+inputs:
+  query:
+    description: "Free-text search query (e.g. 'Drake musician portrait')."
+    required: true
+  out-dir:
+    description: "Directory to write downloaded images + attribution sidecars into."
+    required: true
+  license:
+    description: "License policy: safe-only | prefer-safe | any."
+    required: false
+    default: "safe-only"
+  providers:
+    description: "Comma-separated provider list. Empty = default safe set."
+    required: false
+    default: ""
+  max-per-provider:
+    description: "Maximum candidates to keep per provider."
+    required: false
+    default: "3"
+  limit:
+    description: "Maximum total candidates to download."
+    required: false
+    default: "10"
+  min-width:
+    description: "Reject images narrower than this (pixels)."
+    required: false
+    default: "0"
+  min-height:
+    description: "Reject images shorter than this (pixels)."
+    required: false
+    default: "0"
+  webfetch-ref:
+    description: "Git ref of web-fetcher-mcp to install (branch / tag / sha)."
+    required: false
+    default: "main"
+  webfetch-repo:
+    description: "Git URL of the webfetch repo."
+    required: false
+    default: "https://github.com/ashlr-ai/web-fetcher-mcp.git"
+
+outputs:
+  manifest:
+    description: "Path to the JSON manifest listing every downloaded image + attribution."
+    value: ${{ steps.run.outputs.manifest }}
+  count:
+    description: "Number of images successfully downloaded."
+    value: ${{ steps.run.outputs.count }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install webfetch
+      shell: bash
+      run: |
+        set -euo pipefail
+        CACHE_DIR="$RUNNER_TEMP/webfetch"
+        if [ ! -d "$CACHE_DIR/.git" ]; then
+          git clone --depth 1 --branch "${{ inputs.webfetch-ref }}" "${{ inputs.webfetch-repo }}" "$CACHE_DIR"
+        fi
+        ( cd "$CACHE_DIR" && bun install --silent && bun run --cwd packages/cli build )
+        echo "WEBFETCH_BIN=$CACHE_DIR/packages/cli/dist/index.js" >>"$GITHUB_ENV"
+
+    - name: Run webfetch search + download
+      id: run
+      shell: bash
+      env:
+        UNSPLASH_ACCESS_KEY: ${{ env.UNSPLASH_ACCESS_KEY }}
+        PEXELS_API_KEY: ${{ env.PEXELS_API_KEY }}
+        PIXABAY_API_KEY: ${{ env.PIXABAY_API_KEY }}
+        BRAVE_API_KEY: ${{ env.BRAVE_API_KEY }}
+        SPOTIFY_CLIENT_ID: ${{ env.SPOTIFY_CLIENT_ID }}
+        SPOTIFY_CLIENT_SECRET: ${{ env.SPOTIFY_CLIENT_SECRET }}
+        SERPAPI_KEY: ${{ env.SERPAPI_KEY }}
+        BING_API_KEY: ${{ env.BING_API_KEY }}
+      run: |
+        set -euo pipefail
+        mkdir -p "${{ inputs.out-dir }}"
+        ARGS=( search "${{ inputs.query }}" --json --license "${{ inputs.license }}" \
+               --max-per-provider "${{ inputs.max-per-provider }}" \
+               --limit "${{ inputs.limit }}" )
+        if [ -n "${{ inputs.providers }}" ]; then
+          ARGS+=( --providers "${{ inputs.providers }}" )
+        fi
+        if [ "${{ inputs.min-width }}" != "0" ]; then
+          ARGS+=( --min-width "${{ inputs.min-width }}" )
+        fi
+        if [ "${{ inputs.min-height }}" != "0" ]; then
+          ARGS+=( --min-height "${{ inputs.min-height }}" )
+        fi
+
+        RESULTS="$(bun "$WEBFETCH_BIN" "${ARGS[@]}")"
+        echo "$RESULTS" > "${{ inputs.out-dir }}/_search.json"
+
+        MANIFEST="${{ inputs.out-dir }}/_manifest.json"
+        bun - "$RESULTS" "${{ inputs.out-dir }}" "$WEBFETCH_BIN" <<'EOF'
+        import { mkdirSync, writeFileSync } from "node:fs";
+        import { join, extname } from "node:path";
+        import { spawnSync } from "node:child_process";
+        const [raw, outDir, bin] = Bun.argv.slice(2);
+        const candidates = JSON.parse(raw);
+        mkdirSync(outDir, { recursive: true });
+        const manifest = [];
+        let i = 0;
+        for (const c of candidates) {
+          i += 1;
+          const ext = (extname(new URL(c.url).pathname) || ".jpg").slice(0, 5);
+          const base = String(i).padStart(3, "0");
+          const file = join(outDir, `${base}${ext}`);
+          const r = spawnSync("bun", [bin, "download", c.url, "--out", file, "--json"], { encoding: "utf8" });
+          if (r.status !== 0) {
+            console.error("download failed", c.url, r.stderr);
+            continue;
+          }
+          const info = JSON.parse(r.stdout);
+          writeFileSync(file + ".attribution.txt", (c.attributionLine || "") + "\n");
+          manifest.push({ file, sha256: info.sha256, candidate: c });
+        }
+        writeFileSync(process.argv[2] ? process.argv[2] : "_manifest.json", JSON.stringify(manifest, null, 2));
+        EOF
+        # write manifest deterministically
+        node -e '
+          const fs=require("fs");
+          const raw=fs.readFileSync(process.argv[1],"utf8");
+          const arr=JSON.parse(raw);
+          fs.writeFileSync(process.argv[2], JSON.stringify(arr,null,2));
+        ' "${{ inputs.out-dir }}/_search.json" "$MANIFEST" || true
+
+        COUNT="$(bun -e 'const a=JSON.parse(await Bun.file(process.argv[2]).text()); console.log(Array.isArray(a)?a.length:0)' -- "$MANIFEST" 2>/dev/null || echo 0)"
+        echo "manifest=$MANIFEST" >>"$GITHUB_OUTPUT"
+        echo "count=$COUNT" >>"$GITHUB_OUTPUT"

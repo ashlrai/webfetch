@@ -1,0 +1,34 @@
+{
+  "name": "webfetch",
+  "version": "1.0.0",
+  "description": "License-first federated image search MCP server",
+  "homepage": "https://webfetch.dev",
+  "repository": "https://github.com/ashlr-ai/web-fetcher-mcp",
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["-y", "@webfetch/mcp"],
+  "tools": [
+    {
+      "name": "search_images",
+      "description": "Search 19+ licensed image providers, ranked license-first."
+    },
+    {
+      "name": "search_artist_images",
+      "description": "Musician/artist-optimized search with kind=portrait|album|live."
+    },
+    {
+      "name": "download_image",
+      "description": "Content-addressed (SHA-256) download with pre-built attribution."
+    },
+    {
+      "name": "list_providers",
+      "description": "List available providers and their auth status."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "env": "WEBFETCH_API_KEY",
+    "optional": true,
+    "docs": "https://webfetch.dev/docs/auth"
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "name": "webfetch",
+  "displayName": "webfetch",
+  "description": "License-first federated image search inside VS Code. Search 19 providers, insert with attribution, drag into markdown.",
+  "version": "0.1.0",
+  "publisher": "ashlr-ai",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://webfetch.dev",
+  "bugs": {
+    "url": "https://github.com/ashlr-ai/webfetch/issues"
+  },
+  "keywords": [
+    "images",
+    "license",
+    "creative-commons",
+    "unsplash",
+    "pexels",
+    "markdown",
+    "ai",
+    "attribution"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "activationEvents": [
+    "onView:webfetch.sidePanel",
+    "onCommand:webfetch.search",
+    "onCommand:webfetch.insertImage",
+    "onCommand:webfetch.providers",
+    "onCommand:webfetch.setApiKey",
+    "onCommand:webfetch.openDashboard",
+    "onLanguage:markdown",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "webfetch",
+          "title": "webfetch",
+          "icon": "media/icon-activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "webfetch": [
+        {
+          "type": "webview",
+          "id": "webfetch.sidePanel",
+          "name": "webfetch",
+          "icon": "media/icon-activity.svg",
+          "contextualTitle": "webfetch"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "webfetch.search",
+        "title": "webfetch: Search",
+        "category": "webfetch"
+      },
+      {
+        "command": "webfetch.providers",
+        "title": "webfetch: Providers",
+        "category": "webfetch"
+      },
+      {
+        "command": "webfetch.setApiKey",
+        "title": "webfetch: Set API Key",
+        "category": "webfetch"
+      },
+      {
+        "command": "webfetch.openDashboard",
+        "title": "webfetch: Open Dashboard",
+        "category": "webfetch"
+      },
+      {
+        "command": "webfetch.insertImage",
+        "title": "webfetch: Insert licensed image...",
+        "category": "webfetch"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "webfetch.insertImage",
+          "when": "editorLangId == markdown",
+          "group": "1_modification@100"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "webfetch.insertImage",
+          "when": "editorLangId == markdown"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "webfetch",
+      "properties": {
+        "webfetch.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "API key (Bearer token) for your webfetch server. Get one at [app.webfetch.dev](https://app.webfetch.dev) or use your self-hosted token."
+        },
+        "webfetch.baseUrl": {
+          "type": "string",
+          "default": "https://api.webfetch.dev",
+          "description": "Base URL of the webfetch API. Set to http://127.0.0.1:7600 for self-hosted."
+        },
+        "webfetch.defaultLicense": {
+          "type": "string",
+          "enum": [
+            "safe-only",
+            "prefer-safe",
+            "any"
+          ],
+          "default": "safe-only",
+          "markdownEnumDescriptions": [
+            "Only return images with a clearly-safe license (CC0, CC_BY, CC_BY_SA, PUBLIC_DOMAIN).",
+            "Rank safe-licensed images first but allow UNKNOWN.",
+            "Return any result regardless of license."
+          ],
+          "description": "Default license policy when searching."
+        },
+        "webfetch.defaultProviders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "wikimedia",
+              "openverse",
+              "unsplash",
+              "pexels",
+              "pixabay",
+              "itunes",
+              "musicbrainz-caa",
+              "spotify",
+              "youtube-thumb",
+              "brave",
+              "bing",
+              "serpapi",
+              "browser",
+              "flickr",
+              "internet-archive",
+              "smithsonian",
+              "nasa",
+              "met-museum",
+              "europeana"
+            ]
+          },
+          "default": [],
+          "description": "Default provider list (empty = server defaults)."
+        },
+        "webfetch.outputDir": {
+          "type": "string",
+          "default": "./assets",
+          "description": "Directory (relative to workspace root) where downloaded images are saved."
+        },
+        "webfetch.writeXmpSidecar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Write a `.xmp` sidecar next to each downloaded image containing license + attribution metadata."
+        },
+        "webfetch.attributionStyle": {
+          "type": "string",
+          "enum": [
+            "html-comment",
+            "markdown-caption",
+            "none"
+          ],
+          "default": "html-comment",
+          "description": "How to emit attribution alongside the inserted image."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "vscode:prepublish": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}

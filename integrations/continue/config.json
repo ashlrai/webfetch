@@ -1,0 +1,17 @@
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "bun",
+          "args": ["run", "REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+          "env": {
+            "UNSPLASH_ACCESS_KEY": "",
+            "BRAVE_API_KEY": ""
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "webfetch",
+  "version": "0.1.0",
+  "description": "Search, license-check, and download images via a local webfetch server.",
+  "minimum_chrome_version": "114",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "webfetch",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "contextMenus",
+    "downloads",
+    "storage",
+    "notifications",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:7600/*",
+    "http://127.0.0.1:7610/*",
+    "http://localhost:7600/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/sidebar.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
+      },
+      "description": "Toggle the webfetch sidebar"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["content/sidebar.css", "content/sidebar.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

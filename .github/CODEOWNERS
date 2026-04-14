@@ -1,0 +1,6 @@
+# Default owner — auto-requested on every PR.
+* @masonwyatt
+
+# Package-specific ownership can be added over time, e.g.:
+# /packages/browser/     @masonwyatt @future-browser-maintainer
+# /cloud/workers/        @masonwyatt @future-infra-maintainer

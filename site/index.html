@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>webfetch — federated, license-aware image search for AI agents</title>
+    <meta
+      name="description"
+      content="One MCP server + CLI that replaces the manual Google Images workflow with one tool call. License-first, federated across Wikimedia, Openverse, Unsplash, Spotify, Brave, and more."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="/">webfetch</a>
+        <nav>
+          <a href="#install">Install</a>
+          <a href="#why">Why</a>
+          <a href="#providers">Providers</a>
+          <a href="https://github.com/ashlr-ai/web-fetcher-mcp">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero wrap">
+        <h1>Federated, license-aware image search for AI agents.</h1>
+        <p class="lede">
+          One MCP server + CLI that replaces the manual "open Google Images,
+          right-click-save" workflow with one tool call. Claude Code, Cursor,
+          Cline, Continue, Roo Code — same capability, one config line.
+        </p>
+
+        <div class="install" id="install">
+          <div class="install-label">30-second install</div>
+          <div class="code">
+            <pre id="install-cmd"><code>curl -fsSL https://raw.githubusercontent.com/ashlr-ai/web-fetcher-mcp/main/install/install.sh | bash</code></pre>
+            <button class="copy" data-target="install-cmd" aria-label="Copy install command">
+              Copy
+            </button>
+          </div>
+          <div class="install-sub">
+            macOS and Linux. On Windows, use WSL2. Re-run any time to update.
+          </div>
+        </div>
+
+        <div class="cta-row">
+          <a class="cta primary" href="https://github.com/ashlr-ai/web-fetcher-mcp">View on GitHub</a>
+          <a class="cta" href="https://github.com/ashlr-ai/web-fetcher-mcp/tree/main/docs">Read the docs</a>
+        </div>
+      </section>
+
+      <section class="section wrap" id="why">
+        <h2>What problem this solves</h2>
+        <p>Manually sourcing an image has four failure modes:</p>
+        <ol>
+          <li>You don't know the license, so you can't safely ship the result.</li>
+          <li>You can't script it — every new site means another afternoon.</li>
+          <li>Google's Image Search API is retired; scraping is brittle and ToS-grey.</li>
+          <li>No shared cache — you re-download the same file dozens of times.</li>
+        </ol>
+        <p>
+          webfetch fixes all four by federating across direct-source APIs that
+          have stable terms and structured license metadata, ranking candidates
+          license-first, and exposing the result as a single MCP tool.
+        </p>
+      </section>
+
+      <section class="section wrap">
+        <h2>Usage</h2>
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">CLI</div>
+            <pre><code>webfetch search "drake portrait" --limit 5
+webfetch artist "Taylor Swift" --kind portrait
+webfetch download &lt;url&gt; --out ./portrait.jpg</code></pre>
+          </div>
+          <div class="card">
+            <div class="card-title">MCP (from any agent)</div>
+            <pre><code>search_images({ query: "drake portrait", limit: 5 })
+search_artist_images({ name: "Taylor Swift", kind: "portrait" })
+download_image({ url: "..." })</code></pre>
+          </div>
+          <div class="card">
+            <div class="card-title">TypeScript library</div>
+            <pre><code>import { searchArtistImages, pickBest, downloadImage }
+  from "@webfetch/core";
+
+const { candidates } = await searchArtistImages("Drake", "portrait");
+const best = pickBest(candidates, { minWidth: 1200 });
+const { cachedPath } = await downloadImage(best.url);</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" id="providers">
+        <h2>Providers</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Covers</th>
+                <th>License default</th>
+                <th>Opt-in</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>wikimedia</td><td>portraits, events, history</td><td>CC_BY_SA</td><td>no</td></tr>
+              <tr><td>openverse</td><td>any CC content</td><td>CC_BY</td><td>no</td></tr>
+              <tr><td>unsplash</td><td>photography</td><td>Unsplash (~CC0)</td><td>no</td></tr>
+              <tr><td>pexels</td><td>stock photos</td><td>Pexels (~CC0)</td><td>no</td></tr>
+              <tr><td>pixabay</td><td>photos + illustrations</td><td>Pixabay (~CC0)</td><td>no</td></tr>
+              <tr><td>itunes</td><td>album + artist images</td><td>EDITORIAL</td><td>no</td></tr>
+              <tr><td>musicbrainz-caa</td><td>canonical album art</td><td>EDITORIAL</td><td>no</td></tr>
+              <tr><td>spotify</td><td>artist + album images</td><td>EDITORIAL</td><td>no</td></tr>
+              <tr><td>brave</td><td>general web search</td><td>UNKNOWN</td><td>no</td></tr>
+              <tr><td>bing</td><td>general web search</td><td>UNKNOWN</td><td>yes</td></tr>
+              <tr><td>serpapi</td><td>Google Images + reverse</td><td>UNKNOWN</td><td>yes</td></tr>
+              <tr><td>browser</td><td>headless fallback</td><td>UNKNOWN</td><td>yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section wrap">
+        <h2>Why license-first</h2>
+        <p>
+          The only outcome we refuse is shipping an image we can't justify. A
+          marginally-better photo under an unknown license is worthless to a
+          pipeline that needs to ship without human review. So the ranker sorts
+          by license tag, then metadata confidence, then resolution. UNKNOWN is
+          rejected by default — most of the web is all-rights-reserved unless
+          proven otherwise.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot wrap">
+      <div>webfetch — MIT licensed.</div>
+      <div>
+        <a href="https://github.com/ashlr-ai/web-fetcher-mcp">GitHub</a> ·
+        <a href="https://github.com/ashlr-ai/web-fetcher-mcp/tree/main/docs">Docs</a> ·
+        <a href="https://github.com/ashlr-ai/web-fetcher-mcp/tree/main/integrations">Integrations</a>
+      </div>
+    </footer>
+
+    <script src="./site.js" defer></script>
+  </body>
+</html>

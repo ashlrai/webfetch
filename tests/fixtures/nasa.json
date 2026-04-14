@@ -1,0 +1,22 @@
+{
+  "collection": {
+    "items": [
+      {
+        "data": [
+          {
+            "nasa_id": "as11-40-5874",
+            "title": "Apollo 11 Mission image - Astronaut Edwin Aldrin",
+            "photographer": "NASA",
+            "center": "JSC"
+          }
+        ],
+        "links": [
+          {
+            "href": "https://images-assets.nasa.gov/image/as11-40-5874/as11-40-5874~thumb.jpg",
+            "render": "image"
+          }
+        ]
+      }
+    ]
+  }
+}

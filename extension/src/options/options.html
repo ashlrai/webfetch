@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>webfetch options</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; background: #0b0d10; color: #eceff3;
+    max-width: 640px; margin: 40px auto; padding: 0 24px; }
+  h1 { font-size: 18px; }
+  label { display: block; margin: 16px 0 4px; font-size: 12px; color: #9aa3af; text-transform: uppercase; letter-spacing: .04em; }
+  input[type=text], input[type=password], select, textarea {
+    width: 100%; background: #14181d; border: 1px solid #1f252d; color: #eceff3;
+    border-radius: 6px; padding: 10px; font-size: 13px; box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  button { margin-top: 20px; background: #3b82f6; border: 0; color: white;
+    padding: 10px 16px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { background: #14181d; border: 1px solid #1f252d; color: #cbd2d9;
+    padding: 4px 10px; border-radius: 999px; font-size: 11px; cursor: pointer; user-select: none; }
+  .chip.on { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .ok { color: #34d399; margin-top: 8px; min-height: 14px; font-size: 12px; }
+  .err { color: #f87171; }
+  .hint { font-size: 11px; color: #6b7280; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>webfetch options</h1>
+
+<label for="serverUrl">server URL</label>
+<input type="text" id="serverUrl" placeholder="http://127.0.0.1:7600" />
+
+<label for="token">token</label>
+<input type="password" id="token" placeholder="paste from ~/.webfetch/server.token or /auth/display" />
+<div class="hint">Open <code>http://127.0.0.1:7600/auth/display</code> and click "Copy token".</div>
+
+<label for="policy">default license policy</label>
+<select id="policy">
+  <option value="safe-only">safe-only</option>
+  <option value="prefer-safe">prefer-safe</option>
+  <option value="any">any</option>
+</select>
+
+<label>preferred providers (sidebar default)</label>
+<div class="chip-row" id="providers"></div>
+
+<button id="save">save</button>
+<button id="test" style="background:#14181d;border:1px solid #1f252d;color:#cbd2d9">test connection</button>
+
+<div class="ok" id="status"></div>
+
+<script type="module" src="options.js"></script>
+</body>
+</html>

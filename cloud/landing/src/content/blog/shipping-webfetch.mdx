@@ -1,0 +1,107 @@
+---
+title: "Shipping webfetch: from artist encyclopedia to product"
+slug: "shipping-webfetch"
+excerpt: "webfetch was born inside a different project. The moment we realized it was a product, we parallelized 30+ agents and shipped it in two weeks."
+date: "2026-04-13"
+readTime: "9 min"
+author: "Mason Wyatt"
+cover: "/blog/shipping-webfetch.svg"
+---
+
+# Shipping webfetch: from artist encyclopedia to product
+
+webfetch did not start as a product. It started as a subroutine inside a different project — an artist encyclopedia factory I was building — and it would have stayed a subroutine if I had not watched it eat every other image-fetching problem in my stack for a month.
+
+Here is the short story of how it became a product, what it took to ship in two weeks, and what broke along the way.
+
+## Origin: the artist encyclopedia factory
+
+The encyclopedia factory is a separate pipeline that generates long-form artist pages at scale. Images are a load-bearing piece of every page, and image sourcing has always been the bottleneck. I spent the first month of that project watching my Claude Code agents open Google Images, right-click-save, paste into the pipeline, and hallucinate license information I had never given them.
+
+After the fourth one-off scraper I built — one for Wikimedia, one for Openverse, one for MusicBrainz cover art, one more for the tail — I gave up and wrote an internal package: a single `searchImages(query)` call that hit all of them in parallel, deduped by perceptual hash, and ranked results license-first.
+
+A week later my agents stopped hallucinating licenses. A week after that, I was using the same package in three other projects.
+
+That is when I noticed it had become a product.
+
+## The moment it was real
+
+The decision point was a conversation with a friend building an AI video startup. He asked how I was sourcing images at scale. I described the package. He said "I would pay for that." I went home and checked `npm search image license` — nothing credible, nothing with an MCP surface, nothing that aggregated more than one or two sources.
+
+The market read was: this is a gap, and the gap is closing fast because every agent framework needs an image-fetching primitive. If I did not ship it in two weeks, someone else would.
+
+## The two-week sprint
+
+I ran the sprint the way I have run every Ashlar sprint this year — parallel Claude Code agents working in disjoint branches against a shared plan doc. At peak we had ~30 agents active across:
+
+- `packages/core/` — federation, ranker, cache, pHash (this already existed)
+- `packages/mcp/` — MCP server wrapping core
+- `packages/cli/` — terminal CLI
+- `packages/server/` — local HTTP proxy
+- `extension/` — Chrome extension with shadow-DOM sidebar
+- `integrations/` — IDE snippets for six agents
+- `install/install.sh` — one-line installer
+- Tests: 117 of them by end of week one
+
+Then the second wave for productization:
+
+- `cloud/workers/` — Cloudflare Workers for auth/metering/quota
+- `cloud/dashboard/` — Next.js app on app.webfetch.dev
+- `cloud/landing/` — this site
+- `packages/browser/` — Rebrowser + Camoufox + Bright Data
+- `packages/sdk-python/` — Python bindings
+- `vscode-extension/` — VS Code side panel
+- `homebrew/` + `docker/` + `.github/workflows/` — distribution
+
+Six agents ran the second wave in parallel, each owning a disjoint scope. The coordination layer was a single plan document — who owns what, explicit don't-touch directories, verification commands.
+
+## What the 117-test baseline bought us
+
+The tests were not a goal. They were the only way 30 parallel agents could not destroy each other's work. Every package had a `bun test` invariant. Every PR — from every agent — ran the full suite. When an agent broke an invariant, we saw it in the next minute, not the next week.
+
+The specific invariants that mattered:
+
+- **Provider contract tests** — every provider adapter must return a canonical `ImageCandidate` or explicitly return `{ candidates: [], providerErrors: [...] }`. No exceptions leak to the federation layer.
+- **License coercion tests** — a matrix of 40+ raw license strings ("CC BY-SA 4.0", "Creative Commons Attribution-ShareAlike", "Editorial Use Only") mapped to canonical tags. If you break this, you break the ranker.
+- **Ranker invariants** — given a known candidate set, the output order is stable and license-first. This one test caught the most agent regressions.
+- **End-to-end tests** — a smoke test that hits Wikimedia live, asserts one candidate, confirms attribution is non-empty. Catches auth breakage, API version bumps, and network-layer mistakes.
+
+## What broke
+
+Plenty. The honest list:
+
+1. **Pixabay rate limit is aggressive.** Our first E2E suite hit it and got a 429. We cached responses in the test runner and moved on.
+2. **MusicBrainz CAA has inconsistent redirect behavior.** We spent half a day chasing a flaky "candidate missing" error that turned out to be a 307 one out of five times. Fix: follow redirects, always.
+3. **Bun + Playwright interop is rough.** The browser package ended up with Node as its target runtime; everything else is Bun. We draw the line at `packages/browser/package.json` and accept the complexity.
+4. **Chrome extension shadow DOM + site CSS leakage.** Cost us a day. Solution: inject into a closed shadow root with all our styles inlined.
+
+## The surface area, by the numbers
+
+At launch:
+
+- **4 npm packages** (`@webfetch/core`, `mcp`, `cli`, `server`)
+- **1 Chrome extension**, **1 VS Code extension**, **1 GitHub Action**
+- **19 image providers** (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, browser)
+- **6 IDE integrations** (Claude Code, Cursor, Cline, Continue, Roo Code, Codex)
+- **1 MCP registry manifest** served at `/mcp/manifest.json`
+- **117 passing tests**, CI green on main, Docker image on GHCR, Homebrew tap live
+- **3 blog posts** (this is one of them), **1 four-minute demo video**, **1 HN Show post** scheduled
+
+## What we did not ship
+
+Worth naming explicitly:
+
+- Instagram + TikTok browser providers — deferred past launch (legal heat, operational cost).
+- On-prem enterprise — architected for it, swap path documented, will build for the first customer who pays for it.
+- AI editing features (background removal, style transfer) — explicitly out of scope. webfetch is license-first fetching, not editing.
+- A proprietary "pro" feature set that fragments the OSS from the cloud — the OSS stays unlimited on your machine, forever. The cloud adds things you cannot easily self-host (managed browser, pooled keys, audit log, team workspace).
+
+## The take
+
+If you are sitting on a subroutine that three of your other projects keep stealing from, it is probably a product. The only question is whether you ship it before someone else does. Parallelizing a fleet of agents against a single plan doc was the difference between a six-month project and a two-week sprint.
+
+webfetch is live today. Start free at [webfetch.dev](/). Upgrade when you hit the managed browser, pooled keys, or team workspace. The OSS layer is yours forever.
+
+---
+
+*Mason Wyatt is the founder of Ashlar AI and the author of webfetch. [Read the launch notes](/blog).*

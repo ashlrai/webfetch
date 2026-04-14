@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/ashlr-ai/webfetch/discussions
+    about: For open-ended questions, ideas, and usage help.
+  - name: Security vulnerability
+    url: https://github.com/ashlr-ai/webfetch/security/advisories/new
+    about: Report a vulnerability privately via GitHub Security Advisories.
+  - name: Commercial support
+    url: https://webfetch.dev/pricing
+    about: Enterprise support, SSO, and SLAs.

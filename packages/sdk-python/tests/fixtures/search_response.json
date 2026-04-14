@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "data": {
+    "candidates": [
+      {
+        "url": "https://upload.wikimedia.org/wiki/drake.jpg",
+        "thumbnailUrl": "https://upload.wikimedia.org/wiki/drake_thumb.jpg",
+        "width": 1200,
+        "height": 1600,
+        "mime": "image/jpeg",
+        "byteSize": 482133,
+        "source": "wikimedia",
+        "sourcePageUrl": "https://commons.wikimedia.org/wiki/File:drake.jpg",
+        "title": "Drake portrait",
+        "author": "Jane Photographer",
+        "license": "CC_BY_SA",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attributionLine": "Jane Photographer, CC BY-SA 4.0",
+        "score": 0.92,
+        "confidence": 0.98
+      },
+      {
+        "url": "https://openverse.org/drake2.jpg",
+        "source": "openverse",
+        "license": "CC0",
+        "score": 0.81
+      }
+    ],
+    "providerReports": [
+      { "provider": "wikimedia", "ok": true, "count": 1, "timeMs": 430 },
+      { "provider": "openverse", "ok": true, "count": 1, "timeMs": 612 }
+    ],
+    "warnings": []
+  }
+}

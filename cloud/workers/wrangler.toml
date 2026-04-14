@@ -1,0 +1,99 @@
+# Cloudflare Workers configuration for webfetch Cloud.
+#
+# Routes: api.webfetch.dev/*  (bind at deploy time via dashboard or account-level
+# routes). This file declares bindings only.
+
+name = "webfetch-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-06"
+compatibility_flags = ["nodejs_compat"]
+
+# -----------------------------------------------------------------------------
+# D1 — primary SQL store for users, workspaces, keys, usage_rows, audit_log.
+# -----------------------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "webfetch"
+database_id = "REPLACE_WITH_REAL_ID" # set via `wrangler d1 create webfetch`
+migrations_dir = "../schema"
+
+# -----------------------------------------------------------------------------
+# KV namespaces.
+#   KEYS      — API-key hash -> { workspaceId, apiKeyId } for sub-ms bearer lookup
+#   RATELIMIT — transient counter store (token buckets) keyed by workspace+minute
+#   QUOTA     — daily/monthly counters keyed by workspace+window
+# -----------------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "KEYS"
+id = "REPLACE_WITH_REAL_ID"
+
+[[kv_namespaces]]
+binding = "RATELIMIT"
+id = "REPLACE_WITH_REAL_ID"
+
+[[kv_namespaces]]
+binding = "QUOTA"
+id = "REPLACE_WITH_REAL_ID"
+
+# -----------------------------------------------------------------------------
+# R2 — cached download blobs keyed by sha256. 30-day lifecycle rule applied via
+# the R2 dashboard.
+# -----------------------------------------------------------------------------
+[[r2_buckets]]
+binding = "CACHE"
+bucket_name = "webfetch-cache"
+
+# -----------------------------------------------------------------------------
+# Queue — async usage metering. Producers = route handlers. Consumer = the same
+# worker, invoked by Cloudflare with a batched message payload.
+# -----------------------------------------------------------------------------
+[[queues.producers]]
+binding = "USAGE"
+queue = "webfetch-usage"
+
+[[queues.consumers]]
+queue = "webfetch-usage"
+max_batch_size = 100
+max_batch_timeout = 10
+max_retries = 3
+dead_letter_queue = "webfetch-usage-dlq"
+
+# -----------------------------------------------------------------------------
+# Durable Objects — per-API-key rate limiter (token-bucket implementation in
+# src/middleware.ts).
+# -----------------------------------------------------------------------------
+[[durable_objects.bindings]]
+name = "RL_DO"
+class_name = "RateLimiterDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiterDO"]
+
+# -----------------------------------------------------------------------------
+# Cron triggers — daily audit log retention sweep at 03:00 UTC. Pre-cutoff
+# rows are streamed to R2 (CACHE) under audit-archive/<date>/<workspace>.ndjson
+# and removed from D1. Implemented in src/cron/audit-retention.ts.
+# -----------------------------------------------------------------------------
+[triggers]
+crons = ["0 3 * * *"]
+
+# -----------------------------------------------------------------------------
+# Environment variables (non-secrets). Secrets set via `wrangler secret put`:
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BETTER_AUTH_SECRET,
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+# -----------------------------------------------------------------------------
+[vars]
+APP_URL = "https://app.webfetch.dev"
+API_URL = "https://api.webfetch.dev"
+ENVIRONMENT = "production"
+STRIPE_PRICE_PRO = "price_REPLACE_PRO"
+STRIPE_PRICE_TEAM = "price_REPLACE_TEAM"
+STRIPE_PRICE_TEAM_SEAT = "price_REPLACE_TEAM_SEAT"
+STRIPE_PRICE_OVERAGE_PRO = "price_REPLACE_OVERAGE_PRO"
+STRIPE_PRICE_OVERAGE_TEAM = "price_REPLACE_OVERAGE_TEAM"
+
+[env.development.vars]
+APP_URL = "http://localhost:3000"
+API_URL = "http://localhost:8787"
+ENVIRONMENT = "development"

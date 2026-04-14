@@ -1,0 +1,14 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "wrapperType": "collection",
+      "collectionType": "Album",
+      "artistName": "Drake",
+      "collectionName": "Certified Lover Boy",
+      "collectionViewUrl": "https://itunes.apple.com/us/album/x/123",
+      "artworkUrl100": "https://is1.mzstatic.com/image/thumb/Music/abc/100x100bb.jpg",
+      "artworkUrl60": "https://is1.mzstatic.com/image/thumb/Music/abc/60x60bb.jpg"
+    }
+  ]
+}

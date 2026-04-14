@@ -1,0 +1,66 @@
+{
+  "name": "@webfetch/browser",
+  "version": "0.1.0",
+  "description": "Like-a-human browser-fetch layer for webfetch: hybrid router over Rebrowser-Playwright, Camoufox, Bright Data Scraping Browser, CapSolver, and a Claude vision hero-picker.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "keywords": [
+    "webfetch",
+    "browser",
+    "playwright",
+    "rebrowser",
+    "camoufox",
+    "brightdata",
+    "capsolver",
+    "image-search",
+    "licensing",
+    "agent"
+  ],
+  "homepage": "https://webfetch.dev",
+  "bugs": {
+    "url": "https://github.com/ashlr-ai/webfetch/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "directory": "packages/browser"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=@webfetch/core --external=undici --external=zod --external=@anthropic-ai/sdk --external=playwright --external=rebrowser-playwright --external=camoufox",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@webfetch/core": "workspace:*",
+    "undici": "^6.19.0",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "playwright": "^1.47.0",
+    "rebrowser-playwright": "^1.47.0",
+    "camoufox": "^0.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": { "optional": true },
+    "playwright": { "optional": true },
+    "rebrowser-playwright": { "optional": true },
+    "camoufox": { "optional": true }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

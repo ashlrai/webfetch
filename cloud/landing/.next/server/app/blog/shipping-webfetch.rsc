@@ -1,0 +1,99 @@
+1:"$Sreact.fragment"
+2:I[2619,["619","static/chunks/619-ba102abea3e3d0e4.js","953","static/chunks/app/blog/%5Bslug%5D/page-d94abfa58db1e1d6.js"],""]
+3:I[9766,[],""]
+4:I[8924,[],""]
+b:I[7150,[],""]
+:HL["/_next/static/css/9f644f027f503fd2.css","style"]
+0:{"P":null,"b":"XI9xbGDV4b0PDcKlXCyaV","p":"","c":["","blog","shipping-webfetch"],"i":false,"f":[[["",{"children":["blog",{"children":[["slug","shipping-webfetch","d"],{"children":["__PAGE__",{}]}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/9f644f027f503fd2.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","children":["$","body",null,{"children":[["$","header",null,{"className":"sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.7)] border-b border-[var(--border)]","children":["$","nav",null,{"className":"max-w-6xl mx-auto px-6 h-14 flex items-center justify-between","children":[["$","$L2",null,{"href":"/","className":"flex items-center gap-2 font-semibold tracking-tight","children":[["$","span",null,{"className":"inline-block w-2.5 h-2.5 rounded-sm bg-[var(--accent)]"}],"webfetch"]}],["$","div",null,{"className":"hidden md:flex items-center gap-6 text-sm text-[var(--fg-dim)]","children":[["$","$L2",null,{"href":"/#features","children":"Product"}],["$","$L2",null,{"href":"/pricing","children":"Pricing"}],["$","$L2",null,{"href":"/docs","children":"Docs"}],["$","$L2",null,{"href":"/blog","children":"Blog"}],["$","$L2",null,{"href":"/compare","children":"Compare"}],["$","$L2",null,{"href":"/mcp-registry","children":"MCP"}]]}],["$","div",null,{"className":"flex items-center gap-3","children":[["$","a",null,{"href":"https://app.webfetch.dev","className":"text-sm text-[var(--fg-dim)] hover:text-[var(--fg)]","children":"Sign in"}],["$","a",null,{"href":"https://app.webfetch.dev/signup","className":"wf-btn-primary text-sm","children":"Start free"}]]}]]}]}],["$","main",null,{"className":"min-h-screen","children":["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}],["$","footer",null,{"className":"border-t border-[var(--border)] mt-24","children":[["$","div",null,{"className":"max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm","children":[["$","div",null,{"className":"col-span-2","children":[["$","div",null,{"className":"flex items-center gap-2 font-semibold","children":[["$","span",null,{"className":"inline-block w-2.5 h-2.5 rounded-sm bg-[var(--accent)]"}],"webfetch"]}],["$","p",null,{"className":"mt-3 text-[var(--fg-dim)] max-w-xs","children":"The license-first image layer for AI agents and humans."}]]}],["$","div",null,{"children":[["$","div",null,{"className":"text-[var(--fg-dim)] mb-3","children":"Product"}],["$","ul",null,{"className":"space-y-2","children":[["$","li",null,{"children":["$","$L2",null,{"href":"/pricing","children":"Pricing"}]}],["$","li",null,{"children":["$","$L2",null,{"href":"/compare","children":"Compare"}]}],["$","li",null,{"children":["$","$L2",null,{"href":"/mcp-registry","children":"MCP registry"}]}],["$","li",null,{"children":["$","$L2",null,{"href":"/docs","children":"Docs"}]}]]}]]}],["$","div",null,{"children":[["$","div",null,{"className":"text-[var(--fg-dim)] mb-3","children":"Resources"}],["$","ul",null,{"className":"space-y-2","children":[["$","li",null,{"children":["$","$L2",null,{"href":"/blog","children":"Blog"}]}],["$","li",null,{"children":["$","a",null,{"href":"https://github.com/ashlr-ai/web-fetcher-mcp","children":"GitHub"}]}],["$","li",null,{"children":["$","a",null,{"href":"https://app.webfetch.dev","children":"Dashboard"}]}]]}]]}],["$","div",null,{"children":[["$","div",null,{"className":"text-[var(--fg-dim)] mb-3","children":"Legal"}],"$L5"]}]]}],"$L6"]}]]}]}]]}],{"children":["blog","$L7",{"children":[["slug","shipping-webfetch","d"],"$L8",{"children":["__PAGE__","$L9",{},null,false]},null,false]},null,false]},null,false],"$La",false]],"m":"$undefined","G":["$b",[]],"s":false,"S":true}
+d:I[4431,[],"OutletBoundary"]
+f:I[5278,[],"AsyncMetadataOutlet"]
+11:I[4431,[],"ViewportBoundary"]
+13:I[4431,[],"MetadataBoundary"]
+14:"$Sreact.suspense"
+5:["$","ul",null,{"className":"space-y-2","children":[["$","li",null,{"children":["$","$L2",null,{"href":"/legal/terms","children":"Terms"}]}],["$","li",null,{"children":["$","$L2",null,{"href":"/legal/privacy","children":"Privacy"}]}],["$","li",null,{"children":["$","$L2",null,{"href":"/legal/license-policy","children":"License policy"}]}]]}]
+6:["$","div",null,{"className":"max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-[var(--fg-dim)] border-t border-[var(--border)]","children":[["$","div",null,{"children":["(c) ",2026," Ashlar AI. All rights reserved."]}],["$","div",null,{"className":"flex gap-4","children":[["$","a",null,{"href":"https://x.com/ashlr_ai","children":"X"}],["$","a",null,{"href":"https://github.com/ashlr-ai","children":"GitHub"}],["$","span",null,{"children":"Built by Mason Wyatt"}]]}]]}]
+7:["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}]
+8:["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}]
+9:["$","$1","c",{"children":["$Lc",null,["$","$Ld",null,{"children":["$Le",["$","$Lf",null,{"promise":"$@10"}]]}]]}]
+a:["$","$1","h",{"children":[null,[["$","$L11",null,{"children":"$L12"}],null],["$","$L13",null,{"children":["$","div",null,{"hidden":true,"children":["$","$14",null,{"fallback":null,"children":"$L15"}]}]}]]}]
+16:T1f89,<h1>Shipping webfetch: from artist encyclopedia to product</h1>
+<p>webfetch did not start as a product. It started as a subroutine inside a different project — an artist encyclopedia factory I was building — and it would have stayed a subroutine if I had not watched it eat every other image-fetching problem in my stack for a month.</p>
+<p>Here is the short story of how it became a product, what it took to ship in two weeks, and what broke along the way.</p>
+<h2>Origin: the artist encyclopedia factory</h2>
+<p>The encyclopedia factory is a separate pipeline that generates long-form artist pages at scale. Images are a load-bearing piece of every page, and image sourcing has always been the bottleneck. I spent the first month of that project watching my Claude Code agents open Google Images, right-click-save, paste into the pipeline, and hallucinate license information I had never given them.</p>
+<p>After the fourth one-off scraper I built — one for Wikimedia, one for Openverse, one for MusicBrainz cover art, one more for the tail — I gave up and wrote an internal package: a single <code>searchImages(query)</code> call that hit all of them in parallel, deduped by perceptual hash, and ranked results license-first.</p>
+<p>A week later my agents stopped hallucinating licenses. A week after that, I was using the same package in three other projects.</p>
+<p>That is when I noticed it had become a product.</p>
+<h2>The moment it was real</h2>
+<p>The decision point was a conversation with a friend building an AI video startup. He asked how I was sourcing images at scale. I described the package. He said &quot;I would pay for that.&quot; I went home and checked <code>npm search image license</code> — nothing credible, nothing with an MCP surface, nothing that aggregated more than one or two sources.</p>
+<p>The market read was: this is a gap, and the gap is closing fast because every agent framework needs an image-fetching primitive. If I did not ship it in two weeks, someone else would.</p>
+<h2>The two-week sprint</h2>
+<p>I ran the sprint the way I have run every Ashlar sprint this year — parallel Claude Code agents working in disjoint branches against a shared plan doc. At peak we had ~30 agents active across:</p>
+<ul>
+<li><code>packages/core/</code> — federation, ranker, cache, pHash (this already existed)</li>
+<li><code>packages/mcp/</code> — MCP server wrapping core</li>
+<li><code>packages/cli/</code> — terminal CLI</li>
+<li><code>packages/server/</code> — local HTTP proxy</li>
+<li><code>extension/</code> — Chrome extension with shadow-DOM sidebar</li>
+<li><code>integrations/</code> — IDE snippets for six agents</li>
+<li><code>install/install.sh</code> — one-line installer</li>
+<li>Tests: 117 of them by end of week one</li>
+</ul>
+<p>Then the second wave for productization:</p>
+<ul>
+<li><code>cloud/workers/</code> — Cloudflare Workers for auth/metering/quota</li>
+<li><code>cloud/dashboard/</code> — Next.js app on app.webfetch.dev</li>
+<li><code>cloud/landing/</code> — this site</li>
+<li><code>packages/browser/</code> — Rebrowser + Camoufox + Bright Data</li>
+<li><code>packages/sdk-python/</code> — Python bindings</li>
+<li><code>vscode-extension/</code> — VS Code side panel</li>
+<li><code>homebrew/</code> + <code>docker/</code> + <code>.github/workflows/</code> — distribution</li>
+</ul>
+<p>Six agents ran the second wave in parallel, each owning a disjoint scope. The coordination layer was a single plan document — who owns what, explicit don&#39;t-touch directories, verification commands.</p>
+<h2>What the 117-test baseline bought us</h2>
+<p>The tests were not a goal. They were the only way 30 parallel agents could not destroy each other&#39;s work. Every package had a <code>bun test</code> invariant. Every PR — from every agent — ran the full suite. When an agent broke an invariant, we saw it in the next minute, not the next week.</p>
+<p>The specific invariants that mattered:</p>
+<ul>
+<li><strong>Provider contract tests</strong> — every provider adapter must return a canonical <code>ImageCandidate</code> or explicitly return <code>{ candidates: [], providerErrors: [...] }</code>. No exceptions leak to the federation layer.</li>
+<li><strong>License coercion tests</strong> — a matrix of 40+ raw license strings (&quot;CC BY-SA 4.0&quot;, &quot;Creative Commons Attribution-ShareAlike&quot;, &quot;Editorial Use Only&quot;) mapped to canonical tags. If you break this, you break the ranker.</li>
+<li><strong>Ranker invariants</strong> — given a known candidate set, the output order is stable and license-first. This one test caught the most agent regressions.</li>
+<li><strong>End-to-end tests</strong> — a smoke test that hits Wikimedia live, asserts one candidate, confirms attribution is non-empty. Catches auth breakage, API version bumps, and network-layer mistakes.</li>
+</ul>
+<h2>What broke</h2>
+<p>Plenty. The honest list:</p>
+<ol>
+<li><strong>Pixabay rate limit is aggressive.</strong> Our first E2E suite hit it and got a 429. We cached responses in the test runner and moved on.</li>
+<li><strong>MusicBrainz CAA has inconsistent redirect behavior.</strong> We spent half a day chasing a flaky &quot;candidate missing&quot; error that turned out to be a 307 one out of five times. Fix: follow redirects, always.</li>
+<li><strong>Bun + Playwright interop is rough.</strong> The browser package ended up with Node as its target runtime; everything else is Bun. We draw the line at <code>packages/browser/package.json</code> and accept the complexity.</li>
+<li><strong>Chrome extension shadow DOM + site CSS leakage.</strong> Cost us a day. Solution: inject into a closed shadow root with all our styles inlined.</li>
+</ol>
+<h2>The surface area, by the numbers</h2>
+<p>At launch:</p>
+<ul>
+<li><strong>4 npm packages</strong> (<code>@webfetch/core</code>, <code>mcp</code>, <code>cli</code>, <code>server</code>)</li>
+<li><strong>1 Chrome extension</strong>, <strong>1 VS Code extension</strong>, <strong>1 GitHub Action</strong></li>
+<li><strong>19 image providers</strong> (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, browser)</li>
+<li><strong>6 IDE integrations</strong> (Claude Code, Cursor, Cline, Continue, Roo Code, Codex)</li>
+<li><strong>1 MCP registry manifest</strong> served at <code>/mcp/manifest.json</code></li>
+<li><strong>117 passing tests</strong>, CI green on main, Docker image on GHCR, Homebrew tap live</li>
+<li><strong>3 blog posts</strong> (this is one of them), <strong>1 four-minute demo video</strong>, <strong>1 HN Show post</strong> scheduled</li>
+</ul>
+<h2>What we did not ship</h2>
+<p>Worth naming explicitly:</p>
+<ul>
+<li>Instagram + TikTok browser providers — deferred past launch (legal heat, operational cost).</li>
+<li>On-prem enterprise — architected for it, swap path documented, will build for the first customer who pays for it.</li>
+<li>AI editing features (background removal, style transfer) — explicitly out of scope. webfetch is license-first fetching, not editing.</li>
+<li>A proprietary &quot;pro&quot; feature set that fragments the OSS from the cloud — the OSS stays unlimited on your machine, forever. The cloud adds things you cannot easily self-host (managed browser, pooled keys, audit log, team workspace).</li>
+</ul>
+<h2>The take</h2>
+<p>If you are sitting on a subroutine that three of your other projects keep stealing from, it is probably a product. The only question is whether you ship it before someone else does. Parallelizing a fleet of agents against a single plan doc was the difference between a six-month project and a two-week sprint.</p>
+<p>webfetch is live today. Start free at <a href="/">webfetch.dev</a>. Upgrade when you hit the managed browser, pooled keys, or team workspace. The OSS layer is yours forever.</p>
+<hr>
+<p><em>Mason Wyatt is the founder of Ashlar AI and the author of webfetch. <a href="/blog">Read the launch notes</a>.</em></p>
+c:["$","article",null,{"className":"max-w-3xl mx-auto px-6 py-16","children":[["$","div",null,{"className":"text-xs font-mono text-[var(--fg-dim)] flex items-center gap-3","children":[["$","$L2",null,{"href":"/blog","children":"← blog"}],["$","span",null,{"children":"·"}],["$","time",null,{"children":"2026-04-13"}],["$","span",null,{"children":"·"}],["$","span",null,{"children":"9 min"}],["$","span",null,{"children":"·"}],["$","span",null,{"children":["by ","Mason Wyatt"]}]]}],["$","div",null,{"className":"prose-wf mt-6","dangerouslySetInnerHTML":{"__html":"$16"}}]]}]
+12:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+e:null
+17:I[622,[],"IconMark"]
+10:{"metadata":[["$","title","0",{"children":"Shipping webfetch: from artist encyclopedia to product — webfetch"}],["$","meta","1",{"name":"description","content":"webfetch was born inside a different project. The moment we realized it was a product, we parallelized 30+ agents and shipped it in two weeks."}],["$","meta","2",{"property":"og:title","content":"Shipping webfetch: from artist encyclopedia to product"}],["$","meta","3",{"property":"og:description","content":"webfetch was born inside a different project. The moment we realized it was a product, we parallelized 30+ agents and shipped it in two weeks."}],["$","meta","4",{"property":"og:image","content":"https://webfetch.dev/blog/shipping-webfetch.svg"}],["$","meta","5",{"property":"og:type","content":"article"}],["$","meta","6",{"property":"article:published_time","content":"2026-04-13"}],["$","meta","7",{"property":"article:author","content":"Mason Wyatt"}],["$","meta","8",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","9",{"name":"twitter:title","content":"Shipping webfetch: from artist encyclopedia to product"}],["$","meta","10",{"name":"twitter:description","content":"webfetch was born inside a different project. The moment we realized it was a product, we parallelized 30+ agents and shipped it in two weeks."}],["$","meta","11",{"name":"twitter:image","content":"https://webfetch.dev/blog/shipping-webfetch.svg"}],["$","link","12",{"rel":"icon","href":"/favicon.svg"}],["$","$L17","13",{}]],"error":null,"digest":"$undefined"}
+15:"$10:metadata"

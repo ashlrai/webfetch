@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src {{cspSource}} https: data:; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}'; connect-src 'none';"
+    />
+    <link rel="stylesheet" href="{{css}}" />
+    <title>webfetch</title>
+  </head>
+  <body>
+    <header class="wf-header">
+      <div class="wf-row">
+        <input id="q" class="wf-input" placeholder="Search licensed images..." autocomplete="off" spellcheck="false" />
+        <button id="go" class="wf-btn wf-btn-primary" title="Search">Search</button>
+      </div>
+      <div class="wf-row wf-filters">
+        <label class="wf-label">License</label>
+        <select id="policy" class="wf-select">
+          <option value="safe-only">safe-only</option>
+          <option value="prefer-safe">prefer-safe</option>
+          <option value="any">any</option>
+        </select>
+        <button id="providersBtn" class="wf-btn wf-btn-ghost" title="Choose providers">Providers</button>
+      </div>
+      <div id="providerChips" class="wf-chips" aria-label="selected providers"></div>
+    </header>
+
+    <main class="wf-main">
+      <div id="empty" class="wf-empty">
+        <p class="wf-empty-title">License-first federated image search</p>
+        <p class="wf-empty-hint">
+          19 providers. Wikimedia, Openverse, Unsplash, Pexels, Smithsonian, Europeana,
+          and more. Results are ranked by license safety.
+        </p>
+        <p class="wf-empty-hint">Type a query above to begin. Click a result to download + insert, or drag it into your editor.</p>
+        <div id="statusLine" class="wf-status"></div>
+      </div>
+      <div id="warnings" class="wf-warnings" hidden></div>
+      <div id="grid" class="wf-grid" role="list"></div>
+      <div id="reports" class="wf-reports"></div>
+    </main>
+
+    <footer class="wf-footer">
+      <a href="#" id="openDashboard" class="wf-link">Open dashboard</a>
+      <span class="wf-sep">·</span>
+      <a href="#" id="setApiKey" class="wf-link">Set API key</a>
+    </footer>
+
+    <script nonce="{{nonce}}" src="{{js}}"></script>
+  </body>
+</html>

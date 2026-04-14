@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "guid": "https://www.europeana.eu/item/2048128/618580",
+      "title": ["Portrait of an Artist"],
+      "dcCreator": ["Anonymous"],
+      "edmIsShownBy": ["https://example.org/image.jpg"],
+      "edmPreview": ["https://api.europeana.eu/thumbnail/image.jpg"],
+      "rights": ["http://creativecommons.org/licenses/by/4.0/"]
+    }
+  ]
+}

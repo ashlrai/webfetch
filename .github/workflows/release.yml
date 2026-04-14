@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Build + publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+
+      - name: Setup Node (for npm publish)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Sync package versions from tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for pkg in core cli mcp server; do
+            node -e "const fs=require('fs');const p='packages/'+process.argv[1]+'/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "$pkg"
+          done
+
+      - name: Build packages
+        run: |
+          bun run --cwd packages/core build
+          bun run --cwd packages/cli build
+          bun run --cwd packages/mcp build
+          bun run --cwd packages/server build
+
+      - name: Publish @webfetch/core
+        run: npm publish --access public --provenance
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @webfetch/cli
+        run: npm publish --access public --provenance
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @webfetch/mcp
+        run: npm publish --access public --provenance
+        working-directory: packages/mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @webfetch/server
+        run: npm publish --access public --provenance
+        working-directory: packages/server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release + attach built artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p release-artifacts
+          for pkg in core cli mcp server; do
+            tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json README.md LICENSE 2>/dev/null || \
+              tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json LICENSE
+          done
+          gh release create "v${VERSION}" release-artifacts/*.tgz \
+            --title "webfetch v${VERSION}" \
+            --generate-notes
+
+  homebrew-bump:
+    name: Bump homebrew-webfetch tap
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump formula in ashlr-ai/homebrew-webfetch
+        # Opens (or updates) a PR on the tap repo bumping `Formula/webfetch.rb`
+        # to point at the freshly published @webfetch/cli tarball on npm.
+        # Requires HOMEBREW_GH_TOKEN (fine-scoped PAT, contents:write on
+        # ashlr-ai/homebrew-webfetch).
+        uses: mislav/bump-homebrew-formula-action@v3
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GH_TOKEN }}
+        with:
+          formula-name: webfetch
+          formula-path: Formula/webfetch.rb
+          homebrew-tap: ashlr-ai/homebrew-webfetch
+          base-branch: main
+          download-url: https://registry.npmjs.org/@webfetch/cli/-/cli-${{ steps.version.outputs.version }}.tgz
+          commit-message: |
+            bump webfetch to ${{ steps.version.outputs.version }}
+
+            Released via .github/workflows/release.yml on ashlr-ai/webfetch.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#0f0f13"/>
+  <text x="400" y="210" text-anchor="middle" fill="#ededf0" font-family="ui-sans-serif, system-ui" font-size="24">CLI - MCP - server - Chrome ext - VS Code - Python</text>
+  <text x="400" y="250" text-anchor="middle" fill="#ff7a3d" font-family="ui-sans-serif, system-ui" font-size="20">@webfetch/core</text>
+  <text x="400" y="290" text-anchor="middle" fill="#a1a1aa" font-family="ui-sans-serif, system-ui" font-size="16">19 providers - browser layer - cloud router</text>
+</svg>

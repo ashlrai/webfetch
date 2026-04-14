@@ -1,0 +1,69 @@
+{
+  "name": "@webfetch/core",
+  "version": "0.1.0",
+  "description": "License-first federated image search core: ranker, cache, provider federation, pHash dedupe, EXIF/IPTC/XMP metadata.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./hints": "./src/hints/index.ts"
+  },
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "keywords": [
+    "image-search",
+    "licensing",
+    "mcp",
+    "agent",
+    "federated",
+    "creative-commons",
+    "ai"
+  ],
+  "homepage": "https://webfetch.dev",
+  "bugs": {
+    "url": "https://github.com/ashlr-ai/webfetch/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./providers": {
+        "types": "./dist/providers/index.d.ts",
+        "import": "./dist/providers/index.js"
+      },
+      "./hints": {
+        "types": "./dist/hints/index.d.ts",
+        "import": "./dist/hints/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "sharp": "^0.33.0"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

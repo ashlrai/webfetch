@@ -1,0 +1,48 @@
+{
+  "name": "@webfetch/server",
+  "version": "0.1.0",
+  "description": "Local HTTP server exposing webfetch license-first image search as a REST API.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "webfetch-server": "./dist/index.js"
+  },
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "keywords": [
+    "webfetch",
+    "http",
+    "server",
+    "rest",
+    "image-search",
+    "licensing",
+    "api"
+  ],
+  "homepage": "https://webfetch.dev",
+  "bugs": {
+    "url": "https://github.com/ashlr-ai/webfetch/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "directory": "packages/server"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp --external=@webfetch/core --external=zod",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@webfetch/core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

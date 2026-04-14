@@ -1,0 +1,47 @@
+{
+  "name": "@webfetch/cli",
+  "version": "0.1.0",
+  "description": "Terminal CLI for license-aware federated image search, backed by @webfetch/core.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "webfetch": "./dist/index.js"
+  },
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "keywords": [
+    "webfetch",
+    "cli",
+    "image-search",
+    "licensing",
+    "mcp",
+    "agent"
+  ],
+  "homepage": "https://webfetch.dev",
+  "bugs": {
+    "url": "https://github.com/ashlr-ai/webfetch/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp --external=@webfetch/core",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@webfetch/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

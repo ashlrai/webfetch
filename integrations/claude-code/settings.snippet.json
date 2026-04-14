@@ -1,0 +1,18 @@
+{
+  "//": "Merge this into ~/.claude/settings.json. Only the mcpServers.webfetch key is required.",
+  "mcpServers": {
+    "webfetch": {
+      "command": "bun",
+      "args": ["run", "REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "",
+        "PEXELS_API_KEY": "",
+        "PIXABAY_API_KEY": "",
+        "BRAVE_API_KEY": "",
+        "SPOTIFY_CLIENT_ID": "",
+        "SPOTIFY_CLIENT_SECRET": "",
+        "SERPAPI_KEY": ""
+      }
+    }
+  }
+}

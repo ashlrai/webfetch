@@ -1,0 +1,24 @@
+{
+  "query": {
+    "pages": {
+      "12345": {
+        "pageid": 12345,
+        "title": "File:Drake (rapper) at OVO Fest 2019.jpg",
+        "imageinfo": [
+          {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Drake_OVO_2019.jpg",
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Drake_OVO_2019.jpg/800px.jpg",
+            "width": 2400,
+            "height": 3600,
+            "mime": "image/jpeg",
+            "extmetadata": {
+              "LicenseShortName": { "value": "CC BY-SA 4.0" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-sa/4.0/" },
+              "Artist": { "value": "<a href=\"#\">Jane Photog</a>" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

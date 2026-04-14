@@ -1,0 +1,13 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/compare/page": "app/compare/page.js",
+  "/docs/[[...slug]]/page": "app/docs/[[...slug]]/page.js",
+  "/blog/page": "app/blog/page.js",
+  "/blog/[slug]/page": "app/blog/[slug]/page.js",
+  "/legal/privacy/page": "app/legal/privacy/page.js",
+  "/pricing/page": "app/pricing/page.js",
+  "/legal/terms/page": "app/legal/terms/page.js",
+  "/mcp-registry/page": "app/mcp-registry/page.js",
+  "/legal/license-policy/page": "app/legal/license-policy/page.js"
+}
