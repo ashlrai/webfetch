@@ -43,7 +43,7 @@ export default function PrivacyPage() {
       </ul>
 
       <h2>Contact</h2>
-      <p>privacy@webfetch.dev</p>
+      <p>privacy@getwebfetch.com</p>
     </article>
   );
 }

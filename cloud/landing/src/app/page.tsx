@@ -1,78 +1,59 @@
 import Link from "next/link";
 import { Hero } from "@/components/Hero";
+import { Features } from "@/components/Features";
 import { ProviderMatrix } from "@/components/ProviderMatrix";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
-
-const FEATURES = [
-  {
-    title: "License-first ranking",
-    body: "Candidates are sorted by license tag (CC0 > PUBLIC_DOMAIN > CC_BY > CC_BY_SA > EDITORIAL), then by metadata confidence. UNKNOWN is rejected by default.",
-  },
-  {
-    title: "19+ federated sources",
-    body: "Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, iTunes, MusicBrainz CAA, Spotify, and more — one interface.",
-  },
-  {
-    title: "Human-like browser fallback",
-    body: "When public APIs miss, an opt-in managed browser pulls from Google Images and Pinterest. Every result gets an attribution sidecar.",
-  },
-  {
-    title: "Native MCP integration",
-    body: "One config line installs into Claude Code, Cursor, Cline, Continue, Roo Code, and Codex. Your agent gets a stable fetch tool it can reason about.",
-  },
-];
+import { FadeUp } from "@/components/FadeUp";
 
 export default function Home() {
   return (
     <>
       <Hero />
-
-      <section id="features" className="max-w-6xl mx-auto px-6 py-20">
-        <h2 className="text-3xl font-semibold tracking-tight mb-3">
-          Shipping an image used to take an afternoon.
-        </h2>
-        <p className="text-[var(--fg-dim)] max-w-2xl mb-10">
-          Four failure modes, fixed at the protocol layer.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="wf-card">
-              <div className="text-lg font-semibold">{f.title}</div>
-              <p className="mt-2 text-[var(--fg-dim)] leading-relaxed">{f.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
+      <Features />
       <ArchitectureDiagram />
       <ProviderMatrix />
 
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="flex items-end justify-between mb-6">
-          <h2 className="text-3xl font-semibold tracking-tight">webfetch vs alternatives</h2>
-          <Link href="/compare" className="text-sm text-[var(--accent)]">
-            Full comparison →
-          </Link>
-        </div>
-        <ComparisonTable />
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-24">
+        <FadeUp>
+          <div className="text-[11px] font-mono text-[var(--color-accent)] uppercase tracking-[0.2em] mb-3">
+            — comparison
+          </div>
+          <div className="flex items-end justify-between flex-wrap gap-3 mb-8">
+            <h2 className="font-mono text-[30px] md:text-[36px] font-semibold tracking-[-0.025em] leading-[1.1]">
+              webfetch vs alternatives
+            </h2>
+            <Link href="/compare" className="text-sm font-mono text-[var(--color-accent)]">
+              Full comparison →
+            </Link>
+          </div>
+        </FadeUp>
+        <FadeUp delay={60}>
+          <ComparisonTable />
+        </FadeUp>
       </section>
 
-      <section className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <h2 className="text-4xl font-semibold tracking-tight">
-          Start free. Pay for the parts you can't build.
-        </h2>
-        <p className="mt-4 text-[var(--fg-dim)]">
-          OSS unlimited on your machine. Managed browser, pooled keys, and audit logs in the cloud.
-        </p>
-        <div className="mt-8 flex gap-3 justify-center">
-          <a href="https://app.webfetch.dev/signup" className="wf-btn-primary">
-            Start free
-          </a>
-          <Link href="/pricing" className="wf-btn-ghost">
-            See pricing
-          </Link>
-        </div>
+      <section className="max-w-4xl mx-auto px-6 py-24 md:py-32 text-center">
+        <FadeUp>
+          <h2 className="font-mono text-[36px] md:text-[48px] font-semibold tracking-[-0.03em] leading-[1.05]">
+            Start free.{" "}
+            <span className="text-[var(--color-fg-dim)]">
+              Pay for the parts you can&apos;t build.
+            </span>
+          </h2>
+          <p className="mt-5 text-[var(--color-fg-dim)] max-w-xl mx-auto leading-relaxed">
+            OSS unlimited on your machine. Managed browser, pooled keys, and
+            audit logs in the cloud.
+          </p>
+          <div className="mt-8 flex gap-3 justify-center">
+            <a href="https://app.getwebfetch.com/signup" className="wf-btn-primary">
+              Start free
+            </a>
+            <Link href="/pricing" className="wf-btn-ghost">
+              See pricing
+            </Link>
+          </div>
+        </FadeUp>
       </section>
     </>
   );

@@ -3,17 +3,17 @@
   "displayName": "webfetch",
   "description": "License-first federated image search inside VS Code. Search 19 providers, insert with attribution, drag into markdown.",
   "version": "0.1.0",
-  "publisher": "ashlr-ai",
+  "publisher": "ashlrai",
   "license": "MIT",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "url": "https://github.com/ashlrai/webfetch.git",
     "directory": "vscode-extension"
   },
-  "homepage": "https://webfetch.dev",
+  "homepage": "https://getwebfetch.com",
   "bugs": {
-    "url": "https://github.com/ashlr-ai/webfetch/issues"
+    "url": "https://github.com/ashlrai/webfetch/issues"
   },
   "keywords": [
     "images",
@@ -112,11 +112,11 @@
         "webfetch.apiKey": {
           "type": "string",
           "default": "",
-          "markdownDescription": "API key (Bearer token) for your webfetch server. Get one at [app.webfetch.dev](https://app.webfetch.dev) or use your self-hosted token."
+          "markdownDescription": "API key (Bearer token) for your webfetch server. Get one at [app.getwebfetch.com](https://app.getwebfetch.com) or use your self-hosted token."
         },
         "webfetch.baseUrl": {
           "type": "string",
-          "default": "https://api.webfetch.dev",
+          "default": "https://api.getwebfetch.com",
           "description": "Base URL of the webfetch API. Set to http://127.0.0.1:7600 for self-hosted."
         },
         "webfetch.defaultLicense": {

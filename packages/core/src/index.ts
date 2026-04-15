@@ -29,3 +29,21 @@ export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints
 export type { ArtistImageKind } from "./hints/index.ts";
 export { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 export { defaultCacheDir } from "./cache.ts";
+export {
+  trackEvent,
+  isTelemetryEnabled,
+  installHash,
+  buildPayload,
+  ALLOWED_EVENTS,
+  DEFAULT_ENDPOINT,
+  FALLBACK_ENDPOINT,
+  TELEMETRY_SALT,
+} from "./telemetry.ts";
+export type {
+  TelemetryEvent,
+  TelemetryProps,
+  TelemetryOptions,
+  TelemetryConfig,
+  TelemetryPayload,
+  Fetcher as TelemetryFetcher,
+} from "./telemetry.ts";

@@ -7,7 +7,7 @@ per file and a JSON manifest.
 ## Usage
 
 ```yaml
-- uses: ashlr-ai/web-fetcher-mcp/integrations/github-action@main
+- uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
   with:
     query: "Drake musician portrait"
     out-dir: ./assets/portraits
@@ -18,7 +18,7 @@ per file and a JSON manifest.
 After publishing to the GitHub Action marketplace this reduces to:
 
 ```yaml
-- uses: ashlr-ai/webfetch-action@v1
+- uses: ashlrai/webfetch-action@v1
   with: { query: "...", out-dir: "./assets" }
 ```
 

@@ -1,12 +1,12 @@
 # Homebrew formula for webfetch.
 #
-# Published to the tap repo github.com/ashlr-ai/homebrew-webfetch.
+# Published to the tap repo github.com/ashlrai/homebrew-webfetch.
 # The release workflow templates `version`, `url`, and `sha256` on every
 # `v*` tag push. Do NOT hand-edit those fields here — edit the template in
 # `.github/workflows/release.yml` (homebrew-bump step) instead.
 class Webfetch < Formula
   desc "License-first federated image search for AI agents and humans"
-  homepage "https://webfetch.dev"
+  homepage "https://getwebfetch.com"
   url "https://registry.npmjs.org/@webfetch/cli/-/cli-0.1.0.tgz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"

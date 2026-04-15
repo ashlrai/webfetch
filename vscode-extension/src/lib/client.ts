@@ -2,7 +2,7 @@
  * REST client for the webfetch HTTP API (packages/server/src/routes.ts).
  *
  * Same bearer-token + `{ ok, data }` envelope used by the Chrome extension.
- * Accepts either api.webfetch.dev or a self-hosted http://127.0.0.1:7600.
+ * Accepts either api.getwebfetch.com or a self-hosted http://127.0.0.1:7600.
  */
 
 import * as vscode from "vscode";

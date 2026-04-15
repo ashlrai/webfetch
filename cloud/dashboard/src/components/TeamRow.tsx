@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { WorkspaceRole, User } from "@shared/types";
 import { formatRelative } from "@/lib/format";
 import { removeMember } from "@/lib/api";
+import { Icon } from "./Icon";
 
 interface RowMember {
   userId: string;
@@ -44,14 +45,24 @@ export default function TeamRow({
     readonly: "",
   };
 
+  const initial = (member.user.name ?? member.user.email).slice(0, 1).toUpperCase();
+
   return (
     <tr>
       <td>
-        <div className="flex flex-col">
-          <span>{member.user.name ?? "—"}</span>
-          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
-            {member.user.email}
-          </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="size-7 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0"
+            style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)", color: "var(--text-dim)" }}
+          >
+            {initial}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[13px] truncate">{member.user.name ?? "—"}</span>
+            <span className="mono text-[11px] truncate" style={{ color: "var(--text-mute)" }}>
+              {member.user.email}
+            </span>
+          </div>
         </div>
       </td>
       <td>
@@ -61,16 +72,16 @@ export default function TeamRow({
         {pending ? (
           <span className="badge badge-warn">invite pending</span>
         ) : (
-          <span className="badge badge-ok">active</span>
+          <span className="badge badge-ok"><span className="dot" />active</span>
         )}
       </td>
-      <td className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
+      <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
         {formatRelative(member.acceptedAt ?? member.invitedAt)}
       </td>
       <td style={{ textAlign: "right" }}>
         {canManage && member.role !== "owner" && (
-          <button className="btn btn-danger" onClick={handleRemove} disabled={busy}>
-            {busy ? "Removing…" : "Remove"}
+          <button className="btn btn-sm btn-danger" onClick={handleRemove} disabled={busy}>
+            <Icon name="trash" /> {busy ? "Removing" : "Remove"}
           </button>
         )}
       </td>

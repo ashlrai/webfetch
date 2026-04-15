@@ -1,0 +1,12 @@
+{
+  "photos": [
+    {
+      "id": 9876,
+      "title": "Minimalist desk workspace",
+      "image_url": "https://burst.shopifycdn.com/photos/minimalist-desk.jpg",
+      "thumbnail_url": "https://burst.shopifycdn.com/photos/minimalist-desk_thumb.jpg",
+      "permalink": "https://burst.shopify.com/photos/minimalist-desk",
+      "photographer": { "name": "Matthew Henry" }
+    }
+  ]
+}

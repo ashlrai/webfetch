@@ -4,8 +4,8 @@ Thanks for using webfetch. Here's how to get help, ranked by speed.
 
 ## Community support (free)
 
-- **GitHub Discussions** — questions, ideas, show-and-tell, and "is this a bug?" triage: <https://github.com/ashlr-ai/webfetch/discussions>
-- **Discord** — chat with maintainers and other users: <https://webfetch.dev/discord>
+- **GitHub Discussions** — questions, ideas, show-and-tell, and "is this a bug?" triage: <https://github.com/ashlrai/webfetch/discussions>
+- **Discord** — chat with maintainers and other users: <https://getwebfetch.com/discord>
 - **Issues** — for confirmed bugs and concrete feature requests, use the [issue templates](.github/ISSUE_TEMPLATE/). Please search existing issues first.
 
 We try to respond to community questions within a few business days, but there is no SLA on community channels.
@@ -23,9 +23,9 @@ Do **not** use issues, Discussions, or Discord for security reports. See [SECURI
 
 ## Commercial support
 
-The hosted tier at [webfetch.dev](https://webfetch.dev) includes pooled provider keys, the managed browser fallback, and team usage dashboards. See <https://webfetch.dev/pricing>.
+The hosted tier at [getwebfetch.com](https://getwebfetch.com) includes pooled provider keys, the managed browser fallback, and team usage dashboards. See <https://getwebfetch.com/pricing>.
 
-For SLAs, private deployments, custom provider work, or volume licensing, contact **[enterprise@webfetch.dev](mailto:enterprise@webfetch.dev)**.
+For SLAs, private deployments, custom provider work, or volume licensing, contact **[enterprise@getwebfetch.com](mailto:enterprise@getwebfetch.com)**.
 
 ## What's not supported
 

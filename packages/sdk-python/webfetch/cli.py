@@ -25,7 +25,7 @@ def _client(args: argparse.Namespace) -> WebfetchClient:
     api_key = args.api_key or os.environ.get("WEBFETCH_API_KEY")
     if not api_key and not args.base_url:
         print(
-            "warning: no WEBFETCH_API_KEY set; requests to api.webfetch.dev will fail. "
+            "warning: no WEBFETCH_API_KEY set; requests to api.getwebfetch.com will fail. "
             "Set WEBFETCH_API_KEY or pass --base-url for self-hosted.",
             file=sys.stderr,
         )

@@ -2,8 +2,8 @@
   "name": "webfetch",
   "version": "1.0.0",
   "description": "License-first federated image search MCP server",
-  "homepage": "https://webfetch.dev",
-  "repository": "https://github.com/ashlr-ai/web-fetcher-mcp",
+  "homepage": "https://getwebfetch.com",
+  "repository": "https://github.com/ashlrai/web-fetcher-mcp",
   "transport": "stdio",
   "command": "npx",
   "args": ["-y", "@webfetch/mcp"],
@@ -29,6 +29,6 @@
     "type": "bearer",
     "env": "WEBFETCH_API_KEY",
     "optional": true,
-    "docs": "https://webfetch.dev/docs/auth"
+    "docs": "https://getwebfetch.com/docs/auth"
   }
 }

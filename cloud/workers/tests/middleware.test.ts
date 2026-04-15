@@ -75,13 +75,13 @@ describe("middleware chain (via /v1/search)", () => {
     const res = await app.fetch(
       new Request("http://x/v1/search", {
         method: "OPTIONS",
-        headers: { origin: "https://app.webfetch.dev" },
+        headers: { origin: "https://app.getwebfetch.com" },
       }),
       env,
       makeExecCtx(),
     );
     expect(res.status).toBe(204);
-    expect(res.headers.get("access-control-allow-origin")).toBe("https://app.webfetch.dev");
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://app.getwebfetch.com");
   });
 
   test("x-request-id propagated from client", async () => {

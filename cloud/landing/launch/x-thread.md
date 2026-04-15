@@ -10,7 +10,7 @@ One CLI + MCP that replaces "open Google Images, right-click, save, guess at the
 
 [demo gif: CLI returns 5 candidates with license tags]
 
-webfetch.dev
+getwebfetch.com
 
 ## Tweet 2 (problem)
 
@@ -28,7 +28,7 @@ webfetch fixes all four at the protocol layer.
 30 seconds to try:
 
 ```
-curl -fsSL https://webfetch.dev/install.sh | bash
+curl -fsSL https://getwebfetch.com/install.sh | bash
 webfetch search "drake portrait" --limit 5
 ```
 
@@ -79,14 +79,14 @@ Built this in 2 weeks.
 
 ~30 Claude Code agents against a single plan doc. 4 npm packages + Chrome ext + VS Code ext + GitHub Action + Homebrew + Docker + cloud backend + landing site.
 
-117 passing tests. Wrote up the sprint story here: webfetch.dev/blog/shipping-webfetch
+117 passing tests. Wrote up the sprint story here: getwebfetch.com/blog/shipping-webfetch
 
 ## Tweet 9 (links + CTA)
 
 Try it:
-- Site: webfetch.dev
-- Repo: github.com/ashlr-ai/web-fetcher-mcp
-- Blog: webfetch.dev/blog (3 launch posts)
+- Site: getwebfetch.com
+- Repo: github.com/ashlrai/web-fetcher-mcp
+- Blog: getwebfetch.com/blog (3 launch posts)
 - HN: [HN link]
 
 If you're building an AI agent that touches images, this saves you a week.

@@ -1,6 +1,6 @@
 # Codex agent notes
 
-This project uses [web-fetcher-mcp](https://github.com/ashlr-ai/web-fetcher-mcp)
+This project uses [web-fetcher-mcp](https://github.com/ashlrai/web-fetcher-mcp)
 for every image lookup. Do not download images directly from the web.
 
 ## Preferred workflow

@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": 12345,
+      "title": "Vintage botanical illustration",
+      "image_md": "https://images.rawpixel.com/image_md/12345.jpg",
+      "image_1300": "https://images.rawpixel.com/image_1300/12345.jpg",
+      "pageURL": "https://www.rawpixel.com/image/12345/vintage-botanical",
+      "user": { "display_name": "Rawpixel Ltd" }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import { fetchWithLicenseSchema } from "../schemas.ts";
 import { ok, err, parseJson } from "../responses.ts";
 import { recordUsage } from "../metering.ts";
 import { unitsFor } from "../../../shared/pricing.ts";
+import { assertPublicHttpUrl } from "../ssrf.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -16,6 +17,9 @@ licenseRouter.post("/", async (c) => {
   const parsed = await parseJson(c, fetchWithLicenseSchema);
   if (!parsed.ok) return parsed.response;
   const ctx = c.get("ctx");
+  // SECURITY (SA-003 / CWE-918): Block SSRF via private/internal hostnames.
+  const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
+  if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
   try {
     const r = await fetchWithLicense(parsed.data.url, { probe: parsed.data.probe });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/license", unitsFor("/v1/license"), 200));

@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "guid": "https://www.europeana.eu/item/9200143/BibliographicResource_0001",
+      "title": ["Historic newspaper page"],
+      "dcCreator": ["Unknown"],
+      "edmPreview": ["https://api.europeana.eu/thumbnail/newspaper.jpg"],
+      "rights": ["http://creativecommons.org/licenses/by/4.0/"]
+    }
+  ]
+}

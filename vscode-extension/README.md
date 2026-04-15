@@ -32,14 +32,14 @@ to production.
 | `webfetch: Insert licensed image...` | Editor context action for markdown. |
 | `webfetch: Providers` | Quick-pick listing of connected providers. |
 | `webfetch: Set API Key` | Store your API key in VS Code SecretStorage. |
-| `webfetch: Open Dashboard` | Open [app.webfetch.dev](https://app.webfetch.dev). |
+| `webfetch: Open Dashboard` | Open [app.getwebfetch.com](https://app.getwebfetch.com). |
 
 ## Configuration
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | `webfetch.apiKey` | `""` | Bearer token for the webfetch API (prefer `Set API Key`). |
-| `webfetch.baseUrl` | `https://api.webfetch.dev` | Set to `http://127.0.0.1:7600` for self-hosted. |
+| `webfetch.baseUrl` | `https://api.getwebfetch.com` | Set to `http://127.0.0.1:7600` for self-hosted. |
 | `webfetch.defaultLicense` | `safe-only` | `safe-only` / `prefer-safe` / `any`. |
 | `webfetch.defaultProviders` | `[]` | Subset of the 19 providers to query (empty = server defaults). |
 | `webfetch.outputDir` | `./assets` | Where downloaded images land, relative to the workspace root. |
@@ -48,7 +48,7 @@ to production.
 
 ## Self-host
 
-Run [`@webfetch/server`](https://github.com/ashlr-ai/webfetch) locally:
+Run [`@webfetch/server`](https://github.com/ashlrai/webfetch) locally:
 
 ```
 npx @webfetch/server --port 7600 --token $(uuidgen)

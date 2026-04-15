@@ -34,7 +34,12 @@ export type ProviderId =
   | "smithsonian"
   | "nasa"
   | "met-museum"
-  | "europeana";
+  | "europeana"
+  | "library-of-congress"
+  | "wellcome-collection"
+  | "rawpixel"
+  | "burst"
+  | "europeana-archival";
 
 export type LicensePolicy = "safe-only" | "prefer-safe" | "any";
 export type SafeSearchMode = "strict" | "moderate" | "off";
@@ -105,6 +110,7 @@ export interface ProviderAuth {
   flickrApiKey?: string;
   smithsonianApiKey?: string;
   europeanaApiKey?: string;
+  rawpixelApiKey?: string;
 }
 
 export interface SearchResultBundle {

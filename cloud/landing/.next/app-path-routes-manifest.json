@@ -2,12 +2,12 @@
   "/_not-found/page": "/_not-found",
   "/page": "/",
   "/compare/page": "/compare",
-  "/docs/[[...slug]]/page": "/docs/[[...slug]]",
   "/blog/page": "/blog",
+  "/docs/[[...slug]]/page": "/docs/[[...slug]]",
   "/blog/[slug]/page": "/blog/[slug]",
   "/legal/privacy/page": "/legal/privacy",
-  "/pricing/page": "/pricing",
   "/legal/terms/page": "/legal/terms",
-  "/mcp-registry/page": "/mcp-registry",
-  "/legal/license-policy/page": "/legal/license-policy"
+  "/pricing/page": "/pricing",
+  "/legal/license-policy/page": "/legal/license-policy",
+  "/mcp-registry/page": "/mcp-registry"
 }

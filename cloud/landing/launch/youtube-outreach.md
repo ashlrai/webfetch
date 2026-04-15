@@ -28,9 +28,9 @@ Three reasons this might be a fit for a video:
 
 If you'd like, I can comp you a year of Pro (managed browser + pooled keys + dashboard) so the demo hits the cloud path too. No ask for a review — if it's cool you'll use it; if not, you won't.
 
-Site: https://webfetch.dev
-Repo: https://github.com/ashlr-ai/web-fetcher-mcp
-Demo video: https://webfetch.dev/#demo
+Site: https://getwebfetch.com
+Repo: https://github.com/ashlrai/web-fetcher-mcp
+Demo video: https://getwebfetch.com/#demo
 
 Happy to answer anything, send more detail, or just get out of your inbox. Thanks for making the stuff you make.
 

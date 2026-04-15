@@ -28,7 +28,7 @@ Built this inside a separate project (an artist-encyclopedia factory) and realiz
 Try it:
 
 ```
-curl -fsSL https://webfetch.dev/install.sh | bash
+curl -fsSL https://getwebfetch.com/install.sh | bash
 webfetch search "drake portrait" --limit 5
 ```
 
@@ -38,9 +38,9 @@ Or drop this into your Claude Code config:
 "webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }
 ```
 
-Repo: https://github.com/ashlr-ai/web-fetcher-mcp
-Site: https://webfetch.dev
-Blog (3 launch posts): https://webfetch.dev/blog
+Repo: https://github.com/ashlrai/web-fetcher-mcp
+Site: https://getwebfetch.com
+Blog (3 launch posts): https://getwebfetch.com/blog
 
 Happy to answer anything — especially about the legal posture on browser fetching, which I think is the most interesting design question here.
 

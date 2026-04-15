@@ -8,7 +8,7 @@ import { getProviders } from "../lib/client";
 export function registerOpenDashboard(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("webfetch.openDashboard", async () => {
-      await vscode.env.openExternal(vscode.Uri.parse("https://app.webfetch.dev"));
+      await vscode.env.openExternal(vscode.Uri.parse("https://app.getwebfetch.com"));
     }),
   );
 }

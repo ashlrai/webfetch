@@ -5,8 +5,8 @@ description = "The license-first image layer for AI agents and humans - Python S
 authors = ["Mason Wyatt <mason@ashlr.ai>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://webfetch.dev"
-repository = "https://github.com/ashlr-ai/webfetch"
+homepage = "https://getwebfetch.com"
+repository = "https://github.com/ashlrai/webfetch"
 keywords = ["image-search", "licensing", "ai", "mcp", "agent"]
 classifiers = [
     "Development Status :: 4 - Beta",

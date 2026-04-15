@@ -6,14 +6,14 @@ All four publishable packages (`@webfetch/core`, `@webfetch/cli`,
 ## Prerequisites (one-time)
 
 - Add `NPM_TOKEN` (automation token, `publish` scope) as a GitHub Actions
-  secret on the `ashlr-ai/webfetch` repo.
+  secret on the `ashlrai/webfetch` repo.
 - Add `HOMEBREW_GH_TOKEN` as a GitHub Actions secret. This is a fine-scoped
   Personal Access Token with `contents: write` permission on
-  `ashlr-ai/homebrew-webfetch` only — the `homebrew-bump` job in
+  `ashlrai/homebrew-webfetch` only — the `homebrew-bump` job in
   `release.yml` uses it to open a PR (or push a commit) bumping
   `Formula/webfetch.rb` after each successful npm publish.
 - Be logged in to npm locally for dry-runs: `npm whoami`.
-- Confirm you have write access to `ghcr.io/ashlr-ai/webfetch`.
+- Confirm you have write access to `ghcr.io/ashlrai/webfetch`.
 
 ## Automated release (recommended)
 
@@ -30,9 +30,9 @@ All four publishable packages (`@webfetch/core`, `@webfetch/cli`,
    - `npm publish --access public --provenance` for all four
    - creates a GitHub Release with built tarballs attached
 3. `.github/workflows/docker.yml` fires on the same tag and pushes the
-   multi-arch image to `ghcr.io/ashlr-ai/webfetch:<version>` + `:latest`.
+   multi-arch image to `ghcr.io/ashlrai/webfetch:<version>` + `:latest`.
 4. The `homebrew-bump` job in `release.yml` opens (or updates) a PR on
-   `github.com/ashlr-ai/homebrew-webfetch` bumping `Formula/webfetch.rb`
+   `github.com/ashlrai/homebrew-webfetch` bumping `Formula/webfetch.rb`
    automatically. Merge that PR to ship the new version through `brew`.
    If the job is skipped or fails, fall back to a manual edit per
    `homebrew/README.md`.
@@ -82,5 +82,5 @@ gh release create "v${VERSION}" --generate-notes
 ## Post-release verification
 
 - `npm i -g @webfetch/cli && webfetch --help`
-- `docker run --rm ghcr.io/ashlr-ai/webfetch:${VERSION} cli --help`
+- `docker run --rm ghcr.io/ashlrai/webfetch:${VERSION} cli --help`
 - `brew upgrade webfetch` (after the tap PR merges)

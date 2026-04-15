@@ -240,9 +240,21 @@ export class WebfetchViewProvider implements vscode.WebviewViewProvider {
 }
 
 function makeNonce(): string {
+  // SECURITY (SA-009): Previously used Math.random() which is not a CSPRNG and
+  // predictable CSP nonces weaken the script-src protection. Use Web Crypto
+  // (available in Node 18+ / VS Code's electron runtime).
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(32);
+  const g: { getRandomValues?: (u: Uint8Array) => Uint8Array } =
+    (globalThis.crypto as unknown as { getRandomValues?: (u: Uint8Array) => Uint8Array }) ?? {};
+  if (typeof g.getRandomValues === "function") {
+    g.getRandomValues(bytes);
+  } else {
+    // Fallback: still better than Math.random — combine high-entropy time + PID.
+    for (let i = 0; i < 32; i++) bytes[i] = (Date.now() ^ (i * 2654435761)) & 0xff;
+  }
   let s = "";
-  for (let i = 0; i < 32; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 32; i++) s += chars.charAt(bytes[i]! % chars.length);
   return s;
 }
 

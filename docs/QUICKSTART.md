@@ -6,7 +6,7 @@ and verify it works before moving on.
 ## 0. One-line install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlr-ai/web-fetcher-mcp/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
 ```
 
 This clones the repo to `~/.webfetch/repo`, installs bun if missing, builds
@@ -70,7 +70,7 @@ for packaging details.
 No local install needed:
 
 ```yaml
-- uses: ashlr-ai/web-fetcher-mcp/integrations/github-action@main
+- uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
   with:
     query: "..."
     out-dir: ./assets

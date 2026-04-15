@@ -1,6 +1,6 @@
 # @webfetch/cloud-workers
 
-Cloudflare Workers backend powering `api.webfetch.dev`.
+Cloudflare Workers backend powering `api.getwebfetch.com`.
 
 - **Runtime**: Cloudflare Workers with `nodejs_compat`.
 - **Router**: [Hono](https://hono.dev).

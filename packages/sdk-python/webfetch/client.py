@@ -27,7 +27,7 @@ from .types import (
     UsageResponse,
 )
 
-DEFAULT_BASE_URL = "https://api.webfetch.dev"
+DEFAULT_BASE_URL = "https://api.getwebfetch.com"
 USER_AGENT = "webfetch-python/0.1.0"
 DEFAULT_TIMEOUT = 30.0
 

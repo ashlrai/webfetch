@@ -1,0 +1,23 @@
+{
+  "results": [
+    {
+      "id": "https://www.loc.gov/item/2016879876/",
+      "url": "https://www.loc.gov/item/2016879876/",
+      "title": "Portrait of Frederick Douglass",
+      "date": "1865",
+      "image_url": [
+        "https://tile.loc.gov/image-services/iiif/service:pnp:cph:3a00000:3a05000:3a05100:3a05141/full/pct:12.5/0/default.jpg",
+        "https://tile.loc.gov/image-services/iiif/service:pnp:cph:3a00000:3a05000:3a05100:3a05141/full/pct:100/0/default.jpg"
+      ],
+      "rights": "No known restrictions on publication.",
+      "contributor": ["Brady, Mathew B."]
+    },
+    {
+      "id": "https://www.loc.gov/item/2020999999/",
+      "url": "https://www.loc.gov/item/2020999999/",
+      "title": "Restricted item",
+      "image_url": ["https://tile.loc.gov/example-restricted.jpg"],
+      "rights": "Rights status not evaluated. Copyright may apply."
+    }
+  ]
+}

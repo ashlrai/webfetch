@@ -1,6 +1,6 @@
 # webfetch landing site
 
-Next.js 15 App Router + Tailwind 4 + TypeScript. Deployed to Vercel at `webfetch.dev`.
+Next.js 15 App Router + Tailwind 4 + TypeScript. Deployed to Vercel at `getwebfetch.com`.
 
 ## Dev
 
@@ -35,7 +35,7 @@ bun run --cwd cloud/landing typecheck
 
 ## Environment
 
-- `NEXT_PUBLIC_API_URL` — cloud API base URL. Defaults to `http://localhost:7777` in dev; set to `https://api.webfetch.dev` in production.
+- `NEXT_PUBLIC_API_URL` — cloud API base URL. Defaults to `http://localhost:7777` in dev; set to `https://api.getwebfetch.com` in production.
 
 ## Content
 

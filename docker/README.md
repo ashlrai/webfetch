@@ -5,8 +5,8 @@ Multi-stage image: Bun-built artifacts, Node 20 slim runtime. Ships `cli`,
 
 ## Published tags
 
-- `ghcr.io/ashlr-ai/webfetch:latest`
-- `ghcr.io/ashlr-ai/webfetch:<semver>` (e.g. `1.2.3`, `1.2`)
+- `ghcr.io/ashlrai/webfetch:latest`
+- `ghcr.io/ashlrai/webfetch:<semver>` (e.g. `1.2.3`, `1.2`)
 
 Built + pushed by `.github/workflows/docker.yml` on every `v*` tag.
 
@@ -14,20 +14,20 @@ Built + pushed by `.github/workflows/docker.yml` on every `v*` tag.
 
 ```bash
 # CLI — default entrypoint
-docker run --rm ghcr.io/ashlr-ai/webfetch cli providers
-docker run --rm ghcr.io/ashlr-ai/webfetch cli search "drake portrait" --limit 5
+docker run --rm ghcr.io/ashlrai/webfetch cli providers
+docker run --rm ghcr.io/ashlrai/webfetch cli search "drake portrait" --limit 5
 
 # Local HTTP server (port 7600)
-docker run --rm -p 7600:7600 ghcr.io/ashlr-ai/webfetch server
+docker run --rm -p 7600:7600 ghcr.io/ashlrai/webfetch server
 
 # MCP stdio server (typically invoked by an agent, not directly)
-docker run --rm -i ghcr.io/ashlr-ai/webfetch mcp
+docker run --rm -i ghcr.io/ashlrai/webfetch mcp
 
 # Pass provider keys
 docker run --rm \
   -e UNSPLASH_ACCESS_KEY=... \
   -e PEXELS_API_KEY=... \
-  ghcr.io/ashlr-ai/webfetch cli search "sunset" --provider unsplash
+  ghcr.io/ashlrai/webfetch cli search "sunset" --provider unsplash
 ```
 
 ## Build locally
@@ -47,5 +47,5 @@ Mount a host volume to keep it warm across runs:
 ```bash
 docker run --rm \
   -v "$HOME/.webfetch/cache:/root/.webfetch/cache" \
-  ghcr.io/ashlr-ai/webfetch cli search "sunset"
+  ghcr.io/ashlrai/webfetch cli search "sunset"
 ```

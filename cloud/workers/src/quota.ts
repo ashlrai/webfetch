@@ -110,7 +110,7 @@ export async function checkQuota(
       windowStart: start,
       windowEnd: end,
       reason: "plan_endpoint_forbidden",
-      upgradeUrl: "https://webfetch.dev/pricing",
+      upgradeUrl: "https://getwebfetch.com/pricing",
     };
   }
 
@@ -128,7 +128,7 @@ export async function checkQuota(
       windowStart: start,
       windowEnd: end,
       reason: "quota_exceeded_free",
-      upgradeUrl: "https://webfetch.dev/pricing",
+      upgradeUrl: "https://getwebfetch.com/pricing",
     };
   }
 

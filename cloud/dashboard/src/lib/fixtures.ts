@@ -1,7 +1,7 @@
 /**
  * Deterministic fixture data used when `NEXT_PUBLIC_USE_FIXTURES=1` or when
  * the cloud API is unreachable. Lets the dashboard render end-to-end during
- * development before api.webfetch.dev exists.
+ * development before api.getwebfetch.com exists.
  */
 
 import type {
@@ -222,7 +222,7 @@ export const fixtureProviders: ProviderStatus[] = PROVIDERS.map((name, i) => ({
   hasKey: i % 4 === 0,
   lastTestOk: i % 4 === 0 ? true : null,
   lastTestAt: i % 4 === 0 ? NOW - i * 60_000 : null,
-  docsUrl: `https://webfetch.dev/docs/providers/${name}`,
+  docsUrl: `https://getwebfetch.com/docs/providers/${name}`,
 }));
 
 export function fixtureAudit(count = 60): AuditEntry[] {

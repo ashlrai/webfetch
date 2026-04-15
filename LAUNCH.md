@@ -36,7 +36,7 @@ These can be done asynchronously, in parallel, days before launch day.
 ### 1.1 Domain
 
 ```bash
-# Register webfetch.dev at your registrar of choice.
+# Register getwebfetch.com at your registrar of choice.
 # Recommended: Cloudflare Registrar (no markup, free WHOIS privacy).
 # After purchase, do nothing with DNS yet — Cloudflare zone setup happens in step 4.
 ```
@@ -55,31 +55,31 @@ If `@webfetch` is taken, decide on alternate scope (e.g. `@webfetch-dev`) and up
 
 ### 1.3 GitHub repos
 
-Create two empty public repos under the `ashlr-ai` org:
+Create two empty public repos under the `ashlrai` org:
 
 ```bash
-gh repo create ashlr-ai/webfetch --public --description "Headless web fetcher with MCP, CLI, and SDKs" --homepage "https://webfetch.dev"
-gh repo create ashlr-ai/homebrew-webfetch --public --description "Homebrew tap for webfetch"
+gh repo create ashlrai/webfetch --public --description "Headless web fetcher with MCP, CLI, and SDKs" --homepage "https://getwebfetch.com"
+gh repo create ashlrai/homebrew-webfetch --public --description "Homebrew tap for webfetch"
 ```
 
 ### 1.4 Cloudflare account
 
 1. Sign in at https://dash.cloudflare.com.
-2. Add `webfetch.dev` as a zone (Websites -> Add a site).
+2. Add `getwebfetch.com` as a zone (Websites -> Add a site).
 3. Update nameservers at the registrar to Cloudflare's.
-4. Create an API token with permissions: `Account.Workers Scripts:Edit`, `Account.D1:Edit`, `Account.Workers KV Storage:Edit`, `Account.Workers R2 Storage:Edit`, `Account.Queues:Edit`, `Zone.Workers Routes:Edit` (scope to the webfetch.dev zone). Store as `CLOUDFLARE_API_TOKEN`.
+4. Create an API token with permissions: `Account.Workers Scripts:Edit`, `Account.D1:Edit`, `Account.Workers KV Storage:Edit`, `Account.Workers R2 Storage:Edit`, `Account.Queues:Edit`, `Zone.Workers Routes:Edit` (scope to the getwebfetch.com zone). Store as `CLOUDFLARE_API_TOKEN`.
 
 ### 1.5 Stripe
 
 1. Sign in at https://dashboard.stripe.com.
 2. Open `cloud/shared/pricing.ts` and create the 4 products with matching prices (Free, Pro, Team, Enterprise) in **live mode**. Copy each price ID into `cloud/shared/pricing.ts` if not already populated.
 3. Get `STRIPE_SECRET_KEY` (live mode `sk_live_...`).
-4. Configure a webhook endpoint: `https://api.webfetch.dev/v1/webhooks/stripe` (will exist after step 4). Capture the signing secret as `STRIPE_WEBHOOK_SECRET`.
+4. Configure a webhook endpoint: `https://api.getwebfetch.com/v1/webhooks/stripe` (will exist after step 4). Capture the signing secret as `STRIPE_WEBHOOK_SECRET`.
 
 ### 1.6 Resend
 
 1. Sign up at https://resend.com.
-2. Add and verify `webfetch.dev` (DKIM + SPF + DMARC records in Cloudflare DNS).
+2. Add and verify `getwebfetch.com` (DKIM + SPF + DMARC records in Cloudflare DNS).
 3. Generate API key, store as `RESEND_API_KEY`.
 
 ### 1.7 Vercel
@@ -97,14 +97,14 @@ Capture a token at https://vercel.com/account/tokens for CI as `VERCEL_TOKEN`.
 ```bash
 # npm: https://www.npmjs.com/settings/<user>/tokens -> Granular access token, scope @webfetch, "Read and write".
 # GHCR: gh auth token  (or PAT with write:packages, read:packages).
-# Homebrew tap PAT: a fine-grained PAT with contents:write on ashlr-ai/homebrew-webfetch.
+# Homebrew tap PAT: a fine-grained PAT with contents:write on ashlrai/homebrew-webfetch.
 ```
 
 ---
 
 ## 2. Secrets setup
 
-Run from inside the cloned `ashlr-ai/webfetch` repo (after step 3.1) — listed here for reference. Replace the trailing string with the real value. Use `gh secret set --env <env>` instead of repo-level for environment-scoped secrets if preferred.
+Run from inside the cloned `ashlrai/webfetch` repo (after step 3.1) — listed here for reference. Replace the trailing string with the real value. Use `gh secret set --env <env>` instead of repo-level for environment-scoped secrets if preferred.
 
 ```bash
 gh secret set NPM_TOKEN              --body "npm_xxx"
@@ -141,7 +141,7 @@ git init
 git add .
 git commit -m "Initial commit: webfetch v0.1.0"
 git branch -M main
-git remote add origin git@github.com:ashlr-ai/webfetch.git
+git remote add origin git@github.com:ashlrai/webfetch.git
 git push -u origin main
 ```
 
@@ -149,7 +149,7 @@ git push -u origin main
 
 ```bash
 gh run watch
-# Or: open https://github.com/ashlr-ai/webfetch/actions
+# Or: open https://github.com/ashlrai/webfetch/actions
 ```
 
 Required workflows: `ci.yml`, `install-test.yml`. Do not proceed if any required check is red.
@@ -162,7 +162,17 @@ git tag -a v0.1.0 -m "webfetch 0.1.0"
 git push origin v0.1.0
 ```
 
-This triggers `release.yml` (npm publish for each `packages/*`) and `docker.yml` (push to ghcr.io/ashlr-ai/webfetch:0.1.0 + :latest). Watch:
+> Pre-built artifacts available in `dist-release/` (built by `scripts/preflight.sh` / local prep). To skip the CI round-trip and publish directly:
+> ```bash
+> npm publish dist-release/webfetch-core-0.1.0.tgz    --access public
+> npm publish dist-release/webfetch-cli-0.1.0.tgz     --access public
+> npm publish dist-release/webfetch-mcp-0.1.0.tgz     --access public
+> npm publish dist-release/webfetch-server-0.1.0.tgz  --access public
+> npm publish dist-release/webfetch-browser-0.1.0.tgz --access public
+> ```
+> Note: local tarballs lack npm provenance attestation. Tag-driven CI publish is preferred when provenance matters.
+
+This triggers `release.yml` (npm publish for each `packages/*`) and `docker.yml` (push to ghcr.io/ashlrai/webfetch:0.1.0 + :latest). Watch:
 
 ```bash
 gh run watch
@@ -177,23 +187,23 @@ npm view @webfetch/mcp version
 npm view @webfetch/server version
 npm view @webfetch/browser version
 
-docker pull ghcr.io/ashlr-ai/webfetch:0.1.0
-docker run --rm ghcr.io/ashlr-ai/webfetch:0.1.0 --version
+docker pull ghcr.io/ashlrai/webfetch:0.1.0
+docker run --rm ghcr.io/ashlrai/webfetch:0.1.0 --version
 ```
 
 ### 3.5 Homebrew tap
 
-The `release.yml` job opens a PR against `ashlr-ai/homebrew-webfetch` updating `Formula/webfetch.rb` (templated from `homebrew/webfetch.rb`). Review and merge:
+The `release.yml` job opens a PR against `ashlrai/homebrew-webfetch` updating `Formula/webfetch.rb` (templated from `homebrew/webfetch.rb`). Review and merge:
 
 ```bash
-gh pr list --repo ashlr-ai/homebrew-webfetch
-gh pr merge <num> --repo ashlr-ai/homebrew-webfetch --squash
+gh pr list --repo ashlrai/homebrew-webfetch
+gh pr merge <num> --repo ashlrai/homebrew-webfetch --squash
 ```
 
 Smoke test:
 
 ```bash
-brew tap ashlr-ai/webfetch
+brew tap ashlrai/webfetch
 brew install webfetch
 webfetch --version
 ```
@@ -264,9 +274,9 @@ npx wrangler deploy --env production
 
 ### 4.5 Custom route
 
-In Cloudflare dashboard -> webfetch.dev zone -> Workers Routes:
+In Cloudflare dashboard -> getwebfetch.com zone -> Workers Routes:
 
-- Pattern: `api.webfetch.dev/*`
+- Pattern: `api.getwebfetch.com/*`
 - Worker: `webfetch-api` (or whatever `name` is in `wrangler.toml`)
 
 Or via CLI (already declared in `wrangler.toml [[routes]]` block, pushed by `wrangler deploy`).
@@ -274,7 +284,7 @@ Or via CLI (already declared in `wrangler.toml [[routes]]` block, pushed by `wra
 ### 4.6 Verify
 
 ```bash
-curl https://api.webfetch.dev/v1/health
+curl https://api.getwebfetch.com/v1/health
 # -> {"ok":true,"version":"0.1.0"}
 ```
 
@@ -284,24 +294,24 @@ curl https://api.webfetch.dev/v1/health
 
 ```bash
 cd cloud/dashboard
-vercel link               # select ashlr-ai team, name "webfetch-dashboard"
+vercel link               # select ashlrai team, name "webfetch-dashboard"
 ```
 
 Set environment variables in Vercel project settings (Production scope):
 
 | Key | Value |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `https://api.webfetch.dev` |
+| `NEXT_PUBLIC_API_URL` | `https://api.getwebfetch.com` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_xxx` |
 | `BETTER_AUTH_SECRET` | same as Worker secret |
-| `BETTER_AUTH_URL` | `https://app.webfetch.dev` |
+| `BETTER_AUTH_URL` | `https://app.getwebfetch.com` |
 | `DATABASE_URL` | (if dashboard has its own DB connection; otherwise omit) |
 
 Add domain:
 
 ```bash
-vercel domains add app.webfetch.dev
-vercel alias set webfetch-dashboard.vercel.app app.webfetch.dev
+vercel domains add app.getwebfetch.com
+vercel alias set webfetch-dashboard.vercel.app app.getwebfetch.com
 ```
 
 Deploy production:
@@ -316,22 +326,22 @@ vercel --prod
 
 ```bash
 cd cloud/landing
-vercel link               # select ashlr-ai team, name "webfetch-landing"
-vercel domains add webfetch.dev
-vercel domains add www.webfetch.dev
+vercel link               # select ashlrai team, name "webfetch-landing"
+vercel domains add getwebfetch.com
+vercel domains add www.getwebfetch.com
 vercel --prod
 ```
 
 Verify OG image is publicly reachable:
 
 ```bash
-curl -I https://webfetch.dev/og-image.png
+curl -I https://getwebfetch.com/og-image.png
 # Should be 200 with image/png. If the file is currently SVG, generate a PNG:
 #   npx @resvg/resvg-js cloud/landing/public/og-image.svg cloud/landing/public/og-image.png --width 1200
 # Re-deploy after committing.
 ```
 
-Test OG rendering at https://www.opengraph.xyz/url/https%3A%2F%2Fwebfetch.dev.
+Test OG rendering at https://www.opengraph.xyz/url/https%3A%2F%2Fgetwebfetch.com.
 
 ---
 
@@ -341,9 +351,9 @@ Test OG rendering at https://www.opengraph.xyz/url/https%3A%2F%2Fwebfetch.dev.
 
 ```bash
 npm i -g @vscode/vsce
-# Create a publisher named "ashlr-ai" at https://marketplace.visualstudio.com/manage if not done.
+# Create a publisher named "ashlrai" at https://marketplace.visualstudio.com/manage if not done.
 # Generate a PAT with scope: Marketplace > Manage at https://dev.azure.com.
-vsce login ashlr-ai     # paste the PAT
+vsce login ashlrai     # paste the PAT
 ```
 
 ### 7.2 Publish
@@ -354,7 +364,12 @@ vsce package
 vsce publish --pat "$VSCE_TOKEN"
 ```
 
-Verify at https://marketplace.visualstudio.com/items?itemName=ashlr-ai.webfetch.
+> Pre-built artifact available at `dist-release/webfetch-0.1.0.vsix` — publish it directly without rebuilding:
+> ```bash
+> npx vsce publish --packagePath dist-release/webfetch-0.1.0.vsix --pat "$VSCE_TOKEN"
+> ```
+
+Verify at https://marketplace.visualstudio.com/items?itemName=ashlrai.webfetch.
 
 ---
 
@@ -366,6 +381,15 @@ poetry config pypi-token.pypi "$PYPI_TOKEN"
 poetry build
 poetry publish
 ```
+
+> Pre-built wheel + sdist available in `dist-release/`:
+> ```bash
+> python3 -m pip install --user twine
+> TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_TOKEN" \
+>   python3 -m twine upload \
+>     dist-release/webfetch-0.1.0-py3-none-any.whl \
+>     dist-release/webfetch-python-0.1.0.tar.gz
+> ```
 
 Verify:
 
@@ -396,7 +420,7 @@ gh pr create --title "Add webfetch" --body "Headless web fetcher with MCP server
 
 Submit at https://smithery.ai/submit. Provide:
 
-- Repo: `ashlr-ai/webfetch`
+- Repo: `ashlrai/webfetch`
 - Install command: `npx -y @webfetch/mcp`
 - Description: from `packages/mcp/package.json`
 
@@ -425,7 +449,7 @@ All times in PT. Stagger to maximize coverage; if HN doesn't pop in the first ho
 ```bash
 # Open: https://news.ycombinator.com/submit
 # Title: from hn-show.md
-# URL: https://webfetch.dev
+# URL: https://getwebfetch.com
 # Text: from hn-show.md (the "first comment" goes in the text field)
 ```
 
@@ -449,10 +473,10 @@ cd cloud/workers
 npx wrangler tail --env production --format pretty
 
 # Tail Vercel landing
-vercel logs https://webfetch.dev --follow
+vercel logs https://getwebfetch.com --follow
 
 # Tail Vercel dashboard
-vercel logs https://app.webfetch.dev --follow
+vercel logs https://app.getwebfetch.com --follow
 ```
 
 ### 11.2 Dashboards
@@ -460,7 +484,7 @@ vercel logs https://app.webfetch.dev --follow
 - Cloudflare Workers analytics: https://dash.cloudflare.com -> Workers -> webfetch-api
 - Stripe payments: https://dashboard.stripe.com/payments
 - npm downloads: `npx npm-stat @webfetch/cli`
-- GitHub stars: `gh api repos/ashlr-ai/webfetch | jq .stargazers_count`
+- GitHub stars: `gh api repos/ashlrai/webfetch | jq .stargazers_count`
 
 ### 11.3 Community
 
@@ -498,7 +522,7 @@ git tag v0.1.1 && git push origin v0.1.1     # ship the fix
 
 ```bash
 # Cannot delete a published tag from GHCR via API in most cases; instead:
-docker buildx imagetools create -t ghcr.io/ashlr-ai/webfetch:latest ghcr.io/ashlr-ai/webfetch:0.1.1
+docker buildx imagetools create -t ghcr.io/ashlrai/webfetch:latest ghcr.io/ashlrai/webfetch:0.1.1
 # Mark the bad tag deprecated in the README and via a release note.
 ```
 
@@ -524,8 +548,8 @@ npx wrangler d1 execute webfetch-prod --remote --file=../schema/0002_indexes.dow
 ### 12.6 Vercel deploys
 
 ```bash
-vercel rollback https://webfetch.dev
-vercel rollback https://app.webfetch.dev
+vercel rollback https://getwebfetch.com
+vercel rollback https://app.getwebfetch.com
 ```
 
 ### 12.7 DNS
@@ -543,7 +567,7 @@ Stripe products and prices cannot be deleted, only archived. To pull a bad price
 ### 12.9 VS Code marketplace
 
 ```bash
-vsce unpublish ashlr-ai.webfetch@0.1.0
+vsce unpublish ashlrai.webfetch@0.1.0
 # Then republish a fixed 0.1.1.
 ```
 

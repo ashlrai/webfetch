@@ -21,6 +21,11 @@
 | nasa             | NASA imagery archive (all public domain)| PUBLIC_DOMAIN        | none                                    | 5/s                       | no     |
 | met-museum       | The Met Open Access (CC0 PD objects)    | CC0                  | none                                    | 4/s                       | no     |
 | europeana        | European cultural heritage (CC/PD)      | CC_BY (from meta)    | EUROPEANA_API_KEY (free; gracefully skips) | 5/s                    | no     |
+| library-of-congress | US historical photos/film archive    | PUBLIC_DOMAIN        | none                                    | 10/s                      | no     |
+| wellcome-collection | medical/historical imagery (CC + PDM) | CC_BY (from meta)   | none                                    | 5/s                       | no     |
+| rawpixel         | CC0 slice of Rawpixel's free library    | CC0                  | none (RAWPIXEL_API_KEY optional)        | 3/s                       | no     |
+| burst            | Shopify Burst — 100% CC0 stock photos   | CC0                  | none                                    | 3/s                       | no     |
+| europeana-archival | Europeana TEXT records (editorial)    | CC_BY (from meta)    | EUROPEANA_API_KEY (same as `europeana`) | 5/s                       | **yes** (variant of `europeana`) |
 
 ## Gotchas
 
@@ -64,6 +69,19 @@
   to `isPublicDomain: true`. CC0 with confidence 0.95.
 - **Europeana** (`europeana`): `REUSABILITY=open` filter restricts to CC
   and PD. Gracefully skips when `EUROPEANA_API_KEY` is absent.
+- **Library of Congress** (`library-of-congress`): Huge US PD archive, no
+  auth. `rights` field is coerced conservatively — "no known restrictions"
+  and explicit PD text map to `PUBLIC_DOMAIN`; anything else → `UNKNOWN`.
+- **Wellcome Collection** (`wellcome-collection`): Medical/historical imagery.
+  Per-item `license.id` drives mapping: `pdm` → PUBLIC_DOMAIN, `cc0` → CC0,
+  `cc-by` → CC_BY. `cc-by-nc-nd` results are dropped (not commercially safe).
+- **Rawpixel** (`rawpixel`): Query is pinned with `freecc0=1` so every result
+  is CC0 by construction. `RAWPIXEL_API_KEY` optional today.
+- **Burst** (`burst`): Shopify's free stock library — 100% CC0 by policy.
+- **Europeana Archival** (`europeana-archival`): Opt-in variant of
+  `europeana` that targets `TYPE:TEXT` records (manuscripts, newspapers,
+  book scans) and surfaces their `edmPreview` thumbnails. Useful for
+  editorial / historical layouts.
 
 ## Picking providers
 

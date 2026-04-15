@@ -15,13 +15,13 @@
 #   --yes          answer "yes" to every prompt (non-interactive installs)
 #   --no-claude    skip the Claude Code settings merge
 #   --no-symlink   skip creating the /usr/local/bin/webfetch symlink
-#   --repo URL     override the repo URL (default: https://github.com/ashlr-ai/web-fetcher-mcp.git)
+#   --repo URL     override the repo URL (default: https://github.com/ashlrai/web-fetcher-mcp.git)
 #   --ref REF      git ref to check out (default: main)
 #   --prefix DIR   install dir (default: $HOME/.webfetch)
 
 set -euo pipefail
 
-REPO_URL_DEFAULT="https://github.com/ashlr-ai/web-fetcher-mcp.git"
+REPO_URL_DEFAULT="https://github.com/ashlrai/web-fetcher-mcp.git"
 REF_DEFAULT="main"
 PREFIX_DEFAULT="$HOME/.webfetch"
 

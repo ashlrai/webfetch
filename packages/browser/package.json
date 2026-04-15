@@ -25,13 +25,13 @@
     "licensing",
     "agent"
   ],
-  "homepage": "https://webfetch.dev",
+  "homepage": "https://getwebfetch.com",
   "bugs": {
-    "url": "https://github.com/ashlr-ai/webfetch/issues"
+    "url": "https://github.com/ashlrai/webfetch/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ashlr-ai/webfetch.git",
+    "url": "https://github.com/ashlrai/webfetch.git",
     "directory": "packages/browser"
   },
   "publishConfig": {

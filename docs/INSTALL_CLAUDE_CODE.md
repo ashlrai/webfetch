@@ -4,7 +4,7 @@
 you idempotently:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlr-ai/web-fetcher-mcp/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
 ```
 
 **Manual path:** add this block to `~/.claude/settings.json` (replace the

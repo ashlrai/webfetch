@@ -53,6 +53,10 @@ export async function downloadImage(url: string, opts: DownloadOptions = {}): Pr
 
   const host = safeHost(url);
   if (!host) throw new DownloadError(`invalid url: ${url}`, "network");
+  // SECURITY (SA-010 / CWE-918): Reject non-http(s) schemes and private /
+  // link-local hosts to prevent SSRF against internal services + cloud
+  // metadata endpoints (e.g. 169.254.169.254). See SECURITY-AUDIT-REPORT.md.
+  if (!isPublicHttpUrl(url)) throw new DownloadError(`blocked url: ${url}`, "blocked-host");
   if (HOST_BLOCKLIST.has(host)) throw new DownloadError(`host blocked: ${host}`, "blocked-host");
   for (const extra of (process.env.WEBFETCH_BLOCKLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean)) {
     if (host === extra || host.endsWith(`.${extra}`)) {
@@ -131,4 +135,32 @@ function safeHost(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * SA-010: best-effort private-IP / internal-host blocklist. Mirrors the cloud
+ * worker guard in cloud/workers/src/ssrf.ts; kept inline here so the core
+ * package has no cross-package dependency.
+ */
+function isPublicHttpUrl(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  const h = u.hostname.toLowerCase();
+  if (!h) return false;
+  if (h === "localhost" || h.endsWith(".localhost")) return false;
+  if (h === "metadata.google.internal" || h.endsWith(".internal")) return false;
+  if (h === "0.0.0.0" || h === "::1" || h === "[::1]") return false;
+  if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return false;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (m) {
+    const [a, b] = m.slice(1, 5).map(Number);
+    if (a === 10 || a === 127 || a === 0) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 172 && b! >= 16 && b! <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a === 100 && b! >= 64 && b! <= 127) return false;
+    if (a! >= 224) return false;
+  }
+  return true;
 }

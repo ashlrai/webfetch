@@ -1,10 +1,10 @@
 # webfetch
 
 [![npm version](https://img.shields.io/npm/v/%40webfetch%2Fcli?color=0a7)](https://www.npmjs.com/package/@webfetch/cli)
-[![CI](https://github.com/ashlr-ai/webfetch/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlr-ai/webfetch/actions/workflows/ci.yml)
+[![CI](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Discord](https://img.shields.io/badge/discord-join-5865F2)](https://webfetch.dev/discord)
-[![GitHub stars](https://img.shields.io/github/stars/ashlr-ai/webfetch?style=social)](https://github.com/ashlr-ai/webfetch)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2)](https://getwebfetch.com/discord)
+[![GitHub stars](https://img.shields.io/github/stars/ashlrai/webfetch?style=social)](https://github.com/ashlrai/webfetch)
 
 **The license-first image layer for AI agents and humans.**
 
@@ -12,16 +12,16 @@ One MCP server, one CLI, and one HTTP server that federate across 12+ image
 providers, rank results license-first, and refuse to return anything you
 can't safely ship. Any agent that speaks MCP (Claude Code, Cursor, Cline,
 Continue, Roo Code, Codex) wires up from one config line. Landing page,
-pricing, and hosted usage live at **[webfetch.dev](https://webfetch.dev)**.
+pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**.
 
 ## Install
 
 | Surface       | One-liner |
 | ------------- | --------- |
 | npm           | `npm i -g @webfetch/cli` |
-| Homebrew      | `brew install ashlr-ai/webfetch/webfetch` |
-| Docker        | `docker run --rm ghcr.io/ashlr-ai/webfetch cli --help` |
-| curl \| bash  | `curl -fsSL https://raw.githubusercontent.com/ashlr-ai/webfetch/main/install/install.sh \| bash` |
+| Homebrew      | `brew install ashlrai/webfetch/webfetch` |
+| Docker        | `docker run --rm ghcr.io/ashlrai/webfetch cli --help` |
+| curl \| bash  | `curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh \| bash` |
 
 The `curl | bash` installer also wires webfetch into Claude Code's
 `~/.claude/settings.json` idempotently. Re-run any time to update.
@@ -160,7 +160,7 @@ from the CLI is instantly available to the MCP server and vice versa.
 
 - `webfetch watch` — daemon mode for repeated queries / incremental refresh.
 - Bring-your-own-provider plugin API.
-- Hosted tier at [webfetch.dev](https://webfetch.dev) — pooled provider keys, managed browser fallback, team usage dashboard.
+- Hosted tier at [getwebfetch.com](https://getwebfetch.com) — pooled provider keys, managed browser fallback, team usage dashboard.
 
 ## Contributing
 

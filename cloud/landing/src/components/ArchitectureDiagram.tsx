@@ -1,74 +1,108 @@
+import { FadeUp } from "./FadeUp";
+
 export function ArchitectureDiagram() {
   return (
-    <section className="max-w-6xl mx-auto px-6 py-20">
-      <h2 className="text-3xl font-semibold tracking-tight mb-3">How it works</h2>
-      <p className="text-[var(--fg-dim)] max-w-2xl mb-8">
-        Every surface shares one core. Every core shares one cache. The cloud tier adds metering,
-        pooled keys, and a managed browser you never have to operate.
-      </p>
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-6 md:p-10">
-        <svg viewBox="0 0 800 420" className="w-full h-auto" role="img" aria-label="webfetch architecture">
-          <defs>
-            <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#ff7a3d" />
-              <stop offset="100%" stopColor="#5b8cff" />
-            </linearGradient>
-          </defs>
-          <style>{`
-            .node { fill: #0f0f13; stroke: #2a2a33; stroke-width: 1.2; }
-            .node-core { fill: #16161c; stroke: url(#accent); stroke-width: 1.5; }
-            .label { fill: #ededf0; font: 500 13px ui-sans-serif, system-ui; }
-            .sub { fill: #a1a1aa; font: 400 11px ui-monospace, Menlo; }
-            .wire { stroke: #2a2a33; stroke-width: 1.2; fill: none; }
-          `}</style>
+    <section className="max-w-6xl mx-auto px-6 py-20 md:py-24">
+      <FadeUp>
+        <div className="text-[11px] font-mono text-[var(--color-accent)] uppercase tracking-[0.2em] mb-3">
+          — architecture
+        </div>
+        <h2 className="font-mono text-[30px] md:text-[36px] font-semibold tracking-[-0.025em] leading-[1.1] max-w-3xl">
+          One core. One cache. Every surface.
+        </h2>
+        <p className="mt-4 text-[var(--color-fg-dim)] max-w-2xl leading-relaxed">
+          Every surface shares <code className="font-mono text-[var(--color-accent)]">@webfetch/core</code>. The cloud
+          router adds metering, pooled keys, and a managed browser you never have to operate.
+        </p>
+      </FadeUp>
 
-          {[
-            { x: 20, y: 20, label: "CLI" },
-            { x: 150, y: 20, label: "MCP" },
-            { x: 280, y: 20, label: "HTTP server" },
-            { x: 420, y: 20, label: "Chrome ext" },
-            { x: 560, y: 20, label: "VS Code" },
-            { x: 690, y: 20, label: "Python SDK" },
-          ].map((n) => (
-            <g key={n.label}>
-              <rect x={n.x} y={n.y} width={110} height={46} rx={8} className="node" />
-              <text x={n.x + 55} y={n.y + 28} textAnchor="middle" className="label">
-                {n.label}
-              </text>
-            </g>
-          ))}
+      <FadeUp delay={80}>
+        <div className="mt-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] p-4 md:p-8">
+          <svg
+            viewBox="0 0 880 500"
+            className="w-full h-auto"
+            role="img"
+            aria-label="webfetch architecture: surfaces on top, @webfetch/core + browser + cloud in the middle, 24 providers at the bottom"
+          >
+            <defs>
+              <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 Z" fill="#ff5a1f" />
+              </marker>
+              <pattern id="dots" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                <circle cx="0.5" cy="0.5" r="0.5" fill="#2a2a30" />
+              </pattern>
+            </defs>
+            <style>{`
+              .n { fill: #0f0f13; stroke: #2a2a30; stroke-width: 1; }
+              .n-core { fill: #121216; stroke: #ff5a1f; stroke-width: 1.2; }
+              .n-sub { fill: #121216; stroke: #2a2a30; stroke-width: 1; }
+              .lbl { fill: #f0f0f2; font: 600 12px var(--font-geist-mono), ui-monospace, Menlo; letter-spacing: -0.01em; }
+              .lbl-sm { fill: #f0f0f2; font: 500 10px var(--font-geist-mono), ui-monospace, Menlo; }
+              .sub { fill: #8a8a95; font: 400 9px var(--font-geist-mono), ui-monospace, Menlo; }
+              .sub-core { fill: #c5c5cc; font: 500 10px var(--font-geist-mono), ui-monospace, Menlo; }
+              .wire { stroke: #2a2a30; stroke-width: 1; fill: none; }
+              .wire-flow { stroke: #ff5a1f; stroke-width: 1.2; fill: none; stroke-opacity: 0.7; }
+              .tag { fill: #8a8a95; font: 500 9px var(--font-geist-mono), ui-monospace, Menlo; letter-spacing: 0.1em; text-transform: uppercase; }
+            `}</style>
 
-          <path d="M 400 66 L 400 120" className="wire" />
-          <rect x="270" y="120" width="260" height="60" rx={10} className="node-core" />
-          <text x="400" y="148" textAnchor="middle" className="label">@webfetch/core</text>
-          <text x="400" y="166" textAnchor="middle" className="sub">
-            federation - license - dedupe - pHash
-          </text>
+            {/* Row labels */}
+            <text x="20" y="32" className="tag">surfaces</text>
+            <text x="20" y="208" className="tag">core</text>
+            <text x="20" y="408" className="tag">providers</text>
 
-          <path d="M 400 180 L 400 215 M 150 215 L 650 215" className="wire" />
-          <path d="M 150 215 L 150 245 M 400 215 L 400 245 M 650 215 L 650 245" className="wire" />
+            {/* Surfaces row */}
+            {[
+              { x: 30,  l: "CLI"        },
+              { x: 170, l: "MCP"        },
+              { x: 310, l: "HTTP"       },
+              { x: 450, l: "Chrome ext" },
+              { x: 590, l: "VS Code"    },
+              { x: 730, l: "Python SDK" },
+            ].map((n) => (
+              <g key={n.l}>
+                <rect x={n.x} y={50} width={120} height={44} rx={6} className="n" />
+                <text x={n.x + 60} y={77} textAnchor="middle" className="lbl-sm">{n.l}</text>
+              </g>
+            ))}
 
-          {[
-            { x: 40, y: 245, label: "19 providers", sub: "wikimedia - openverse - unsplash - nasa..." },
-            { x: 290, y: 245, label: "browser layer", sub: "Rebrowser - Camoufox - Bright Data" },
-            { x: 540, y: 245, label: "cloud router", sub: "auth - quota - metering - cache" },
-          ].map((n) => (
-            <g key={n.label}>
-              <rect x={n.x} y={n.y} width={220} height={60} rx={10} className="node" />
-              <text x={n.x + 110} y={n.y + 26} textAnchor="middle" className="label">
-                {n.label}
-              </text>
-              <text x={n.x + 110} y={n.y + 44} textAnchor="middle" className="sub">
-                {n.sub}
-              </text>
-            </g>
-          ))}
+            {/* wires down to core */}
+            {[90, 230, 370, 510, 650, 790].map((x, i) => (
+              <path key={i} d={`M ${x} 94 L ${x} 140 L 440 140 L 440 200`} className="wire" />
+            ))}
 
-          <path d="M 150 305 L 150 345 M 400 305 L 400 345 M 650 305 L 650 345" className="wire" />
-          <rect x="270" y="345" width="260" height="48" rx={10} className="node" />
-          <text x="400" y="374" textAnchor="middle" className="label">api.webfetch.dev</text>
-        </svg>
-      </div>
+            {/* Core + browser + cloud row */}
+            <rect x="140" y="200" width="600" height="70" rx={8} className="n-core" />
+            <text x="440" y="226" textAnchor="middle" className="lbl">@webfetch/core</text>
+            <text x="440" y="244" textAnchor="middle" className="sub-core">federation · license rank · dedupe · pHash · cache</text>
+            <text x="440" y="260" textAnchor="middle" className="sub">typescript · MIT · 241 tests</text>
+
+            {/* branches */}
+            <path d="M 240 270 L 240 310" className="wire-flow" markerEnd="url(#arr)" />
+            <path d="M 440 270 L 440 310" className="wire-flow" markerEnd="url(#arr)" />
+            <path d="M 640 270 L 640 310" className="wire-flow" markerEnd="url(#arr)" />
+
+            {[
+              { x: 140, l: "browser layer",      s: "Rebrowser · Camoufox" },
+              { x: 340, l: "provider adapters",  s: "24 sources · normalized" },
+              { x: 540, l: "cloud router",       s: "auth · quota · meter" },
+            ].map((n) => (
+              <g key={n.l}>
+                <rect x={n.x} y={316} width={200} height={50} rx={8} className="n-sub" />
+                <text x={n.x + 100} y={338} textAnchor="middle" className="lbl-sm">{n.l}</text>
+                <text x={n.x + 100} y={354} textAnchor="middle" className="sub">{n.s}</text>
+              </g>
+            ))}
+
+            {/* provider endpoints row */}
+            <rect x="30" y="400" width="820" height="70" rx={8} fill="url(#dots)" stroke="#2a2a30" />
+            <text x="440" y="424" textAnchor="middle" className="lbl-sm">24 provider endpoints</text>
+            <text x="440" y="442" textAnchor="middle" className="sub">
+              wikimedia · openverse · unsplash · pexels · nasa · smithsonian · met · loc · spotify · musicbrainz · brave · bing · serpapi · ...
+            </text>
+            <text x="440" y="460" textAnchor="middle" className="sub">api.getwebfetch.com · app.getwebfetch.com</text>
+          </svg>
+        </div>
+      </FadeUp>
     </section>
   );
 }

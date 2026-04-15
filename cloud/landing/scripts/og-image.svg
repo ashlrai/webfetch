@@ -1,122 +1,125 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
-    <radialGradient id="orangeGlow" cx="0.12" cy="0.08" r="0.7">
-      <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.42"/>
-      <stop offset="45%" stop-color="#ff7a3d" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#ff7a3d" stop-opacity="0"/>
+    <radialGradient id="orangeGlow" cx="0.1" cy="0.1" r="0.7">
+      <stop offset="0%" stop-color="#ff5a1f" stop-opacity="0.32"/>
+      <stop offset="50%" stop-color="#ff5a1f" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ff5a1f" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="coolGlow" cx="0.95" cy="1.0" r="0.6">
-      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#5b8cff" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="tileA" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a20"/>
-      <stop offset="100%" stop-color="#0f0f13"/>
-    </linearGradient>
-    <linearGradient id="tileAccent" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.95"/>
-      <stop offset="100%" stop-color="#ff5a1f" stop-opacity="0.85"/>
-    </linearGradient>
-    <linearGradient id="tileCool" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#3a6cff" stop-opacity="0.7"/>
-    </linearGradient>
-    <linearGradient id="dimLine" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#2a2a32"/>
-      <stop offset="100%" stop-color="#1a1a20"/>
-    </linearGradient>
+    <pattern id="stampInk" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#d63a2f" fill-opacity="0.06"/>
+      <circle cx="1.5" cy="1.5" r="0.7" fill="#d63a2f" fill-opacity="0.45"/>
+    </pattern>
+    <pattern id="stampInkGreen" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#2a5a3a" fill-opacity="0.08"/>
+      <circle cx="1.5" cy="1.5" r="0.7" fill="#4ade80" fill-opacity="0.55"/>
+    </pattern>
+    <pattern id="scan" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="4" y2="0" stroke="#ffffff" stroke-opacity="0.025" stroke-width="1"/>
+    </pattern>
   </defs>
 
-  <!-- Background -->
+  <!-- Canvas -->
   <rect width="1200" height="630" fill="#0a0a0c"/>
   <rect width="1200" height="630" fill="url(#orangeGlow)"/>
-  <rect width="1200" height="630" fill="url(#coolGlow)"/>
+  <rect width="1200" height="630" fill="url(#scan)"/>
 
-  <!-- Subtle grid lines for depth -->
-  <g stroke="#15151b" stroke-width="1" opacity="0.5">
-    <line x1="0" y1="158" x2="1200" y2="158"/>
-    <line x1="0" y1="316" x2="1200" y2="316"/>
-    <line x1="0" y1="474" x2="1200" y2="474"/>
-  </g>
-
-  <!-- Wordmark mark -->
-  <g transform="translate(80,80)">
-    <rect width="22" height="22" rx="5" fill="#ff7a3d"/>
+  <!-- Wordmark -->
+  <g transform="translate(72,72)">
+    <rect width="22" height="22" rx="4" fill="#ff5a1f"/>
     <rect x="6" y="6" width="10" height="10" rx="2" fill="#0a0a0c"/>
-    <text x="36" y="19" fill="#ededf0" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" letter-spacing="-0.4">webfetch</text>
+    <text x="36" y="19" fill="#f0f0f2"
+          font-family="Geist Mono, ui-monospace, Menlo, monospace"
+          font-size="20" font-weight="600" letter-spacing="-0.02em">webfetch</text>
   </g>
 
-  <!-- Hero wordmark -->
-  <text x="80" y="320" fill="#ededf0" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="148" font-weight="700" letter-spacing="-5">webfetch</text>
+  <!-- Hero wordmark (mono) -->
+  <text x="72" y="332" fill="#f0f0f2"
+        font-family="Geist Mono, ui-monospace, Menlo, monospace"
+        font-size="148" font-weight="600" letter-spacing="-0.06em">webfetch<tspan fill="#ff5a1f">.</tspan></text>
 
-  <!-- Subline -->
-  <text x="80" y="392" fill="#a1a1aa" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="28" font-weight="400" letter-spacing="-0.3">
+  <!-- Tagline -->
+  <text x="72" y="396" fill="#c5c5cc"
+        font-family="Geist, ui-sans-serif, system-ui, sans-serif"
+        font-size="28" font-weight="400" letter-spacing="-0.01em">
     The license-first image layer for AI agents and humans.
   </text>
+  <text x="72" y="430" fill="#8a8a95"
+        font-family="Geist Mono, ui-monospace, Menlo, monospace"
+        font-size="15" letter-spacing="0.04em">
+    24 providers · federated · attribution-first · MCP-native
+  </text>
 
-  <!-- Stacked-tiles illustration (federated providers) -->
-  <g transform="translate(820,150)">
-    <!-- Back tile -->
-    <g transform="translate(60,40) rotate(-8)">
-      <rect width="220" height="160" rx="14" fill="url(#tileA)" stroke="#2a2a32" stroke-width="1"/>
-      <rect x="16" y="16" width="40" height="6" rx="3" fill="url(#dimLine)"/>
-      <rect x="16" y="30" width="80" height="4" rx="2" fill="#1f1f24"/>
-      <circle cx="188" cy="28" r="6" fill="url(#tileCool)"/>
-      <rect x="16" y="56" width="188" height="88" rx="8" fill="#0a0a0c" stroke="#1f1f24"/>
-      <rect x="28" y="68" width="80" height="60" rx="4" fill="#15151b"/>
-      <rect x="118" y="68" width="74" height="28" rx="4" fill="#15151b"/>
-      <rect x="118" y="102" width="74" height="26" rx="4" fill="#15151b"/>
+  <!-- Stamp grid (right side) -->
+  <g transform="translate(770,90)">
+    <!-- CC0 stamp -->
+    <g transform="translate(20,20) rotate(-7)">
+      <rect width="150" height="68" fill="url(#stampInkGreen)" stroke="#4ade80" stroke-width="2.5" rx="4"/>
+      <text x="75" y="32" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="22" font-weight="700" fill="#4ade80" letter-spacing="0.12em">CC0</text>
+      <text x="75" y="52" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="9" font-weight="600" fill="#4ade80" letter-spacing="0.18em">PUBLIC USE</text>
     </g>
-
-    <!-- Middle tile -->
-    <g transform="translate(20,90) rotate(4)">
-      <rect width="240" height="170" rx="14" fill="url(#tileA)" stroke="#2f2f38" stroke-width="1"/>
-      <rect x="16" y="16" width="60" height="6" rx="3" fill="url(#tileCool)"/>
-      <rect x="16" y="30" width="100" height="4" rx="2" fill="#1f1f24"/>
-      <rect x="16" y="56" width="208" height="98" rx="8" fill="#0a0a0c" stroke="#1f1f24"/>
-      <rect x="28" y="68" width="92" height="74" rx="4" fill="#15151b"/>
-      <rect x="130" y="68" width="84" height="34" rx="4" fill="#15151b"/>
-      <rect x="130" y="108" width="84" height="34" rx="4" fill="#15151b"/>
+    <!-- PUBLIC DOMAIN -->
+    <g transform="translate(200,40) rotate(5)">
+      <rect width="180" height="74" fill="url(#stampInkGreen)" stroke="#6ea87a" stroke-width="2.5" rx="4"/>
+      <text x="90" y="34" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="14" font-weight="700" fill="#6ea87a" letter-spacing="0.12em">PUBLIC</text>
+      <text x="90" y="54" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="14" font-weight="700" fill="#6ea87a" letter-spacing="0.12em">DOMAIN</text>
     </g>
-
-    <!-- Front tile (accent) -->
-    <g transform="translate(80,160) rotate(-3)">
-      <rect width="260" height="180" rx="14" fill="url(#tileA)" stroke="#3a2a20" stroke-width="1"/>
-      <rect x="18" y="18" width="70" height="8" rx="4" fill="url(#tileAccent)"/>
-      <rect x="18" y="34" width="120" height="5" rx="2" fill="#26262e"/>
-      <circle cx="232" cy="28" r="7" fill="url(#tileAccent)"/>
-      <rect x="18" y="60" width="224" height="104" rx="9" fill="#0a0a0c" stroke="#26262e"/>
-      <!-- mock image -->
-      <defs>
-        <linearGradient id="frontImg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#5b8cff" stop-opacity="0.4"/>
-        </linearGradient>
-      </defs>
-      <rect x="30" y="72" width="100" height="80" rx="5" fill="url(#frontImg)"/>
-      <rect x="140" y="72" width="92" height="36" rx="4" fill="#15151b"/>
-      <rect x="140" y="116" width="92" height="36" rx="4" fill="#15151b"/>
-      <rect x="146" y="124" width="40" height="4" rx="2" fill="url(#tileAccent)"/>
-      <rect x="146" y="134" width="60" height="3" rx="1.5" fill="#2a2a32"/>
+    <!-- CC-BY -->
+    <g transform="translate(40,150) rotate(-3)">
+      <rect width="170" height="68" fill="url(#stampInk)" stroke="#d63a2f" stroke-width="2.5" rx="4"/>
+      <text x="85" y="32" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="22" font-weight="700" fill="#d63a2f" letter-spacing="0.12em">CC-BY</text>
+      <text x="85" y="52" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="9" font-weight="600" fill="#d63a2f" letter-spacing="0.18em">ATTRIBUTION REQ</text>
     </g>
-
-    <!-- connection dots -->
-    <g fill="#ff7a3d" opacity="0.7">
-      <circle cx="40" cy="40" r="3"/>
-      <circle cx="350" cy="60" r="3"/>
-      <circle cx="370" cy="320" r="3"/>
+    <!-- EDITORIAL -->
+    <g transform="translate(230,170) rotate(8)">
+      <rect width="170" height="68" fill="url(#stampInk)" stroke="#d63a2f" stroke-width="2.5" rx="4"/>
+      <text x="85" y="32" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="18" font-weight="700" fill="#d63a2f" letter-spacing="0.12em">EDITORIAL</text>
+      <text x="85" y="52" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="9" font-weight="600" fill="#d63a2f" letter-spacing="0.18em">LICENSED USE</text>
+    </g>
+    <!-- UNKNOWN rejected -->
+    <g transform="translate(80,290) rotate(-12)" opacity="0.55">
+      <rect width="180" height="68" fill="none" stroke="#f87171" stroke-width="2.5" rx="4" stroke-dasharray="6 3"/>
+      <text x="90" y="32" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="20" font-weight="700" fill="#f87171" letter-spacing="0.12em">UNKNOWN</text>
+      <text x="90" y="52" text-anchor="middle"
+            font-family="Geist Mono, ui-monospace, Menlo, monospace"
+            font-size="9" font-weight="600" fill="#f87171" letter-spacing="0.18em">REJECTED BY DEFAULT</text>
     </g>
   </g>
 
-  <!-- Bottom-right badge -->
-  <g transform="translate(820,548)">
-    <rect width="300" height="42" rx="21" fill="#111114" stroke="#26262e" stroke-width="1"/>
-    <circle cx="22" cy="21" r="5" fill="#ff7a3d"/>
-    <text x="40" y="27" fill="#ededf0" font-family="Geist Mono, ui-monospace, Menlo, monospace" font-size="14" font-weight="500" letter-spacing="0.2">
-      MIT  ·  19 providers  ·  175 tests
+  <!-- Bottom bar -->
+  <line x1="72" y1="540" x2="1128" y2="540" stroke="#2a2a30" stroke-width="1"/>
+
+  <g transform="translate(72,560)">
+    <text x="0" y="22" fill="#f0f0f2"
+          font-family="Geist Mono, ui-monospace, Menlo, monospace"
+          font-size="16" font-weight="500" letter-spacing="0.04em">
+      MIT  ·  24 providers  ·  241 tests
     </text>
   </g>
 
-  <!-- URL bottom-left -->
-  <text x="80" y="572" fill="#71717a" font-family="Geist Mono, ui-monospace, Menlo, monospace" font-size="18" letter-spacing="0.3">webfetch.dev</text>
+  <g transform="translate(900,560)">
+    <circle cx="6" cy="16" r="5" fill="#ff5a1f"/>
+    <text x="20" y="22" fill="#c5c5cc"
+          font-family="Geist Mono, ui-monospace, Menlo, monospace"
+          font-size="16" font-weight="500" letter-spacing="0.04em">
+      getwebfetch.com
+    </text>
+  </g>
 </svg>

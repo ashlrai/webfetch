@@ -47,7 +47,7 @@ export async function sendInviteEmail(env: Env, input: SendInviteEmailInput): Pr
     });
     return { skipped: "no-email-provider" };
   }
-  const from = env.EMAIL_FROM || "webfetch <invites@webfetch.dev>";
+  const from = env.EMAIL_FROM || "webfetch <invites@getwebfetch.com>";
   const subject = `${input.inviterName} invited you to ${input.workspaceName} on webfetch`;
   const { html, text } = renderInviteBodies(input);
 

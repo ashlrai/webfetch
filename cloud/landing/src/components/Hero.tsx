@@ -1,46 +1,50 @@
 import Link from "next/link";
 import { InstallCommand } from "./InstallCommand";
+import { TypingCli } from "./TypingCli";
 
 export function Hero() {
   return (
-    <section className="max-w-6xl mx-auto px-6 pt-20 pb-24">
-      <div className="flex flex-col items-start gap-6">
-        <div className="inline-flex items-center gap-2 text-xs font-mono text-[var(--fg-dim)] border border-[var(--border)] rounded-full px-3 py-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-          v1.0 out now — 19 providers, 117 tests, MIT licensed
-        </div>
-        <h1 className="text-5xl md:text-6xl font-semibold tracking-tight max-w-4xl leading-[1.05]">
-          The license-first image layer for{" "}
-          <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-cool)] bg-clip-text text-transparent">
-            AI agents and humans.
-          </span>
-        </h1>
-        <p className="text-lg md:text-xl text-[var(--fg-dim)] max-w-2xl leading-relaxed">
-          One API, CLI, and MCP that federates 19+ licensed image sources, falls through to a
-          human-like browser when APIs miss, and always ships attribution.
-        </p>
-        <div className="pt-2">
-          <InstallCommand />
-        </div>
-        <div className="flex flex-wrap gap-3 pt-2">
-          <a href="https://app.webfetch.dev/signup" className="wf-btn-primary">
-            Start free
-          </a>
-          <Link href="/docs" className="wf-btn-ghost">
-            View docs
-          </Link>
-        </div>
-      </div>
+    <section className="wf-scanlines overflow-hidden">
+      <div className="max-w-6xl mx-auto px-6 pt-16 pb-24 md:pt-24 md:pb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
+          <div className="flex flex-col items-start gap-6">
+            <div className="relative inline-flex items-center gap-2 text-[11px] font-mono text-[var(--color-fg-dim)] border border-[var(--color-border)] rounded-full pl-3 pr-10 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-green)] wf-live-dot" />
+              <span className="uppercase tracking-wider">v1.0</span>
+              <span>24 providers · 241 tests · MIT</span>
+              <span className="wf-stamp" style={{ top: -10, right: -14, fontSize: 8 }}>
+                LICENSED
+              </span>
+            </div>
 
-      <div className="mt-16 rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] overflow-hidden aspect-video max-w-5xl mx-auto">
-        <video
-          src="/demo.mp4"
-          poster="/demo-poster.svg"
-          controls
-          preload="none"
-          className="w-full h-full object-cover"
-          aria-label="webfetch demo video"
-        />
+            <h1 className="font-mono text-[48px] md:text-[64px] lg:text-[80px] font-semibold tracking-[-0.04em] leading-[0.95] text-[var(--color-fg)]">
+              webfetch<span className="text-[var(--color-accent)]">.</span>
+            </h1>
+
+            <p className="text-[18px] md:text-[20px] text-[var(--color-fg-muted)] max-w-xl leading-[1.55] -mt-1">
+              The license-first image layer for AI agents and humans. One API,
+              CLI, and MCP that federates 24 licensed sources, falls through to
+              a human-like browser, and always ships attribution.
+            </p>
+
+            <div className="pt-1">
+              <InstallCommand />
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-1">
+              <a href="https://app.getwebfetch.com/signup" className="wf-btn-primary">
+                Start free
+              </a>
+              <Link href="/docs" className="wf-btn-ghost">
+                View docs
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:pl-4">
+            <TypingCli />
+          </div>
+        </div>
       </div>
     </section>
   );

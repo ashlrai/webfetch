@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import type { PlanId, User, WorkspaceRole } from "@shared/types";
 import TeamRow from "@/components/TeamRow";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import EmptyState from "@/components/EmptyState";
+import { Icon } from "@/components/Icon";
 import { inviteMember, listMembers } from "@/lib/api";
 
 interface RowMember {
@@ -34,14 +36,15 @@ export default function TeamClient({
 
   const atCap = members.length >= seatLimit;
   const owner = members.find((m) => m.role === "owner");
-  const canManage = owner?.userId === currentUserId || members.find((m) => m.userId === currentUserId)?.role === "admin";
+  const canManage =
+    owner?.userId === currentUserId ||
+    members.find((m) => m.userId === currentUserId)?.role === "admin";
 
-  const refresh = () => {
+  const refresh = () =>
     startTransition(async () => {
       const next = await listMembers();
       setMembers(next);
     });
-  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,35 +61,32 @@ export default function TeamClient({
     }
   };
 
+  const pct = Math.min(100, (members.length / seatLimit) * 100);
+
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="card p-4">
-          <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-            Seats used
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="surface p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="eyebrow">Seats used</span>
+            <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+              {members.length} / {seatLimit}
+            </span>
           </div>
-          <div className="mt-1 text-2xl font-medium">
-            {members.length} / {seatLimit}
-          </div>
-          <div className="mt-2 bar">
-            <span style={{ width: `${Math.min(100, (members.length / seatLimit) * 100)}%` }} />
-          </div>
-        </div>
-        <div className="card p-4">
-          <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-            Pending invites
-          </div>
-          <div className="mt-1 text-2xl font-medium">
-            {members.filter((m) => m.acceptedAt == null).length}
+          <div className="num-md">{members.length}</div>
+          <div className="bar">
+            <span style={{ width: `${pct}%`, background: pct >= 100 ? "var(--warn)" : "var(--accent)" }} />
           </div>
         </div>
-        <div className="card p-4">
-          <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-            Admins
-          </div>
-          <div className="mt-1 text-2xl font-medium">
-            {members.filter((m) => m.role === "admin" || m.role === "owner").length}
-          </div>
+        <div className="surface p-4 flex flex-col gap-1">
+          <span className="eyebrow">Pending invites</span>
+          <div className="num-md">{members.filter((m) => m.acceptedAt == null).length}</div>
+          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>invites expire in 7 days</span>
+        </div>
+        <div className="surface p-4 flex flex-col gap-1">
+          <span className="eyebrow">Admins</span>
+          <div className="num-md">{members.filter((m) => m.role === "admin" || m.role === "owner").length}</div>
+          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>can manage keys + members</span>
         </div>
       </div>
 
@@ -94,13 +94,11 @@ export default function TeamClient({
 
       {canManage && (
         <form
-          className="card p-4 flex flex-col md:flex-row items-start md:items-end gap-3"
+          className="surface p-4 flex flex-col md:flex-row items-start md:items-end gap-3"
           onSubmit={handleInvite}
         >
-          <label className="flex flex-col gap-1 flex-1 min-w-0 w-full">
-            <span className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-              Invite by email
-            </span>
+          <label className="flex flex-col gap-1.5 flex-1 min-w-0 w-full">
+            <span className="eyebrow">Invite by email</span>
             <input
               type="email"
               className="input"
@@ -110,10 +108,8 @@ export default function TeamClient({
               required
             />
           </label>
-          <label className="flex flex-col gap-1 w-full md:w-auto">
-            <span className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-              Role
-            </span>
+          <label className="flex flex-col gap-1.5 w-full md:w-[180px]">
+            <span className="eyebrow">Role</span>
             <select
               className="select"
               value={role}
@@ -126,45 +122,48 @@ export default function TeamClient({
             </select>
           </label>
           <button type="submit" className="btn btn-primary" disabled={atCap}>
-            Send invite
+            <Icon name="plus" /> Send invite
           </button>
         </form>
       )}
 
       {error && (
-        <div className="text-[12px] mono" style={{ color: "var(--danger)" }}>
-          {error}
-        </div>
+        <div className="text-[12px] mono" style={{ color: "var(--danger)" }}>{error}</div>
       )}
       {ok && (
-        <div className="text-[12px] mono" style={{ color: "var(--ok)" }}>
-          {ok}
+        <div className="text-[12px] mono flex items-center gap-2" style={{ color: "var(--ok)" }}>
+          <Icon name="check" /> {ok}
         </div>
       )}
 
-      <div className="card p-0 overflow-hidden">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Member</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th style={{ textAlign: "right" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((m) => (
-              <TeamRow key={m.userId} member={m} canManage={canManage} onChange={refresh} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {members.length === 0 ? (
+        <EmptyState
+          title="No teammates yet."
+          description="Invite someone to share keys, usage, and billing. Roles let you limit who can rotate keys or change plans."
+        />
+      ) : (
+        <div className="surface overflow-hidden">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m) => (
+                <TeamRow key={m.userId} member={m} canManage={!!canManage} onChange={refresh} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {pending && (
-        <div className="text-[11px] mono" style={{ color: "var(--text-mute)" }}>
-          refreshing…
-        </div>
+        <div className="text-[11px] mono" style={{ color: "var(--text-mute)" }}>refreshing…</div>
       )}
     </>
   );

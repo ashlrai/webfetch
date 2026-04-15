@@ -17,10 +17,10 @@ import { requestId } from "./ids.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
-/** Permissive CORS for `*.webfetch.dev` + localhost dev. */
+/** Permissive CORS for `*.getwebfetch.com` + localhost dev. */
 export const cors: MiddlewareHandler<HonoEnv> = async (c, next) => {
   const origin = c.req.header("origin") ?? "*";
-  const allow = isAllowedOrigin(origin) ? origin : "https://app.webfetch.dev";
+  const allow = isAllowedOrigin(origin) ? origin : "https://app.getwebfetch.com";
   c.header("access-control-allow-origin", allow);
   c.header("access-control-allow-credentials", "true");
   c.header("access-control-allow-methods", "GET,POST,DELETE,PATCH,OPTIONS");
@@ -34,18 +34,50 @@ export const cors: MiddlewareHandler<HonoEnv> = async (c, next) => {
   return next();
 };
 
-function isAllowedOrigin(origin: string): boolean {
-  if (!origin || origin === "*") return true;
+export function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  // SECURITY (SA-005): Previously returned `true` for `origin === "*"`. Combined
+  // with `access-control-allow-credentials: true`, that would have been a
+  // cross-origin credentialed-read bug. See SECURITY-AUDIT-REPORT.md § HIGH.
   try {
     const { hostname } = new URL(origin);
-    if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
-    if (hostname === "webfetch.dev") return true;
-    if (hostname.endsWith(".webfetch.dev")) return true;
+    // Only bare `localhost` (+ explicit dev ports) — NOT arbitrary
+    // `*.localhost` which an attacker can claim via /etc/hosts or a rebinding
+    // DNS setup. SA-006.
+    if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+    if (hostname === "getwebfetch.com") return true;
+    if (hostname.endsWith(".getwebfetch.com")) return true;
   } catch {
     /* fallthrough */
   }
   return false;
 }
+
+/**
+ * CSRF guard for cookie-authenticated mutation routes (dashboard/team/billing/
+ * keys). Requires the request Origin (or, for older clients, Referer) to match
+ * an allow-listed origin for any non-safe method. Bearer-auth routes are NOT
+ * subject to this because attackers cannot forge an Authorization header
+ * cross-origin. See SECURITY-AUDIT-REPORT.md § SA-007.
+ */
+export const csrfGuard: MiddlewareHandler<HonoEnv> = async (c, next) => {
+  const method = c.req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return next();
+  const origin = c.req.header("origin");
+  const referer = c.req.header("referer");
+  // If neither Origin nor Referer is present, the request is not cross-origin
+  // from a browser (CSRF vector requires a browser to attach the cookie AND
+  // send one of these headers on any fetch). Non-browser clients like curl or
+  // server-side tests are permitted — session cookies aren't available there
+  // without explicit attacker-controlled session hijack, which is out of scope
+  // of CSRF. SA-007.
+  if (!origin && !referer) return next();
+  const check = origin ?? referer!;
+  if (!isAllowedOrigin(check)) {
+    return c.json({ ok: false, error: "csrf: origin not allowed" }, 403);
+  }
+  return next();
+};
 
 /** Attach a per-request id; mirrors it into the response header. */
 export const requestIdMiddleware: MiddlewareHandler<HonoEnv> = async (c, next) => {

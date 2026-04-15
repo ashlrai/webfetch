@@ -178,6 +178,16 @@ function prettySource(source: string): string {
       return "The Met";
     case "europeana":
       return "Europeana";
+    case "library-of-congress":
+      return "Library of Congress";
+    case "wellcome-collection":
+      return "Wellcome Collection";
+    case "rawpixel":
+      return "Rawpixel";
+    case "burst":
+      return "Burst (Shopify)";
+    case "europeana-archival":
+      return "Europeana Archival";
     default:
       return source;
   }

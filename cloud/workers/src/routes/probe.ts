@@ -7,6 +7,7 @@ import { probePageSchema } from "../schemas.ts";
 import { ok, err, parseJson } from "../responses.ts";
 import { recordUsage } from "../metering.ts";
 import { unitsFor } from "../../../shared/pricing.ts";
+import { assertPublicHttpUrl } from "../ssrf.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -16,6 +17,12 @@ probeRouter.post("/", async (c) => {
   const parsed = await parseJson(c, probePageSchema);
   if (!parsed.ok) return parsed.response;
   const ctx = c.get("ctx");
+
+  // SECURITY (SA-002 / CWE-918): Block SSRF via private/internal hostnames.
+  // See SECURITY-AUDIT-REPORT.md § HIGH.
+  const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
+  if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
+
   try {
     const out = await probePage(parsed.data.url, { respectRobots: parsed.data.respectRobots });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/probe", unitsFor("/v1/probe"), 200));

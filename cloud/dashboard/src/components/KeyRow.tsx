@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import type { ApiKey } from "@shared/types";
-import { formatDate, formatRelative, maskKey } from "@/lib/format";
+import { formatDate, formatRelative } from "@/lib/format";
 import { revokeKey } from "@/lib/api";
+import { Icon } from "./Icon";
 
 export default function KeyRow({
   apiKey,
@@ -13,8 +14,19 @@ export default function KeyRow({
   onChange: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const revoked = apiKey.revokedAt != null;
+
+  const masked = `${apiKey.prefix}${"•".repeat(20)}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(apiKey.prefix);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch { /* noop */ }
+  };
 
   const handleRevoke = async () => {
     if (!confirm(`Revoke "${apiKey.name}"? This cannot be undone.`)) return;
@@ -31,18 +43,32 @@ export default function KeyRow({
   };
 
   return (
-    <tr style={revoked ? { opacity: 0.55 } : undefined}>
+    <tr style={revoked ? { opacity: 0.48 } : undefined}>
       <td>
         <div className="flex items-center gap-2">
-          <span>{apiKey.name}</span>
+          <span className="font-medium text-[13px]">{apiKey.name}</span>
           {revoked && <span className="badge badge-err">revoked</span>}
         </div>
       </td>
-      <td className="mono">{maskKey(apiKey.prefix)}</td>
-      <td className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
+      <td className="mono">
+        <div className="inline-flex items-center gap-2">
+          <span style={{ color: "var(--text-dim)" }}>{masked}</span>
+          {!revoked && (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={handleCopy}
+              aria-label="Copy key prefix"
+              title="Copy prefix"
+            >
+              <Icon name={copied ? "check" : "copy"} />
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
         {formatDate(apiKey.createdAt)}
       </td>
-      <td className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
+      <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
         {apiKey.lastUsedAt ? formatRelative(apiKey.lastUsedAt) : "never"}
       </td>
       <td>
@@ -51,19 +77,15 @@ export default function KeyRow({
       <td style={{ textAlign: "right" }}>
         {!revoked && (
           <button
-            className="btn btn-danger"
+            className="btn btn-sm btn-danger"
             onClick={handleRevoke}
             disabled={busy}
             aria-label={`Revoke ${apiKey.name}`}
           >
-            {busy ? "Revoking…" : "Revoke"}
+            <Icon name="trash" /> {busy ? "Revoking" : "Revoke"}
           </button>
         )}
-        {error && (
-          <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>{error}</div>}
       </td>
     </tr>
   );

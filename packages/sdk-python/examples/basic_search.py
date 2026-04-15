@@ -14,7 +14,7 @@ from webfetch import WebfetchClient
 
 def main() -> int:
     if not os.environ.get("WEBFETCH_API_KEY"):
-        print("set WEBFETCH_API_KEY to run this example against api.webfetch.dev")
+        print("set WEBFETCH_API_KEY to run this example against api.getwebfetch.com")
         print("or pass base_url=http://127.0.0.1:7600 to WebfetchClient for self-hosted")
         return 0
 

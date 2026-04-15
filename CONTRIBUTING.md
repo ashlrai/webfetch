@@ -5,7 +5,7 @@ Thanks for your interest. webfetch is an OSS project under MIT — issues, PRs, 
 ## Dev setup
 
 ```bash
-git clone https://github.com/ashlr-ai/webfetch
+git clone https://github.com/ashlrai/webfetch
 cd webfetch
 bun install
 bun test

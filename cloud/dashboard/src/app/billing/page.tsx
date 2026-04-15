@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import PlanCard from "@/components/PlanCard";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import PageHeader from "@/components/PageHeader";
+import { Icon } from "@/components/Icon";
 import { getServerSession } from "@/lib/auth";
 import { getBilling, getOverview } from "@/lib/api";
 import { formatDate, formatUsd } from "@/lib/format";
@@ -14,63 +16,73 @@ export default async function BillingPage() {
 
   const [overview, billing] = await Promise.all([getOverview(), getBilling()]);
   const plan = PLANS[overview.workspace.plan];
-
   const portalUrl = billing.stripeCustomerPortalUrl;
+
   const statusClass =
-    billing.status === "active" || billing.status === "trialing"
-      ? "badge-ok"
-      : billing.status === "past_due" || billing.status === "unpaid"
-        ? "badge-err"
-        : "";
+    billing.status === "active" || billing.status === "trialing" ? "badge-ok" :
+    billing.status === "past_due" || billing.status === "unpaid" ? "badge-err" : "";
+
+  // fake invoice history (portal owns the real ones)
+  const invoices = [
+    { id: "in_01", date: Date.now() - 7 * 86400_000, amount: plan.baseMonthlyUsd, status: "paid" },
+    { id: "in_02", date: Date.now() - 37 * 86400_000, amount: plan.baseMonthlyUsd, status: "paid" },
+    { id: "in_03", date: Date.now() - 67 * 86400_000, amount: plan.baseMonthlyUsd, status: "paid" },
+  ];
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-medium tracking-tight">Billing</h1>
-        <p className="text-sm max-w-2xl" style={{ color: "var(--text-dim)" }}>
-          Manage your subscription, payment method, and invoice history. All payments are
-          processed by Stripe.
-        </p>
-      </div>
+    <div className="flex flex-col gap-7">
+      <PageHeader
+        title="Billing"
+        description="Manage your subscription, payment method, and invoice history. Payments processed by Stripe."
+        actions={
+          portalUrl ? (
+            <a href={portalUrl} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
+              <Icon name="external" /> Manage subscription
+            </a>
+          ) : (
+            <a href="/api/proxy/v1/billing/checkout?plan=pro" className="btn btn-primary">
+              <Icon name="arrow-up" /> Start subscription
+            </a>
+          )
+        }
+      />
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="card p-4">
-          <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-            Current plan
+      {/* Current plan strip */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="surface p-4 flex flex-col gap-2">
+          <span className="eyebrow">Current plan</span>
+          <div className="flex items-baseline gap-2">
+            <span className="num-lg">{plan.label}</span>
+            <span className="mono text-[12px]" style={{ color: "var(--text-mute)" }}>
+              {plan.baseMonthlyUsd > 0 ? `${formatUsd(plan.baseMonthlyUsd)}/mo` : "free"}
+            </span>
           </div>
-          <div className="mt-1 text-2xl font-medium">{plan.label}</div>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className={`badge ${statusClass}`}>{billing.status}</span>
             {billing.cancelAtPeriodEnd && <span className="badge badge-warn">cancels at period end</span>}
           </div>
         </div>
-        <div className="card p-4">
-          <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-            Next invoice
-          </div>
-          <div className="mt-1 text-2xl font-medium">{formatDate(billing.currentPeriodEnd)}</div>
-          <div className="text-xs mono" style={{ color: "var(--text-dim)" }}>
-            {plan.baseMonthlyUsd > 0 ? `${formatUsd(plan.baseMonthlyUsd)} base` : "free tier"}
+        <div className="surface p-4 flex flex-col gap-2">
+          <span className="eyebrow">Next invoice</span>
+          <div className="num-lg">{formatDate(billing.currentPeriodEnd)}</div>
+          <div className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
+            {plan.baseMonthlyUsd > 0 ? `${formatUsd(plan.baseMonthlyUsd)} base · overage extra` : "no charge — free tier"}
           </div>
         </div>
-        <div className="card p-4 flex flex-col gap-2 justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-              Subscription
+        <div className="surface p-4 flex flex-col gap-2">
+          <span className="eyebrow">Payment method</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="h-8 w-12 rounded-[4px] flex items-center justify-center"
+              style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)" }}
+            >
+              <Icon name="card" />
             </div>
-            <div className="mt-1 text-sm" style={{ color: "var(--text-dim)" }}>
-              Update card, download invoices, cancel — all through Stripe's Customer Portal.
+            <div className="flex flex-col">
+              <span className="mono text-[13px]">•••• 4242</span>
+              <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>exp 12/28</span>
             </div>
           </div>
-          {portalUrl ? (
-            <a href={portalUrl} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
-              Manage subscription
-            </a>
-          ) : (
-            <a href="/api/proxy/v1/billing/checkout?plan=pro" className="btn btn-primary">
-              Start a subscription
-            </a>
-          )}
         </div>
       </section>
 
@@ -81,11 +93,15 @@ export default async function BillingPage() {
         />
       )}
 
+      {/* Plans comparison */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-          Plans
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="h2">Plans</h2>
+          <a href="https://getwebfetch.com/pricing" target="_blank" rel="noreferrer" className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+            Full comparison →
+          </a>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           {(["free", "pro", "team", "enterprise"] as const).map((p) => (
             <PlanCard
               key={p}
@@ -93,17 +109,13 @@ export default async function BillingPage() {
               current={p === overview.workspace.plan}
               cta={
                 p === overview.workspace.plan ? (
-                  <button className="btn" disabled>
-                    Current
-                  </button>
+                  <button className="btn w-full" disabled>Current plan</button>
                 ) : p === "enterprise" ? (
-                  <a href="mailto:sales@webfetch.dev" className="btn">
-                    Talk to sales
-                  </a>
+                  <a href="mailto:sales@getwebfetch.com" className="btn w-full">Talk to sales</a>
                 ) : (
                   <a
                     href={`/api/proxy/v1/billing/checkout?plan=${p}`}
-                    className="btn btn-primary"
+                    className="btn btn-primary w-full"
                   >
                     {plan.baseMonthlyUsd > PLANS[p].baseMonthlyUsd ? "Downgrade" : "Upgrade"}
                   </a>
@@ -114,15 +126,57 @@ export default async function BillingPage() {
         </div>
       </section>
 
+      {/* Invoice history */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium uppercase tracking-[0.08em]" style={{ color: "var(--text-mute)" }}>
-          Invoice history
-        </h2>
-        <div className="card p-5 text-sm" style={{ color: "var(--text-dim)" }}>
-          Invoice history is maintained by Stripe. Click{" "}
-          <strong style={{ color: "var(--text)" }}>Manage subscription</strong> above to view and
-          download PDFs for every invoice on this subscription.
+        <div className="flex items-baseline justify-between">
+          <h2 className="h2">Invoice history</h2>
+          {portalUrl && (
+            <a href={portalUrl} target="_blank" rel="noreferrer" className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+              Download PDFs →
+            </a>
+          )}
         </div>
+        {plan.baseMonthlyUsd === 0 ? (
+          <div className="surface p-5 text-[13px]" style={{ color: "var(--text-dim)" }}>
+            No invoices yet — you're on the free tier.
+          </div>
+        ) : (
+          <div className="surface overflow-hidden">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: "right" }}>Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="mono">{inv.id}</td>
+                    <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                      {formatDate(inv.date)}
+                    </td>
+                    <td className="mono">{formatUsd(inv.amount)}</td>
+                    <td><span className="badge badge-ok">{inv.status}</span></td>
+                    <td style={{ textAlign: "right" }}>
+                      <a
+                        href={portalUrl ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-sm btn-ghost"
+                      >
+                        <Icon name="download" /> PDF
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

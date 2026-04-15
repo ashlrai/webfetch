@@ -10,7 +10,7 @@ This code applies to all project spaces — the repository, issue tracker, pull 
 
 ## Enforcement
 
-Report concerns to **security@webfetch.dev**. Reports are handled confidentially. Maintainers may remove content, temporarily restrict access, or permanently ban participants who violate this code.
+Report concerns to **security@getwebfetch.com**. Reports are handled confidentially. Maintainers may remove content, temporarily restrict access, or permanently ban participants who violate this code.
 
 ## Attribution
 

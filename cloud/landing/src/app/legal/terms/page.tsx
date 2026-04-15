@@ -10,7 +10,7 @@ export default function TermsPage() {
 
       <h2>1. Agreement</h2>
       <p>
-        By using webfetch.dev, api.webfetch.dev, or any @webfetch/* package, you agree to these
+        By using getwebfetch.com, api.getwebfetch.com, or any @webfetch/* package, you agree to these
         terms. If you disagree, do not use the service.
       </p>
 
@@ -18,7 +18,7 @@ export default function TermsPage() {
       <p>
         webfetch is a federated image search and fetching layer. The open-source packages are
         licensed under MIT (see the LICENSE file in each package). The hosted cloud service at
-        api.webfetch.dev is a paid-usage managed offering with metered fetches.
+        api.getwebfetch.com is a paid-usage managed offering with metered fetches.
       </p>
 
       <h2>3. Your content and compliance</h2>
@@ -60,7 +60,7 @@ export default function TermsPage() {
       <p>We may update these terms with at least 30 days' notice to active customers.</p>
 
       <h2>Contact</h2>
-      <p>legal@webfetch.dev</p>
+      <p>legal@getwebfetch.com</p>
     </article>
   );
 }

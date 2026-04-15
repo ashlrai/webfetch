@@ -26,7 +26,7 @@ export async function loadSettings(context: vscode.ExtensionContext): Promise<We
   const secretKey = await context.secrets.get(SECRET_KEY);
   const inlineKey = cfg.get<string>("apiKey", "");
   return {
-    baseUrl: (cfg.get<string>("baseUrl") ?? "https://api.webfetch.dev").replace(/\/+$/, ""),
+    baseUrl: (cfg.get<string>("baseUrl") ?? "https://api.getwebfetch.com").replace(/\/+$/, ""),
     apiKey: (secretKey && secretKey.length > 0 ? secretKey : inlineKey).trim(),
     defaultLicense: cfg.get<LicensePolicy>("defaultLicense", "safe-only"),
     defaultProviders: cfg.get<ProviderId[]>("defaultProviders", []),

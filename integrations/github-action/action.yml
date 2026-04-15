@@ -1,6 +1,6 @@
 name: "webfetch"
 description: "Federated, license-aware image search. Downloads top-N candidates with attribution sidecars."
-author: "ashlr-ai"
+author: "ashlrai"
 branding:
   icon: "image"
   color: "blue"
@@ -43,7 +43,7 @@ inputs:
   webfetch-repo:
     description: "Git URL of the webfetch repo."
     required: false
-    default: "https://github.com/ashlr-ai/web-fetcher-mcp.git"
+    default: "https://github.com/ashlrai/web-fetcher-mcp.git"
 
 outputs:
   manifest:

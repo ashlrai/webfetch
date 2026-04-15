@@ -1,7 +1,7 @@
 # webfetch — Python SDK
 
 The license-first image layer for AI agents and humans. Python bindings for
-[webfetch.dev](https://webfetch.dev), at full parity with the TypeScript SDK
+[getwebfetch.com](https://getwebfetch.com), at full parity with the TypeScript SDK
 ([`@webfetch/core`](https://www.npmjs.com/package/@webfetch/core)).
 
 - 19 image providers with license-aware ranking
@@ -19,7 +19,7 @@ Python 3.10+ required.
 
 ## Auth
 
-Get a key at https://webfetch.dev. Either set an env var:
+Get a key at https://getwebfetch.com. Either set an env var:
 
 ```bash
 export WEBFETCH_API_KEY=wf_live_...
@@ -141,9 +141,9 @@ python -m webfetch download https://... --out-dir ./assets
 
 ## Links
 
-- Docs and dashboard: https://webfetch.dev
+- Docs and dashboard: https://getwebfetch.com
 - TypeScript SDK: https://www.npmjs.com/package/@webfetch/core
-- Source: https://github.com/ashlr-ai/webfetch
+- Source: https://github.com/ashlrai/webfetch
 
 ## License
 

@@ -36,6 +36,11 @@ const PROVIDER_ENV: Record<ProviderId, string[]> = {
   nasa: [],
   "met-museum": [],
   europeana: ["EUROPEANA_API_KEY"],
+  "library-of-congress": [],
+  "wellcome-collection": [],
+  rawpixel: [], // RAWPIXEL_API_KEY is optional; only enforced if upstream starts requiring it
+  burst: [],
+  "europeana-archival": ["EUROPEANA_API_KEY"],
 };
 
 export function authFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderAuth {

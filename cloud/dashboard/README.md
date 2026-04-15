@@ -1,6 +1,6 @@
 # webfetch Cloud — Dashboard
 
-Next.js 16 app that powers `app.webfetch.dev`. Paying users manage API keys,
+Next.js 16 app that powers `app.getwebfetch.com`. Paying users manage API keys,
 usage, teams, billing, provider BYOK, and audit logs here.
 
 ## Dev
@@ -11,12 +11,12 @@ bun run --cwd cloud/dashboard dev
 # → http://localhost:3200
 ```
 
-Set `NEXT_PUBLIC_USE_FIXTURES=1` to render without a live `api.webfetch.dev`.
+Set `NEXT_PUBLIC_USE_FIXTURES=1` to render without a live `api.getwebfetch.com`.
 
 ## Env
 
 ```
-NEXT_PUBLIC_API_URL=https://api.webfetch.dev
+NEXT_PUBLIC_API_URL=https://api.getwebfetch.com
 NEXT_PUBLIC_STRIPE_KEY=pk_live_...
 NEXT_PUBLIC_USE_FIXTURES=0
 ```
@@ -24,7 +24,7 @@ NEXT_PUBLIC_USE_FIXTURES=0
 ## Deploy
 
 Targets Vercel. Set the env vars above in the project settings. Session cookie
-must be scoped to `.webfetch.dev` so the dashboard and API share auth.
+must be scoped to `.getwebfetch.com` so the dashboard and API share auth.
 
 ## Routes
 

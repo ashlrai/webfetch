@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "id": "abcd1234",
+      "thumbnail": {
+        "url": "https://iiif.wellcomecollection.org/thumbs/abcd1234/full/300,/0/default.jpg",
+        "license": { "id": "pdm" }
+      },
+      "locations": [
+        {
+          "url": "https://iiif.wellcomecollection.org/image/abcd1234/full/1024,/0/default.jpg",
+          "license": {
+            "id": "pdm",
+            "url": "https://creativecommons.org/publicdomain/mark/1.0/"
+          }
+        }
+      ],
+      "source": {
+        "id": "work-abcd1234",
+        "title": "Anatomical drawing of the heart",
+        "description": "A 19th century anatomical illustration.",
+        "contributors": [
+          { "agent": { "label": "Henry Gray" } }
+        ]
+      }
+    },
+    {
+      "id": "ccby9999",
+      "thumbnail": {
+        "url": "https://iiif.wellcomecollection.org/thumbs/ccby9999/full/300,/0/default.jpg",
+        "license": { "id": "cc-by" }
+      },
+      "locations": [
+        {
+          "url": "https://iiif.wellcomecollection.org/image/ccby9999/full/1024,/0/default.jpg",
+          "license": {
+            "id": "cc-by",
+            "url": "https://creativecommons.org/licenses/by/4.0/"
+          }
+        }
+      ],
+      "source": {
+        "id": "work-ccby9999",
+        "title": "Microscope slide photograph",
+        "contributors": [
+          { "agent": { "label": "Wellcome Library" } }
+        ]
+      }
+    },
+    {
+      "id": "ncnd0001",
+      "thumbnail": {
+        "url": "https://iiif.wellcomecollection.org/thumbs/ncnd0001/full/300,/0/default.jpg",
+        "license": { "id": "cc-by-nc-nd" }
+      },
+      "locations": [
+        {
+          "url": "https://iiif.wellcomecollection.org/image/ncnd0001/full/1024,/0/default.jpg",
+          "license": { "id": "cc-by-nc-nd" }
+        }
+      ],
+      "source": { "id": "work-ncnd0001", "title": "NC-ND image", "contributors": [] }
+    }
+  ]
+}

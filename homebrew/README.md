@@ -4,7 +4,7 @@ This directory hosts the canonical `webfetch.rb` formula. The formula itself
 lives in a separate tap repository so users can `brew tap` + `brew install` it:
 
 ```
-github.com/ashlr-ai/homebrew-webfetch
+github.com/ashlrai/homebrew-webfetch
 └── Formula/
     └── webfetch.rb
 ```
@@ -12,7 +12,7 @@ github.com/ashlr-ai/homebrew-webfetch
 ## Install for users
 
 ```bash
-brew tap ashlr-ai/webfetch
+brew tap ashlrai/webfetch
 brew install webfetch
 ```
 
@@ -40,7 +40,7 @@ curl -sL "https://registry.npmjs.org/@webfetch/cli/-/cli-${VERSION}.tgz" \
 Create the tap repo (empty GitHub repo named `homebrew-webfetch`), then:
 
 ```bash
-git clone git@github.com:ashlr-ai/homebrew-webfetch.git
+git clone git@github.com:ashlrai/homebrew-webfetch.git
 cd homebrew-webfetch
 mkdir -p Formula
 cp /path/to/web-fetcher-mcp/homebrew/webfetch.rb Formula/webfetch.rb

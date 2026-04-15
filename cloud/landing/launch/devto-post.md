@@ -2,13 +2,13 @@
 title: "Shipping webfetch: a license-first image layer for AI agents"
 published: true
 tags: ai, mcp, opensource, typescript
-canonical_url: https://webfetch.dev/blog/shipping-webfetch
-cover_image: https://webfetch.dev/og-image.svg
+canonical_url: https://getwebfetch.com/blog/shipping-webfetch
+cover_image: https://getwebfetch.com/og-image.svg
 ---
 
 Today I'm shipping **webfetch** — a federated, license-aware image search layer for AI agents (and humans). One CLI, one MCP server, 19+ licensed providers, and a ranker that rejects anything with an unknown license by default.
 
-Live at [webfetch.dev](https://webfetch.dev). Source: [github.com/ashlr-ai/web-fetcher-mcp](https://github.com/ashlr-ai/web-fetcher-mcp). MIT.
+Live at [getwebfetch.com](https://getwebfetch.com). Source: [github.com/ashlrai/web-fetcher-mcp](https://github.com/ashlrai/web-fetcher-mcp). MIT.
 
 ## The problem
 
@@ -80,7 +80,7 @@ This is the same OSS/commercial split as phantom-secrets. It works because the t
 
 ## Why I'm writing this
 
-I parallelized ~30 Claude Code agents across a monorepo for two weeks. Shipped 4 npm packages + Chrome ext + VS Code ext + GitHub Action + Homebrew + Docker + cloud backend + landing site + 117 passing tests. If you've been curious what that workflow looks like in practice, the full writeup is on the blog: [webfetch.dev/blog/shipping-webfetch](https://webfetch.dev/blog/shipping-webfetch).
+I parallelized ~30 Claude Code agents across a monorepo for two weeks. Shipped 4 npm packages + Chrome ext + VS Code ext + GitHub Action + Homebrew + Docker + cloud backend + landing site + 117 passing tests. If you've been curious what that workflow looks like in practice, the full writeup is on the blog: [getwebfetch.com/blog/shipping-webfetch](https://getwebfetch.com/blog/shipping-webfetch).
 
 Feedback welcome. I'm around in the comments.
 

@@ -1,6 +1,6 @@
 # Cloudflare Workers configuration for webfetch Cloud.
 #
-# Routes: api.webfetch.dev/*  (bind at deploy time via dashboard or account-level
+# Routes: api.getwebfetch.com/*  (bind at deploy time via dashboard or account-level
 # routes). This file declares bindings only.
 
 name = "webfetch-api"
@@ -84,8 +84,8 @@ crons = ["0 3 * * *"]
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 # -----------------------------------------------------------------------------
 [vars]
-APP_URL = "https://app.webfetch.dev"
-API_URL = "https://api.webfetch.dev"
+APP_URL = "https://app.getwebfetch.com"
+API_URL = "https://api.getwebfetch.com"
 ENVIRONMENT = "production"
 STRIPE_PRICE_PRO = "price_REPLACE_PRO"
 STRIPE_PRICE_TEAM = "price_REPLACE_TEAM"

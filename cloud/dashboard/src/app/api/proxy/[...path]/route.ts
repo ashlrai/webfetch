@@ -1,10 +1,10 @@
 /**
- * Session-authenticated proxy to api.webfetch.dev.
+ * Session-authenticated proxy to api.getwebfetch.com.
  *
  * The browser never talks to the API directly from the dashboard — instead it
  * hits `/api/proxy/<path>` on the dashboard origin. This route:
  *
- *   1. Verifies the Better Auth session cookie (attached to `.webfetch.dev`).
+ *   1. Verifies the Better Auth session cookie (attached to `.getwebfetch.com`).
  *   2. Forwards the request to `${API_URL}/<path>` with the session ID as a
  *      bearer token — the Worker's auth middleware recognizes session tokens
  *      and resolves them to the user + workspace in a single lookup.
@@ -40,7 +40,7 @@ async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> })
     return new Response(
       JSON.stringify({
         error: "fixtures_mode",
-        hint: "Set NEXT_PUBLIC_USE_FIXTURES=0 to proxy to api.webfetch.dev.",
+        hint: "Set NEXT_PUBLIC_USE_FIXTURES=0 to proxy to api.getwebfetch.com.",
       }),
       { status: 501, headers: { "Content-Type": "application/json" } },
     );

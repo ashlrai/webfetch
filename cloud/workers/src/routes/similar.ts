@@ -7,6 +7,7 @@ import { findSimilarSchema } from "../schemas.ts";
 import { ok, err, parseJson } from "../responses.ts";
 import { recordUsage } from "../metering.ts";
 import { unitsFor } from "../../../shared/pricing.ts";
+import { assertPublicHttpUrl } from "../ssrf.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -16,6 +17,9 @@ similarRouter.post("/", async (c) => {
   const parsed = await parseJson(c, findSimilarSchema);
   if (!parsed.ok) return parsed.response;
   const ctx = c.get("ctx");
+  // SECURITY (SA-004 / CWE-918): Block SSRF via private/internal hostnames.
+  const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
+  if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
   try {
     const out = await findSimilar({ url: parsed.data.url }, { providers: parsed.data.providers });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/similar", unitsFor("/v1/similar"), 200));

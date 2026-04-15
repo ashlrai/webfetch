@@ -34,6 +34,11 @@ const DEFAULTS: Record<ProviderId, { capacity: number; perSec: number }> = {
   nasa: { capacity: 5, perSec: 5 }, // no documented hard cap
   "met-museum": { capacity: 4, perSec: 4 }, // ~80/sec — stay low
   europeana: { capacity: 5, perSec: 5 },
+  "library-of-congress": { capacity: 10, perSec: 10 },
+  "wellcome-collection": { capacity: 5, perSec: 5 },
+  rawpixel: { capacity: 3, perSec: 3 },
+  burst: { capacity: 3, perSec: 3 },
+  "europeana-archival": { capacity: 5, perSec: 5 },
 };
 
 const buckets = new Map<ProviderId, Bucket>();

@@ -1,3 +1,11 @@
 {
-  "/page": "app/page.js"
+  "/audit/page": "app/audit/page.js",
+  "/billing/page": "app/billing/page.js",
+  "/keys/page": "app/keys/page.js",
+  "/page": "app/page.js",
+  "/providers/page": "app/providers/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/team/page": "app/team/page.js",
+  "/usage/page": "app/usage/page.js",
+  "/usage/stream/route": "app/usage/stream/route.js"
 }

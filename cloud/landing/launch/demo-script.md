@@ -23,7 +23,7 @@ Total runtime target: 3:45-4:15. Voice: flat, confident, no hype. Mason records 
 **Voice:** "Thirty seconds to install."
 
 ```
-curl -fsSL https://webfetch.dev/install.sh | bash
+curl -fsSL https://getwebfetch.com/install.sh | bash
 ```
 
 **Screen:** installer prints, finishes, `webfetch version` shows `1.0.0`.
@@ -73,7 +73,7 @@ cat ./portrait.jpg.sidecar.json
 
 ## [2:50 - 3:30] Dashboard + pricing
 
-**Screen:** app.webfetch.dev — usage graph, API keys page, audit log.
+**Screen:** app.getwebfetch.com — usage graph, API keys page, audit log.
 
 **Voice:** "The OSS is unlimited on your machine. If you want a managed browser fallback for the pages APIs don't cover, pooled keys so you don't manage credentials, or an audit log your legal team can export, that's the cloud tier. Nineteen a month for Pro. Seventy-nine for a team."
 
@@ -83,7 +83,7 @@ cat ./portrait.jpg.sidecar.json
 
 ## [3:30 - 4:00] Close
 
-**Screen:** webfetch.dev homepage.
+**Screen:** getwebfetch.com homepage.
 
 **Voice:** "webfetch dot dev. Thirty seconds to install. Free to use. Open source. Every image you ship ships with attribution. No guessing."
 
@@ -116,7 +116,7 @@ cat ./portrait.jpg.sidecar.json
 
 ## Text overlays
 
-- Bottom-left persistent: "webfetch.dev · MIT · MCP-native"
+- Bottom-left persistent: "getwebfetch.com · MIT · MCP-native"
 - Callouts on license tags (yellow outline, 1.5s) when each appears
 
 ## Captions

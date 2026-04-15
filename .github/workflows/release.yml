@@ -102,21 +102,21 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Bump formula in ashlr-ai/homebrew-webfetch
+      - name: Bump formula in ashlrai/homebrew-webfetch
         # Opens (or updates) a PR on the tap repo bumping `Formula/webfetch.rb`
         # to point at the freshly published @webfetch/cli tarball on npm.
         # Requires HOMEBREW_GH_TOKEN (fine-scoped PAT, contents:write on
-        # ashlr-ai/homebrew-webfetch).
+        # ashlrai/homebrew-webfetch).
         uses: mislav/bump-homebrew-formula-action@v3
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GH_TOKEN }}
         with:
           formula-name: webfetch
           formula-path: Formula/webfetch.rb
-          homebrew-tap: ashlr-ai/homebrew-webfetch
+          homebrew-tap: ashlrai/homebrew-webfetch
           base-branch: main
           download-url: https://registry.npmjs.org/@webfetch/cli/-/cli-${{ steps.version.outputs.version }}.tgz
           commit-message: |
             bump webfetch to ${{ steps.version.outputs.version }}
 
-            Released via .github/workflows/release.yml on ashlr-ai/webfetch.
+            Released via .github/workflows/release.yml on ashlrai/webfetch.

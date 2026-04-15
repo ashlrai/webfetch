@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AuditClient from "./AuditClient";
+import PageHeader from "@/components/PageHeader";
 import { getServerSession } from "@/lib/auth";
 import { getAudit, getUsageRows } from "@/lib/api";
 
@@ -13,13 +14,10 @@ export default async function AuditPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-medium tracking-tight">Audit log</h1>
-        <p className="text-sm max-w-2xl" style={{ color: "var(--text-dim)" }}>
-          Every API call, admin action, and billing event. Filter, search, and export — useful
-          for SOC2, invoicing reconciliation, and incident review.
-        </p>
-      </div>
+      <PageHeader
+        title="Audit log"
+        description="Every API call, admin action, and billing event. Useful for SOC2, invoicing reconciliation, and incident review."
+      />
       <AuditClient audit={audit} usage={usage} />
     </div>
   );

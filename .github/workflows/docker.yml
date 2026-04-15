@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ashlr-ai/webfetch
+  IMAGE_NAME: ashlrai/webfetch
 
 jobs:
   build-and-push:

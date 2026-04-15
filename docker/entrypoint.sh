@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # webfetch docker entrypoint — dispatches first arg to a subcommand.
 #
-#   docker run ghcr.io/ashlr-ai/webfetch cli providers
-#   docker run -p 7600:7600 ghcr.io/ashlr-ai/webfetch server
-#   docker run ghcr.io/ashlr-ai/webfetch mcp
+#   docker run ghcr.io/ashlrai/webfetch cli providers
+#   docker run -p 7600:7600 ghcr.io/ashlrai/webfetch server
+#   docker run ghcr.io/ashlrai/webfetch mcp
 #
 # If the first arg is not a known subcommand, default to `cli` and forward all args.
 

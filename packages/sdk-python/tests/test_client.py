@@ -18,7 +18,7 @@ from webfetch import (
     WebfetchError,
 )
 
-BASE = "https://api.webfetch.dev"
+BASE = "https://api.getwebfetch.com"
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "search_response.json"
 SEARCH_FIXTURE = json.loads(FIXTURE.read_text())
 
@@ -187,13 +187,13 @@ def test_quota_error_on_402_with_upgrade_url():
             json={
                 "ok": False,
                 "error": "quota exhausted",
-                "upgrade_url": "https://webfetch.dev/pricing",
+                "upgrade_url": "https://getwebfetch.com/pricing",
             },
         )
     )
     with _client() as c, pytest.raises(QuotaError) as exc_info:
         c.search("x")
-    assert exc_info.value.upgrade_url == "https://webfetch.dev/pricing"
+    assert exc_info.value.upgrade_url == "https://getwebfetch.com/pricing"
 
 
 @respx.mock

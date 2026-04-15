@@ -6,7 +6,7 @@
  * rate-limit headers, and workspace context.
  *
  * When `USE_FIXTURES` is on we short-circuit to the deterministic fixtures so
- * the dashboard renders end-to-end even before api.webfetch.dev exists.
+ * the dashboard renders end-to-end even before api.getwebfetch.com exists.
  */
 
 import type {

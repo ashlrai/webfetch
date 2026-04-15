@@ -21,6 +21,7 @@ import {
   bearerAuth,
   rateLimit,
   quotaGate,
+  csrfGuard,
   RateLimiterDO,
 } from "./middleware.ts";
 import { handleAuth } from "./auth.ts";
@@ -65,10 +66,14 @@ app.get("/providers", async (c) => {
 // Auth subroute — delegates to Better Auth. All paths starting with /auth/...
 app.all("/auth/*", handleAuth);
 
-// Stripe webhook (signed, no session/bearer).
+// Stripe webhook (signed, no session/bearer). CSRF guard does not apply —
+// Stripe posts from its own origin with a signature we verify in billing.ts.
 app.route("/", billingRouter);
 
 // Dashboard cookie-auth routes (no bearer chain).
+// SECURITY (SA-007): CSRF guard on all mutation methods. See report.
+app.use("/v1/keys/*", csrfGuard);
+app.use("/v1/workspaces/*", csrfGuard);
 app.route("/v1", keysRouter);
 app.route("/v1", teamsRouter);
 

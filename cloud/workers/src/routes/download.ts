@@ -19,6 +19,7 @@ import { downloadImageSchema } from "../schemas.ts";
 import { ok, err, parseJson } from "../responses.ts";
 import { recordUsage } from "../metering.ts";
 import { unitsFor } from "../../../shared/pricing.ts";
+import { assertPublicHttpUrl } from "../ssrf.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -33,10 +34,16 @@ downloadRouter.post("/", async (c) => {
   const ctx = c.get("ctx");
   const maxBytes = parsed.data.maxBytes ?? MAX_BYTES_DEFAULT;
 
+  // SECURITY (SA-001 / CWE-918): Reject non-http(s) schemes and private/link-local
+  // hosts to prevent SSRF against cloud metadata endpoints + internal services.
+  // See SECURITY-AUDIT-REPORT.md § HIGH.
+  const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
+  if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
+
   try {
     const res = await fetch(parsed.data.url, {
       redirect: "follow",
-      headers: { "user-agent": "webfetch-cloud/1.0 (+https://webfetch.dev)" },
+      headers: { "user-agent": "webfetch-cloud/1.0 (+https://getwebfetch.com)" },
     });
     if (!res.ok) {
       c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), res.status));

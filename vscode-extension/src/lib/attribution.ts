@@ -69,8 +69,8 @@ export function buildXmpSidecar(candidate: ImageCandidate): string {
       <xmpRights:Marked>${candidate.license === "CC0" || candidate.license === "PUBLIC_DOMAIN" ? "False" : "True"}</xmpRights:Marked>
       <cc:license rdf:resource="${escape(candidate.licenseUrl ?? "")}"/>
       <plus:ImageSupplierImageID>${escape(candidate.source)}</plus:ImageSupplierImageID>
-      <webfetch:License xmlns:webfetch="https://webfetch.dev/ns/1.0/">${candidate.license}</webfetch:License>
-      <webfetch:Confidence xmlns:webfetch="https://webfetch.dev/ns/1.0/">${candidate.confidence ?? ""}</webfetch:Confidence>
+      <webfetch:License xmlns:webfetch="https://getwebfetch.com/ns/1.0/">${candidate.license}</webfetch:License>
+      <webfetch:Confidence xmlns:webfetch="https://getwebfetch.com/ns/1.0/">${candidate.confidence ?? ""}</webfetch:Confidence>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>

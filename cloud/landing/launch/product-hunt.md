@@ -43,10 +43,10 @@ Feedback very welcome. I'm also around all day in the comments.
 Developer Tools, Artificial Intelligence, API, Open Source, Productivity
 
 ## Links
-- Website: https://webfetch.dev
-- GitHub: https://github.com/ashlr-ai/web-fetcher-mcp
-- Docs: https://webfetch.dev/docs
-- Pricing: https://webfetch.dev/pricing
+- Website: https://getwebfetch.com
+- GitHub: https://github.com/ashlrai/web-fetcher-mcp
+- Docs: https://getwebfetch.com/docs
+- Pricing: https://getwebfetch.com/pricing
 
 ## Maker comment — question for hunters
 What's the one image-sourcing pain we haven't solved yet? We have a clear roadmap (Python SDK, reverse image search, bulk batch mode), but if you're hitting a wall we didn't anticipate, name it — first 10 responses get a free year of Pro.

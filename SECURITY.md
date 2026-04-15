@@ -18,8 +18,8 @@ Only the **latest published release** of each `@webfetch/*` npm package is suppo
 
 Report privately via either:
 
-1. **Email:** [security@webfetch.dev](mailto:security@webfetch.dev) (PGP key on request)
-2. **GitHub Security Advisory:** use the "Report a vulnerability" button under the [Security tab](https://github.com/ashlr-ai/webfetch/security/advisories/new) of this repo.
+1. **Email:** [security@getwebfetch.com](mailto:security@getwebfetch.com) (PGP key on request)
+2. **GitHub Security Advisory:** use the "Report a vulnerability" button under the [Security tab](https://github.com/ashlrai/webfetch/security/advisories/new) of this repo.
 
 Please include:
 
@@ -47,7 +47,7 @@ We will request CVEs for confirmed vulnerabilities of moderate severity or highe
 **In scope**
 
 - All packages published under the `@webfetch/*` npm scope.
-- The hosted webfetch cloud API (`api.webfetch.dev`).
+- The hosted webfetch cloud API (`api.getwebfetch.com`).
 - The official Chrome / VS Code extensions in this repository.
 - Default-enabled provider adapters as shipped.
 

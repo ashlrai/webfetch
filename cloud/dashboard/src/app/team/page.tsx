@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import TeamClient from "./TeamClient";
+import PageHeader from "@/components/PageHeader";
 import { getServerSession } from "@/lib/auth";
 import { getOverview, listMembers } from "@/lib/api";
 import { PLANS } from "@shared/pricing";
@@ -15,13 +16,10 @@ export default async function TeamPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-medium tracking-tight">Team</h1>
-        <p className="text-sm max-w-2xl" style={{ color: "var(--text-dim)" }}>
-          Invite teammates and assign roles. Owners manage billing; admins manage keys + members;
-          members consume the API; billing-only users see invoices without access to data.
-        </p>
-      </div>
+      <PageHeader
+        title="Team"
+        description="Invite teammates and assign roles. Owners manage billing; admins manage keys and members; members consume the API; billing-only users see invoices."
+      />
       <TeamClient
         initialMembers={members}
         planId={overview.workspace.plan}

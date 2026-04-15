@@ -97,7 +97,12 @@ export async function getSessionUser(c: Context<{ Bindings: Env }>): Promise<Ses
   ).bind(tokenHash).first<{ id: string; user_id: string; expires_at: number; email: string }>();
   if (!row) return null;
   if (row.expires_at < Date.now()) return null;
-  // Defend against length-mismatch timing signal.
+  // SECURITY (SA-008): The previous `constantTimeEq(row.id, tokenHash)` was a
+  // no-op because `row.id` was selected WHERE s.id = tokenHash. The real
+  // constant-time check is moot since lookup happens on the hashed token
+  // (attacker cannot time-attack a sha256 prefix), but we keep an explicit
+  // length-equality check to fail fast on any malformed row.
+  if (row.id.length !== tokenHash.length) return null;
   if (!constantTimeEq(row.id, tokenHash)) return null;
   return { userId: row.user_id, email: row.email, sessionId: row.id };
 }
