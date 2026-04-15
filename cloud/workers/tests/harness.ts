@@ -30,7 +30,12 @@ export function makeD1(): D1Database {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
   const root = path.resolve(__dirname, "../../schema");
-  const files = ["0001_init.sql", "0002_indexes.sql", "0003_audit_retention.sql"];
+  const files = [
+    "0001_init.sql",
+    "0002_indexes.sql",
+    "0003_audit_retention.sql",
+    "0004_better_auth_alignment.sql",
+  ];
   for (const f of files) {
     const sql = fs.readFileSync(path.join(root, f), "utf8");
     db.exec(sql);

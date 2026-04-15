@@ -64,10 +64,109 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
   })();
 
   const auth = betterAuth({
-    database: d1Adapter(c.env),
+    // Better Auth detects D1 natively via the `batch`/`exec`/`prepare` surface
+    // and wraps it in its built-in Kysely D1 dialect. Previously we passed a
+    // hand-rolled adapter POJO which Better Auth could not coerce into a
+    // Kysely dialect → "Failed to initialize database adapter" at signup time.
+    database: c.env.DB as unknown as never,
     baseURL: c.env.API_URL,
+    // Our Hono router mounts Better Auth at `/auth/*`, not the default
+    // `/api/auth`. Tell Better Auth so route matching aligns.
+    basePath: "/auth",
     secret: c.env.BETTER_AUTH_SECRET,
     trustedOrigins: [c.env.APP_URL, c.env.API_URL],
+    // Remap Better Auth's default model + field names onto our snake_case D1
+    // schema. Without this, Better Auth would try `SELECT * FROM "user"` and
+    // 500 with "Failed to initialize database adapter".
+    user: {
+      modelName: "users",
+      fields: {
+        email: "email",
+        name: "name",
+        emailVerified: "email_verified",
+        image: "image",
+        createdAt: "created_at",
+        updatedAt: "updated_at",
+      },
+    },
+    session: {
+      modelName: "sessions",
+      fields: {
+        userId: "user_id",
+        expiresAt: "expires_at",
+        token: "token",
+        createdAt: "created_at",
+        updatedAt: "updated_at",
+        ipAddress: "ip_address",
+        userAgent: "user_agent",
+      },
+    },
+    account: {
+      modelName: "oauth_accounts",
+      fields: {
+        // Legacy `provider` / `provider_account_id` columns are reused; keeps
+        // the existing UNIQUE(provider, provider_account_id) index in play.
+        userId: "user_id",
+        providerId: "provider",
+        accountId: "provider_account_id",
+        accessToken: "access_token",
+        refreshToken: "refresh_token",
+        idToken: "id_token",
+        accessTokenExpiresAt: "access_token_expires_at",
+        refreshTokenExpiresAt: "refresh_token_expires_at",
+        scope: "scope",
+        password: "password",
+        createdAt: "created_at",
+        updatedAt: "updated_at",
+      },
+    },
+    verification: {
+      modelName: "verification_tokens",
+      fields: {
+        identifier: "identifier",
+        // Better Auth's `value` lands in our legacy `token_hash` column.
+        value: "token_hash",
+        expiresAt: "expires_at",
+        createdAt: "created_at",
+        updatedAt: "updated_at",
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user: { id: string; email: string; name?: string }) => {
+            // Auto-provision a default workspace + owner membership so the
+            // newly-signed-up user immediately has somewhere to mint API keys,
+            // track usage, and be upgraded to Pro. Without this, downstream
+            // dashboard pages would 404 on `/v1/workspaces/current`.
+            try {
+              const workspaceId = ulid();
+              const now = Date.now();
+              const slug = (user.email.split("@")[0] || "workspace").replace(/[^a-z0-9-]/gi, "-").toLowerCase().slice(0, 24);
+              const name = user.name ? `${user.name}'s workspace` : `${slug}'s workspace`;
+              // Quota resets on the 1st of the next month (UTC)
+              const quotaResetsAt = (() => {
+                const d = new Date();
+                return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+              })();
+              await c.env.DB.batch([
+                c.env.DB.prepare(
+                  `INSERT INTO workspaces (id, slug, name, owner_id, plan, subscription_status, quota_resets_at, created_at, updated_at)
+                   VALUES (?1, ?2, ?3, ?4, 'free', 'active', ?5, ?6, ?6)`,
+                ).bind(workspaceId, `${slug}-${workspaceId.slice(-6).toLowerCase()}`, name, user.id, quotaResetsAt, now),
+                c.env.DB.prepare(
+                  `INSERT INTO members (workspace_id, user_id, role, invited_at, accepted_at)
+                   VALUES (?1, ?2, 'owner', ?3, ?3)`,
+                ).bind(workspaceId, user.id, now),
+              ]);
+            } catch (err) {
+              // Do not block signup on provisioning failure; log for debug.
+              console.error("[auth.hooks.user.create.after] provisioning error", err);
+            }
+          },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       // Email verification is ON when RESEND_API_KEY is a real key; we default
@@ -77,18 +176,31 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
       requireEmailVerification:
         (!!c.env.RESEND_API_KEY && !c.env.RESEND_API_KEY.startsWith("test_")) ||
         c.env.REQUIRE_EMAIL_VERIFICATION === "1",
+      // Better Auth's default is scrypt (N=16384) via a pure-JS fallback in
+      // the Workers runtime → blows past the 10 ms CPU budget and returns
+      // Cloudflare error 1102. Swap in Web Crypto PBKDF2-SHA-256 (100k
+      // iterations) which runs in native code and finishes in ~2-3 ms on a
+      // Workers isolate.
+      password: { hash: hashPassword, verify: verifyPassword },
     },
-    advanced: cookieDomain
-      ? {
-          crossSubDomainCookies: { enabled: true, domain: cookieDomain },
-          defaultCookieAttributes: {
-            sameSite: "lax" as const,
-            secure: true,
-            httpOnly: true,
-            domain: cookieDomain,
-          },
-        }
-      : undefined,
+    advanced: {
+      // Force the session cookie name to `wf_session` (shared with the
+      // dashboard + our hand-rolled getSessionUser below).
+      cookies: {
+        session_token: { name: SESSION_COOKIE },
+      },
+      ...(cookieDomain
+        ? {
+            crossSubDomainCookies: { enabled: true, domain: cookieDomain },
+            defaultCookieAttributes: {
+              sameSite: "lax" as const,
+              secure: true,
+              httpOnly: true,
+              domain: cookieDomain,
+            },
+          }
+        : {}),
+    },
     socialProviders: {
       ...(c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET
         ? {
@@ -124,119 +236,108 @@ export async function getSessionUser(c: Context<{ Bindings: Env }>): Promise<Ses
   const cookie = c.req.header("cookie") ?? "";
   const m = new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]+)`).exec(cookie);
   if (!m) return null;
-  const token = decodeURIComponent(m[1]!);
+  const raw = decodeURIComponent(m[1]!);
+  // Better Auth signs session cookies as `<token>.<signature>`; split off the
+  // signature so our lookup matches the stored token. Our own
+  // `issueSessionForTest` writes an unsigned hex token, which still works
+  // because it contains no `.` separator.
+  const token = raw.includes(".") ? raw.slice(0, raw.indexOf(".")) : raw;
   const tokenHash = await sha256Hex(token);
+  // Look up the row by either the plaintext token (Better Auth path) or its
+  // sha256 hash (legacy `issueSessionForTest` path). We select both and do a
+  // constant-time compare to avoid timing oracles.
   const row = await c.env.DB.prepare(
-    `SELECT s.id, s.user_id, s.expires_at, u.email
+    `SELECT s.id, s.token, s.user_id, s.expires_at, u.email
        FROM sessions s JOIN users u ON u.id = s.user_id
-      WHERE s.id = ?1
+      WHERE s.token = ?1 OR s.id = ?2
       LIMIT 1`,
   )
-    .bind(tokenHash)
-    .first<{ id: string; user_id: string; expires_at: number; email: string }>();
+    .bind(token, tokenHash)
+    .first<{
+      id: string;
+      token: string | null;
+      user_id: string;
+      expires_at: number;
+      email: string;
+    }>();
   if (!row) return null;
   if (row.expires_at < Date.now()) return null;
-  // SECURITY (SA-008): The previous `constantTimeEq(row.id, tokenHash)` was a
-  // no-op because `row.id` was selected WHERE s.id = tokenHash. The real
-  // constant-time check is moot since lookup happens on the hashed token
-  // (attacker cannot time-attack a sha256 prefix), but we keep an explicit
-  // length-equality check to fail fast on any malformed row.
-  if (row.id.length !== tokenHash.length) return null;
-  if (!constantTimeEq(row.id, tokenHash)) return null;
+  // Accept either shape: Better Auth writes the plaintext token into
+  // `sessions.token`; `issueSessionForTest` writes the sha256 hash into both
+  // `id` and `token`. Match if either comparison succeeds (constant-time).
+  const tokenMatch =
+    !!row.token &&
+    row.token.length === token.length &&
+    constantTimeEq(row.token, token);
+  const hashMatch =
+    (row.token ?? row.id).length === tokenHash.length &&
+    constantTimeEq(row.token ?? row.id, tokenHash);
+  if (!tokenMatch && !hashMatch) return null;
   return { userId: row.user_id, email: row.email, sessionId: row.id };
 }
 
-/**
- * Minimal D1 adapter surface that Better Auth will call. This is intentionally
- * a thin shim — Better Auth's built-in SQLite adapter is pluggable, but D1's
- * Workers-native driver doesn't match the `better-sqlite3` interface. We
- * expose the methods Better Auth's core adapter contract needs.
- */
-function d1Adapter(env: Env) {
-  return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async create({ model, data }: { model: string; data: Record<string, any> }) {
-      const id = data.id ?? ulid();
-      const now = Date.now();
-      const row: Record<string, unknown> = {
-        id,
-        ...data,
-        createdAt: data.createdAt ?? now,
-        updatedAt: now,
-      };
-      const cols = Object.keys(row);
-      const placeholders = cols.map((_, i) => `?${i + 1}`).join(",");
-      await env.DB.prepare(
-        `INSERT INTO ${escapeIdent(model)} (${cols.map(escapeIdent).join(",")})
-         VALUES (${placeholders})`,
-      )
-        .bind(...cols.map((c) => row[c]))
-        .run();
-      return row;
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async findOne({
-      model,
-      where,
-    }: { model: string; where: Array<{ field: string; value: any }> }) {
-      const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
-      const res = await env.DB.prepare(
-        `SELECT * FROM ${escapeIdent(model)} WHERE ${clause} LIMIT 1`,
-      )
-        .bind(...where.map((w) => w.value))
-        .first();
-      return res ?? null;
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async findMany({
-      model,
-      where,
-    }: { model: string; where?: Array<{ field: string; value: any }> }) {
-      if (!where?.length) {
-        const res = await env.DB.prepare(`SELECT * FROM ${escapeIdent(model)}`).all();
-        return res.results ?? [];
-      }
-      const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
-      const res = await env.DB.prepare(`SELECT * FROM ${escapeIdent(model)} WHERE ${clause}`)
-        .bind(...where.map((w) => w.value))
-        .all();
-      return res.results ?? [];
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async update({
-      model,
-      where,
-      update,
-    }: {
-      model: string;
-      where: Array<{ field: string; value: any }>;
-      update: Record<string, any>;
-    }) {
-      const sets = Object.keys(update)
-        .map((k, i) => `${escapeIdent(k)} = ?${i + 1}`)
-        .join(", ");
-      const whereClause = where
-        .map((w, i) => `${escapeIdent(w.field)} = ?${Object.keys(update).length + i + 1}`)
-        .join(" AND ");
-      await env.DB.prepare(`UPDATE ${escapeIdent(model)} SET ${sets} WHERE ${whereClause}`)
-        .bind(...Object.values(update), ...where.map((w) => w.value))
-        .run();
-      return { ...update };
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async delete({ model, where }: { model: string; where: Array<{ field: string; value: any }> }) {
-      const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
-      await env.DB.prepare(`DELETE FROM ${escapeIdent(model)} WHERE ${clause}`)
-        .bind(...where.map((w) => w.value))
-        .run();
-    },
-  };
+// ---------------------------------------------------------------------------
+// Password hashing — Web Crypto PBKDF2-SHA-256.
+//
+// Format: `pbkdf2-sha256$<iterations>$<base64-salt>$<base64-hash>`
+// Chosen over scrypt because the Workers runtime lacks native scrypt
+// acceleration; Better Auth's default falls back to a pure-JS implementation
+// that exceeds the CPU budget on free/paid Workers alike.
+// ---------------------------------------------------------------------------
+
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_KEYLEN = 32; // bytes → 256-bit key
+
+function b64encode(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
 }
 
-function escapeIdent(s: string): string {
-  // D1 accepts double-quoted identifiers; restrict to safe chars as a belt+suspenders defense.
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(s)) throw new Error(`unsafe identifier: ${s}`);
-  return `"${s}"`;
+function b64decode(s: string): Uint8Array {
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function pbkdf2(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  const material = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: salt as BufferSource, iterations },
+    material,
+    PBKDF2_KEYLEN * 8,
+  );
+  return new Uint8Array(bits);
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await pbkdf2(password, salt, PBKDF2_ITERATIONS);
+  return `pbkdf2-sha256$${PBKDF2_ITERATIONS}$${b64encode(salt)}$${b64encode(hash)}`;
+}
+
+export async function verifyPassword(opts: {
+  password: string;
+  hash: string;
+}): Promise<boolean> {
+  const parts = opts.hash.split("$");
+  if (parts.length !== 4 || parts[0] !== "pbkdf2-sha256") return false;
+  const iterations = Number(parts[1]);
+  if (!Number.isFinite(iterations) || iterations < 1) return false;
+  const salt = b64decode(parts[2]!);
+  const expected = b64decode(parts[3]!);
+  const actual = await pbkdf2(opts.password, salt, iterations);
+  if (actual.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < actual.length; i++) diff |= actual[i]! ^ expected[i]!;
+  return diff === 0;
 }
 
 /** Used by the test suite to mint a session row directly (bypassing Better Auth). */
@@ -247,8 +348,11 @@ export async function issueSessionForTest(
 ): Promise<string> {
   const token = crypto.randomUUID() + crypto.randomUUID();
   const tokenHash = await sha256Hex(token);
+  // Write the hash to BOTH `id` (legacy bearer-equals-pk shape) and `token`
+  // (Better Auth shape) so `getSessionUser` resolves either way.
   await env.DB.prepare(
-    "INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
+    `INSERT INTO sessions (id, token, user_id, expires_at, created_at, updated_at)
+     VALUES (?1, ?1, ?2, ?3, ?4, ?4)`,
   )
     .bind(tokenHash, userId, now + SESSION_TTL_MS, now)
     .run();
