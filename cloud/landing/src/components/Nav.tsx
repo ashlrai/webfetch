@@ -11,7 +11,7 @@ export function Nav() {
           <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[var(--color-accent)]" />
           webfetch
         </Link>
-        <div className="hidden md:flex items-center gap-7 text-[13px] font-mono text-[var(--color-fg-dim)]">
+        <div className="hidden md:flex items-center gap-7 text-[13px] font-mono text-[var(--color-fg)]">
           <Link href="/#features" className="hover:text-[var(--color-fg)] transition-colors">
             Product
           </Link>
@@ -34,7 +34,7 @@ export function Nav() {
         <div className="flex items-center gap-3">
           <a
             href="https://app.getwebfetch.com"
-            className="hidden sm:inline text-[13px] font-mono text-[var(--color-fg-dim)] hover:text-[var(--color-fg)]"
+            className="hidden sm:inline text-[13px] font-mono text-[var(--color-fg)] hover:text-[var(--color-fg)]"
           >
             Sign in
           </a>
