@@ -6,9 +6,9 @@ canonical_url: https://getwebfetch.com/blog/shipping-webfetch
 cover_image: https://getwebfetch.com/og-image.svg
 ---
 
-Today I'm shipping **webfetch** — a federated, license-aware image search layer for AI agents (and humans). One CLI, one MCP server, 19+ licensed providers, and a ranker that rejects anything with an unknown license by default.
+Today I'm shipping **webfetch** — a federated, license-aware image search layer for AI agents (and humans). One CLI, one MCP server, 24 licensed providers, and a ranker that rejects anything with an unknown license by default.
 
-Live at [getwebfetch.com](https://getwebfetch.com). Source: [github.com/ashlrai/web-fetcher-mcp](https://github.com/ashlrai/web-fetcher-mcp). MIT.
+Live at [getwebfetch.com](https://getwebfetch.com). Source: [github.com/ashlrai/webfetch](https://github.com/ashlrai/webfetch). Apache-2.0 core.
 
 ## The problem
 
@@ -25,7 +25,7 @@ Human developers have the same four failure modes, just slower.
 
 webfetch is one `search_images(query)` call that:
 
-- fans out across 19 providers (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, and an opt-in browser fallback)
+- fans out across 24 providers (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, Internet Archive, Wellcome Collection, Rawpixel, Burst, Europeana Archival, and an opt-in browser fallback)
 - ranks results **license-first**: CC0 > PUBLIC_DOMAIN > CC_BY > CC_BY_SA > EDITORIAL_LICENSED > UNKNOWN
 - rejects UNKNOWN by default (you can opt in explicitly, in code)
 - returns a pre-built attribution string on every result

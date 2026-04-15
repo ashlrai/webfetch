@@ -4,20 +4,21 @@
 webfetch
 
 ## Tagline (60 char max)
-License-first image search for AI agents. One MCP. 19 sources.
+License-first image search for AI agents. One MCP. 24 sources.
 
 ## Description (260 char)
-webfetch is the license-aware image fetching layer your AI agent is missing. One CLI + MCP server federates 19+ providers (Wikimedia, Unsplash, NASA, Smithsonian, and more), ranks results license-first, and ships attribution on every image. MIT open-source.
+webfetch is the license-aware image fetching layer your AI agent is missing. One CLI + MCP server federates 24 providers (Wikimedia, Unsplash, NASA, Smithsonian, Met, LOC, and more), ranks results license-first, and ships attribution on every image. Apache-2.0 core.
 
 ## Gallery (order)
-1. Hero screenshot — dark landing with install command
-2. CLI demo GIF — `webfetch search "drake portrait"` returning 5 license-tagged candidates
-3. MCP in Claude Code — agent calling `search_images` + shipping the result into a project
-4. Provider matrix — the 19-row table
-5. Pricing page — Free / Pro / Team / Enterprise
-6. Architecture diagram — CLI/MCP/ext → core → providers + browser + cloud
-7. Chrome extension — shadow-DOM sidebar with license-ranked results
-8. Dashboard screenshot — usage + API keys + audit log
+1. Hero screenshot — dark landing with install command (`cloud/landing/public/og-image.png`)
+2. Demo GIF — landing scroll-through (`cloud/landing/public/demo-hero.gif`)
+3. CLI demo GIF — `webfetch search "drake portrait"` returning 5 license-tagged candidates
+4. MCP in Claude Code — agent calling `search_images` + shipping the result into a project
+5. Provider matrix — the 24-row table
+6. Pricing page — Free / Pro / Team / Enterprise
+7. Architecture diagram — CLI/MCP/ext → core → providers + browser + cloud (`cloud/landing/public/diagram-architecture.svg`)
+8. Chrome extension — shadow-DOM sidebar with license-ranked results
+9. Dashboard screenshot — usage + API keys + audit log
 
 ## First comment (maker)
 
@@ -27,7 +28,7 @@ I built webfetch because every AI agent I'd ever used invented image URLs out of
 
 Two weeks later, it's a product:
 
-- 4 npm packages (MIT), 19 federated providers, 117 passing tests
+- 4 npm packages (Apache-2.0 core), 24 federated providers, 117 passing tests
 - Native MCP support for Claude Code / Cursor / Cline / Continue / Roo Code / Codex
 - Chrome extension + VS Code extension + GitHub Action + Homebrew + Docker
 - License-first ranker; UNKNOWN rejected by default
@@ -44,7 +45,7 @@ Developer Tools, Artificial Intelligence, API, Open Source, Productivity
 
 ## Links
 - Website: https://getwebfetch.com
-- GitHub: https://github.com/ashlrai/web-fetcher-mcp
+- GitHub: https://github.com/ashlrai/webfetch
 - Docs: https://getwebfetch.com/docs
 - Pricing: https://getwebfetch.com/pricing
 

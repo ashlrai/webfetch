@@ -63,7 +63,7 @@ Try it free:
 
 - Docs + signup: getwebfetch.com
 - Free tier: 1,000 fetches/mo, no card
-- Repo: github.com/ashlrai/web-fetcher-mcp
+- Repo: github.com/ashlrai/webfetch
 - MCP: one config line for Claude Code / Cursor / Cline / Continue / Roo / Codex
 
 Feedback welcome — reply or DM.

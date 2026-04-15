@@ -85,7 +85,7 @@ Built this in 2 weeks.
 
 Try it:
 - Site: getwebfetch.com
-- Repo: github.com/ashlrai/web-fetcher-mcp
+- Repo: github.com/ashlrai/webfetch
 - Blog: getwebfetch.com/blog (3 launch posts)
 - HN: [HN link]
 

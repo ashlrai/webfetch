@@ -1,55 +1,42 @@
 # Hacker News — Show HN
 
 ## Title (80 char max)
-Show HN: webfetch — license-first image search for AI agents (MCP + CLI + 19 providers)
 
-## Body
+Show HN: Webfetch – license-first image search for AI agents (MCP, 24 providers)
 
-Hi HN — I'm Mason, founder of Ashlar AI. I'm launching webfetch, a federated, license-aware image fetching layer for AI agents and humans.
+<!-- 79 chars. Alternates if the above reads wrong after a sleep:
+  - Show HN: Webfetch – one MCP for 24 licensed image sources (75 chars)
+  - Show HN: Webfetch – license-aware image fetcher for agents (60 chars)
+-->
 
-The short version: if you've ever had a Claude Code / Cursor / Cline agent invent an "image URL" out of thin air, or watched it right-click-save from Google Images and hallucinate license data, webfetch is the primitive that fixes it. One MCP config line, or one `npm i -g @webfetch/cli`, and your agent gets a stable `search_images` tool that hits 19+ licensed sources in parallel, ranks results license-first (CC0 > PD > CC-BY > CC-BY-SA > editorial), rejects UNKNOWN by default, and emits attribution strings ready to ship.
+## Body (under 750 chars)
 
-What's in the box at launch:
+I'm Mason. I kept watching Claude Code / Cursor agents invent image URLs and hallucinate license metadata, so I built webfetch: one MCP + CLI that fans out across 24 licensed providers (Wikimedia, Openverse, NASA, Smithsonian, Met, LOC, Europeana, Unsplash, Pexels, Flickr-CC, Spotify, YouTube, Brave, Bing, SerpAPI, +9), ranks license-first (CC0 > PD > CC-BY > CC-BY-SA > editorial), rejects UNKNOWN by default, and returns a render-ready attribution string.
 
-- 4 npm packages (`@webfetch/core`, `mcp`, `cli`, `server`), MIT licensed
-- 19 providers: Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, and an opt-in browser fallback
-- Chrome extension + VS Code extension + GitHub Action + Homebrew tap + Docker image
-- 117 passing tests
-- Native MCP integration for Claude Code, Cursor, Cline, Continue, Roo Code, Codex
-- Real DCT perceptual hashing for dedupe; EXIF/IPTC/XMP license reading
-- A license-first ranker that I'll argue (in the blog) is the only defensible default in 2026
+Add to any agent with one config line: `"webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }`.
 
-The moat, honestly, is the "like a human" browser fallback. When public APIs miss — and they miss on musician portraits, Pinterest boards, obscure product shots — webfetch can opt-in to a managed browser that pulls from Google Images / Pinterest, tags the result UNKNOWN, and emits a sidecar JSON with source URL + consent timestamp. Outsourced legally to Bright Data's Scraping Browser at launch; self-hosted Rebrowser + Camoufox for enterprise.
+Apache-2.0 core. 117 passing tests. Opt-in managed browser for when public APIs miss.
 
-Pricing: OSS unlimited on your machine, forever. Cloud is $19/mo Pro (10K fetches, managed browser, pooled keys), $79/mo Team (50K pooled, RBAC, audit), Enterprise custom.
-
-Built this inside a separate project (an artist-encyclopedia factory) and realized three of my other projects kept stealing the package. Parallelized ~30 Claude Code agents against a single plan doc and shipped the monorepo + cloud + site in two weeks.
-
-Try it:
-
-```
-curl -fsSL https://getwebfetch.com/install.sh | bash
-webfetch search "drake portrait" --limit 5
-```
-
-Or drop this into your Claude Code config:
-
-```json
-"webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }
-```
-
-Repo: https://github.com/ashlrai/web-fetcher-mcp
+Repo: https://github.com/ashlrai/webfetch
 Site: https://getwebfetch.com
-Blog (3 launch posts): https://getwebfetch.com/blog
-
-Happy to answer anything — especially about the legal posture on browser fetching, which I think is the most interesting design question here.
 
 ## First comment (author)
 
-A couple of things I'd love feedback on:
+Three things I'd love feedback on:
 
-1. **The rejection rule.** UNKNOWN is rejected by default. You can turn it off, but you have to turn it off explicitly in code. Is that the right friction level, or too aggressive?
+1. **The rejection rule.** UNKNOWN is rejected by default — you can turn it off but only explicitly, in code. Right friction level, or too aggressive?
 
-2. **MCP as a distribution channel.** We're betting hard that MCP becomes the primitive — register once, every agent works. The risk is that Claude Code / Cursor build image-fetching in directly. Mitigation: VS Code extension + Python SDK + organic content to diversify surfaces. Anyone seeing different signals here?
+2. **MCP as distribution.** Betting hard that MCP becomes the primitive: register once, every agent works. The risk is Claude Code / Cursor building image-fetching in directly. Mitigating with VS Code ext, Python SDK, and organic content. Anyone seeing different signals?
 
-3. **Browser fetching as a service.** We outsource to Bright Data at launch specifically because their legal team has been litigated to a stalemate with Meta and LinkedIn. Self-hosted is the enterprise option. Curious whether the HN crowd would prefer the reverse (self-hosted default, managed as upgrade), or thinks our split is right.
+3. **Browser fetching as a service.** We outsource to Bright Data's Scraping Browser at launch because their legal team has been litigated to a stalemate with Meta + LinkedIn. Self-hosted Rebrowser + Camoufox is the enterprise option. Is managed-default / self-host-upgrade the right split, or would you flip it?
+
+Happy to dig into the license-first ranker, the 24-provider failover topology, EXIF/IPTC/XMP license extraction, the DCT perceptual-hash dedupe, or the pricing.
+
+## Pre-submit checklist
+
+- [ ] Repo public, README above the fold
+- [ ] `getwebfetch.com` returns 200 and the install script hash matches the docs
+- [ ] `npx -y @webfetch/mcp` returns a valid `tools/list` in <5s
+- [ ] Author account has karma > 100 (required for Show HN)
+- [ ] Submit between 06:00–08:00 PT on a Tuesday or Wednesday
+- [ ] First comment posted within 60 seconds of submission
