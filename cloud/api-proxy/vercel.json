@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/:path*", "destination": "https://webfetch-api.mason-28b.workers.dev/:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    }
+  ]
+}
