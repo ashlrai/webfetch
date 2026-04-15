@@ -39,9 +39,9 @@ id = "ddbde78fe4ad4f8d94c078f7950928d0"
 # R2 — cached download blobs keyed by sha256. 30-day lifecycle rule applied via
 # the R2 dashboard.
 # -----------------------------------------------------------------------------
-# [[r2_buckets]]
-# binding = "CACHE"
-# bucket_name = "webfetch-cache"
+[[r2_buckets]]
+binding = "CACHE"
+bucket_name = "webfetch-cache"
 
 # -----------------------------------------------------------------------------
 # Queue — async usage metering. Producers = route handlers. Consumer = the same
@@ -68,7 +68,7 @@ class_name = "RateLimiterDO"
 
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["RateLimiterDO"]
+new_classes = ["RateLimiterDO"]
 
 # -----------------------------------------------------------------------------
 # Cron triggers — daily audit log retention sweep at 03:00 UTC. Pre-cutoff
