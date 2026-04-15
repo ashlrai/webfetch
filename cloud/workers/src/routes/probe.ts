@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
+import { resolveProviderAuth } from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { probePageSchema } from "../schemas.ts";
 import { assertPublicHttpUrl } from "../ssrf.ts";
@@ -24,7 +25,11 @@ probeRouter.post("/", async (c) => {
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
 
   try {
-    const out = await probePage(parsed.data.url, { respectRobots: parsed.data.respectRobots });
+    const auth = await resolveProviderAuth(c);
+    const out = await probePage(parsed.data.url, {
+      respectRobots: parsed.data.respectRobots,
+      userAgent: auth.userAgent,
+    });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/probe", unitsFor("/v1/probe"), 200));
     return ok(c, out);
   } catch (e) {

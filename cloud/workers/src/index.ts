@@ -14,11 +14,13 @@
  */
 
 import { Hono } from "hono";
-import { handleAuth } from "./auth.ts";
+import type { PlanId } from "../../shared/pricing.ts";
+import { getSessionUser, handleAuth } from "./auth.ts";
 import { billingRouter } from "./billing.ts";
 import { runAuditRetention } from "./cron/audit-retention.ts";
 import type { Env, RequestCtx, UsageMessage } from "./env.ts";
 import { persistUsageRow } from "./metering.ts";
+import { platformProvidersConfigured } from "./middleware/platform-keys.ts";
 import {
   RateLimiterDO,
   bearerAuth,
@@ -50,11 +52,36 @@ app.get("/health", (c) => c.json({ ok: true, service: "webfetch-api", env: c.env
 app.get("/providers", async (c) => {
   // Avoid hot-path deps on @webfetch/core provider registry.
   const { ALL_PROVIDERS, DEFAULT_PROVIDERS } = await import("@webfetch/core");
+  const platformProvidersAvailable = platformProvidersConfigured(c.env);
+
+  // Best-effort user plan resolution — only populated when the caller has a
+  // valid session cookie. Public callers still see `userPlan: null`.
+  let userPlan: PlanId | null = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user = await getSessionUser(c as any);
+    if (user) {
+      const row = await c.env.DB.prepare(
+        `SELECT w.plan AS plan FROM workspaces w
+           JOIN members m ON m.workspace_id = w.id
+          WHERE m.user_id = ?1
+          ORDER BY m.invited_at ASC LIMIT 1`,
+      )
+        .bind(user.userId)
+        .first<{ plan: PlanId }>();
+      userPlan = row?.plan ?? "free";
+    }
+  } catch {
+    // ignore — /providers is unauthenticated and should never fail on this.
+  }
+
   return c.json({
     ok: true,
     data: {
       all: Object.keys(ALL_PROVIDERS),
       defaults: DEFAULT_PROVIDERS,
+      platformProvidersAvailable,
+      userPlan,
       endpoints: [
         "/v1/search",
         "/v1/artist",

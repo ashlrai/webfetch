@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
+import { resolveProviderAuth } from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { fetchWithLicenseSchema } from "../schemas.ts";
 import { assertPublicHttpUrl } from "../ssrf.ts";
@@ -21,7 +22,11 @@ licenseRouter.post("/", async (c) => {
   const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
   try {
-    const r = await fetchWithLicense(parsed.data.url, { probe: parsed.data.probe });
+    const auth = await resolveProviderAuth(c);
+    const r = await fetchWithLicense(parsed.data.url, {
+      probe: parsed.data.probe,
+      userAgent: auth.userAgent,
+    });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/license", unitsFor("/v1/license"), 200));
     return ok(c, {
       license: r.license,

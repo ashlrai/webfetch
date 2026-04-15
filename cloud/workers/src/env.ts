@@ -53,6 +53,35 @@ export interface Env {
   // Email provider (Resend). Optional — invites stay queued in D1 if absent.
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+
+  // When RESEND_API_KEY is still the `test_stub` placeholder, Better Auth's
+  // email-verification gate is turned OFF automatically so self-signup works
+  // for dogfooding. Set this to "1" to force-on in non-Resend environments
+  // (e.g. magic-link fallback).
+  REQUIRE_EMAIL_VERIFICATION?: string;
+
+  // Contact email included in outbound User-Agent for polite providers
+  // (Wikimedia, MusicBrainz, Europeana).
+  INGEST_CONTACT_EMAIL?: string;
+
+  // Optional pooled platform provider keys. When present, Pro/Team/Enterprise
+  // users get these providers enabled without BYOK. All are optional; any
+  // provider whose key is missing is silently skipped.
+  PLATFORM_UNSPLASH_ACCESS_KEY?: string;
+  PLATFORM_PEXELS_API_KEY?: string;
+  PLATFORM_PIXABAY_API_KEY?: string;
+  PLATFORM_BRAVE_API_KEY?: string;
+  PLATFORM_SERPAPI_KEY?: string;
+  PLATFORM_BING_API_KEY?: string;
+  PLATFORM_SPOTIFY_CLIENT_ID?: string;
+  PLATFORM_SPOTIFY_CLIENT_SECRET?: string;
+  PLATFORM_FLICKR_API_KEY?: string;
+  PLATFORM_SMITHSONIAN_API_KEY?: string;
+  PLATFORM_EUROPEANA_API_KEY?: string;
+
+  // Optional Bright Data managed-browser credentials (Pro+ gated).
+  BRIGHTDATA_CUSTOMER?: string;
+  BRIGHTDATA_PASSWORD?: string;
 }
 
 /** Async usage-metering payload queued from request handlers. */

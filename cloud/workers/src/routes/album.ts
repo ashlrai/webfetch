@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
+import { resolveProviderAuth } from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { searchAlbumCoverSchema } from "../schemas.ts";
 
@@ -17,7 +18,11 @@ albumRouter.post("/", async (c) => {
   if (!parsed.ok) return parsed.response;
   const ctx = c.get("ctx");
   try {
-    const out = await searchAlbumCover(parsed.data.artist, parsed.data.album, parsed.data);
+    const auth = await resolveProviderAuth(c);
+    const out = await searchAlbumCover(parsed.data.artist, parsed.data.album, {
+      ...parsed.data,
+      auth,
+    });
     c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/album", unitsFor("/v1/album"), 200));
     return ok(c, {
       candidates: out.candidates,

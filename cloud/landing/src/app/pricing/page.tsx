@@ -10,7 +10,7 @@ const BREADCRUMB_JSONLD = buildBreadcrumbJsonLd([
 export const metadata: Metadata = {
   title: "Pricing — Free, Pro, Team, Enterprise",
   description:
-    "Free self-host forever. Pro $19 with managed browser and pooled keys. Team $79 with shared workspace. Transparent usage metering on every tier.",
+    "Free: 10 no-key providers, zero signups required. Pro $19: pooled SerpAPI, Brave, Unsplash, Pexels, Pixabay, Spotify, Flickr, Europeana keys plus managed browser fallback. Team $79: shared pool across seats + Bright Data browser at 50k fetches/mo.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     title: "webfetch pricing — free self-host, Pro from $19",
@@ -39,7 +39,8 @@ const PRICING_JSONLD = {
     {
       "@type": "Offer",
       name: "Free",
-      description: "Self-host forever. Unlimited local usage.",
+      description:
+        "10 no-key providers included by default (Wikimedia, Openverse, iTunes, MusicBrainz, NASA, Smithsonian, Met, Library of Congress, Wellcome, Burst) — no signup at provider sites required.",
       price: "0",
       priceCurrency: "USD",
       url: "https://getwebfetch.com/pricing",
@@ -54,7 +55,8 @@ const PRICING_JSONLD = {
     {
       "@type": "Offer",
       name: "Pro",
-      description: "Managed browser, pooled keys, 20k fetches/mo, usage dashboard.",
+      description:
+        "Pooled keys for SerpAPI, Brave Search, Unsplash, Pexels, Pixabay, Spotify, Flickr, Europeana — zero BYOK config. Managed browser fallback for Google Images + Pinterest. 10k fetches/mo included.",
       price: "19",
       priceCurrency: "USD",
       url: "https://getwebfetch.com/pricing",
@@ -69,7 +71,8 @@ const PRICING_JSONLD = {
     {
       "@type": "Offer",
       name: "Team",
-      description: "Shared workspace, SSO, 100k fetches/mo, per-seat pricing.",
+      description:
+        "Shared pool across seats + Bright Data browser included at 50k fetches/mo. SSO, audit log export, per-seat pricing.",
       price: "79",
       priceCurrency: "USD",
       url: "https://getwebfetch.com/pricing",
@@ -115,8 +118,10 @@ export default function PricingPage() {
           Simple pricing. Transparent metering.
         </h1>
         <p className="mt-4 text-lg text-[var(--fg-dim)]">
-          Self-host unlimited for free. Upgrade when you need managed browser, pooled keys, or a
-          team workspace.
+          Free includes 10 no-key providers out of the box — no signup at provider sites. Pro adds
+          pooled keys for SerpAPI, Brave, Unsplash, Pexels, Pixabay, Spotify, Flickr, and Europeana
+          plus managed browser fallback. Team adds a shared pool across seats with Bright Data
+          included.
         </p>
       </section>
       <PricingTable />
