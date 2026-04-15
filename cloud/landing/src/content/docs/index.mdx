@@ -1,0 +1,32 @@
+---
+title: webfetch documentation
+description: The license-first image layer for AI agents and humans. One API, CLI, and MCP that federates 24 licensed image sources.
+section: Introduction
+---
+
+webfetch is a federated, license-aware image search layer. It unifies 24 image sources — Wikimedia, Openverse, The Met, NASA, Library of Congress, Unsplash, Spotify, and more — behind a single CLI, HTTP API, and MCP server. Every result ships with a machine-readable license tag, confidence score, and attribution line. If the API sources miss, a consent-gated headless browser fills the gap, with every browser-sourced candidate flagged `UNKNOWN` by default.
+
+## What's in this documentation
+
+- **Getting started** — install in under a minute via curl, npm, brew, or Docker, then run your first search.
+- **Providers** — the full 24-provider matrix with auth, rate limits, license defaults, and gotchas.
+- **License safety** — why `UNKNOWN` is rejected, the ranking algorithm, attribution sidecars, and the consent gate for browser-sourced media.
+- **CLI / HTTP API / MCP** — three front doors to the same federated core. Pick your integration surface.
+- **Per-IDE MCP setup** — exact copy-paste JSON for Claude Code, Cursor, Cline, Continue, Roo Code, and Codex.
+- **Cookbook** — ten production recipes, from CC0 album art for a music app to self-hosting an internal MCP server.
+- **Self-hosting** — run the whole stack on your own infrastructure, bring your own keys.
+- **FAQ + Changelog** — everything else.
+
+## Design principles
+
+1. **License-first, not relevance-first.** A marginally better image under an unknown license is worthless to a pipeline that needs to ship without human review.
+2. **Structured attribution.** Every candidate carries enough provenance to render a credit line, write an XMP sidecar, and survive a DMCA request.
+3. **Graceful degradation.** Providers that need a key skip silently when one is missing; the default provider set always produces results with zero configuration.
+4. **The browser is a fallback, not a default.** Headless scraping is opt-in, consent-gated, and flagged `UNKNOWN` so downstream code can refuse it.
+
+## Quick links
+
+- New here? Read [Getting started](/docs/getting-started).
+- Building with Claude Code? Go straight to the [Claude Code MCP setup](/docs/mcp/claude-code).
+- Need to verify an image you already have? See [Recipe 3](/docs/cookbook/recipe-3).
+- Want the full license rubric? Read [License safety](/docs/license-safety).

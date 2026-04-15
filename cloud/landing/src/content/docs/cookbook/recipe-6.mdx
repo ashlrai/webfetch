@@ -1,0 +1,96 @@
+---
+title: "Recipe 6: GitHub Action that fetches assets at build time"
+description: JAMstack / static-site pattern — webfetch runs in CI, commits fresh license-safe assets into your repo on every build.
+section: Cookbook
+---
+
+You run a static site (Astro, Next.js SSG, Hugo). You want fresh hero images for dynamic pages, fetched at build time, with attribution baked in. This pattern keeps runtime fast and keeps licensing out of your runtime path.
+
+## The Action
+
+```yaml
+# .github/workflows/build-assets.yml
+name: build
+
+on:
+  push: { branches: [main] }
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch license-safe assets
+        uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
+        with:
+          queries-file: ./data/asset-queries.tsv
+          out-dir: ./public/generated
+          license: safe-only
+          min-width: 1600
+          providers: wikimedia,openverse,unsplash,pexels
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
+      - name: Build site
+        run: npm ci && npm run build
+
+      - name: Deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          projectName: my-site
+          directory: ./out
+```
+
+## The queries file
+
+```tsv
+slug	query	providers
+homepage-hero	minimalist mountain sunrise	unsplash,pexels
+about-page	modern co-working space	unsplash,pexels
+blog-latest	reading glasses on book	unsplash,wikimedia
+```
+
+For each row, the Action downloads a fresh top candidate to `./public/generated/<slug>.jpg` and writes `./public/generated/<slug>.credit.json` next to it:
+
+```json
+{
+  "slug": "homepage-hero",
+  "url": "https://images.unsplash.com/...",
+  "license": "CC0",
+  "author": "Jane Photog",
+  "attributionLine": "Photo by Jane Photog on Unsplash",
+  "confidence": 0.85,
+  "sha256": "..."
+}
+```
+
+## Render the credit
+
+```astro
+---
+// src/pages/index.astro
+import credit from "../../public/generated/homepage-hero.credit.json";
+---
+<img src="/generated/homepage-hero.jpg" alt="" />
+<small class="credit">{credit.attributionLine}</small>
+```
+
+## Don't re-fetch on every build
+
+The Action caches by `(query, provider-set)` in a JSON manifest at `./public/generated/.manifest.json`. If the top candidate for a query hasn't changed, it skips the download. On a typical CI run, only a handful of images are actually re-fetched.
+
+To force refresh for a specific slug: `webfetch_force_refresh=homepage-hero,about-page` env var.
+
+## Committing vs not committing
+
+Two patterns:
+
+1. **Commit the assets.** Run the Action on `workflow_dispatch` or `schedule`, let it open a PR with new assets. Your prod build is deterministic.
+2. **Don't commit.** Fetch at build time on every deploy. Simpler, but your deploys depend on upstream provider availability. Mitigate with aggressive caching.
+
+Pattern 1 is the safer default.

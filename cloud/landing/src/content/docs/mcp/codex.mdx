@@ -1,0 +1,51 @@
+---
+title: Codex MCP setup
+description: Wire webfetch into OpenAI Codex CLI.
+section: MCP per IDE
+---
+
+OpenAI Codex is a terminal coding agent with MCP support. The webfetch integration is a standard stdio server.
+
+## Setup
+
+Edit `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.webfetch]
+command = "npx"
+args = ["-y", "@webfetch/mcp"]
+
+[mcp_servers.webfetch.env]
+UNSPLASH_ACCESS_KEY = "..."
+PEXELS_API_KEY = "..."
+SPOTIFY_CLIENT_ID = "..."
+SPOTIFY_CLIENT_SECRET = "..."
+```
+
+Restart any running Codex sessions.
+
+## Verification
+
+In a new Codex session:
+
+```text
+/mcp
+```
+
+The webfetch server should show as connected with seven tools. Then:
+
+```text
+Find a PUBLIC_DOMAIN photo of the Eiffel Tower from Library of Congress.
+Print the source URL and the attribution.
+```
+
+## Troubleshooting
+
+- **`/mcp` lists server but "0 tools"** — the server started but the capability handshake failed. Check `~/.codex/logs/` for subprocess stderr.
+- **`spawn npx ENOENT`** — PATH not set. Use the absolute path: `command = "/opt/homebrew/bin/npx"`.
+- **Rate-limited by Codex** — Codex enforces per-tool-call budgets. For long bulk operations, use the CLI directly instead (`webfetch batch`).
+
+## Next steps
+
+- [MCP overview](/docs/mcp).
+- [CLI reference](/docs/cli) — Codex sessions often benefit from shelling out to the CLI for batch work.

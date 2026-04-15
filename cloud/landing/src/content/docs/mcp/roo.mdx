@@ -1,0 +1,56 @@
+---
+title: Roo Code MCP setup
+description: Register webfetch as an MCP server in Roo Code — the Cline fork with multi-mode agents.
+section: MCP per IDE
+---
+
+Roo Code is a VS Code extension forked from Cline with deeper multi-mode agent workflows. MCP configuration mirrors Cline's.
+
+## Setup
+
+Config path:
+
+- **macOS:** `~/Library/Application Support/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json`.
+- **Linux:** `~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json`.
+- **Windows:** `%APPDATA%\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\cline_mcp_settings.json`.
+
+Merge:
+
+```json
+{
+  "mcpServers": {
+    "webfetch": {
+      "command": "npx",
+      "args": ["-y", "@webfetch/mcp"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "...",
+        "PEXELS_API_KEY": "...",
+        "SPOTIFY_CLIENT_ID": "...",
+        "SPOTIFY_CLIENT_SECRET": "..."
+      },
+      "disabled": false,
+      "autoApprove": ["search_images", "search_artist_images", "search_album_cover"]
+    }
+  }
+}
+```
+
+Restart the server from the Roo Code sidebar → MCP Servers → Restart.
+
+## Verification
+
+Switch to "Architect" mode (or any mode that can call MCP tools) and prompt:
+
+```text
+Find three CC0-licensed photos of coastal lighthouses. List the URLs,
+authors, and license tags.
+```
+
+## Troubleshooting
+
+- Same as Cline — Roo shares the same MCP plumbing. If Cline works and Roo doesn't, double-check the globalStorage path (`rooveterinaryinc` instead of `saoudrizwan`).
+
+## Next steps
+
+- [MCP overview](/docs/mcp).
+- [Cline setup](/docs/mcp/cline) — nearly identical, useful cross-reference.

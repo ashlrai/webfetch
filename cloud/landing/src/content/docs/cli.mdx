@@ -1,0 +1,200 @@
+---
+title: CLI reference
+description: Every webfetch subcommand, flag, profile, and environment variable — with copy-paste examples.
+section: Interfaces
+---
+
+The `webfetch` CLI is the fastest way to try things. Every subcommand maps to an HTTP endpoint and to an MCP tool, so skills learned here transfer directly.
+
+## Synopsis
+
+```text
+webfetch <command> [args] [flags]
+```
+
+## Subcommands
+
+| Command | What it does |
+|---|---|
+| `search <query>` | Federated image search. |
+| `artist <name> [--kind K]` | Artist images. `K` ∈ `portrait | album | logo | performing`. |
+| `album <artist> <album>` | Canonical album artwork (1:1). |
+| `download <url> [--out path]` | Download an image, write XMP sidecar by default. |
+| `probe <url>` | List every `<img>` on a page, per-image license. |
+| `license <url> [--probe]` | Determine license for an arbitrary URL. |
+| `providers` | List configured providers + auth status. |
+| `batch [--file path \| <stdin>]` | Run many queries; one per line. |
+| `watch <query> [--interval 1h]` | Poll a query; emit only new candidates per tick. |
+| `config <init\|show> [--force]` | Manage `~/.webfetchrc`. |
+| `help` | Usage. |
+| `version` | Print version. |
+
+## Common search flags
+
+| Flag | Meaning |
+|---|---|
+| `--providers a,b,c` | Comma-separated provider ids. Default: the safe set (see [Providers](/docs/providers)). |
+| `--license MODE` | `safe` (default) \| `prefer` \| `any`. |
+| `--max-per-provider N` | Cap per provider. |
+| `--min-width W` / `--min-height H` | Minimum pixel dimensions. |
+| `--limit N` | Rows to print (default 20). |
+| `--json` | Raw JSON array of `ImageCandidate`. |
+| `--verbose` | Provider reports and warnings to stderr. |
+| `--profile NAME` | Activate a named profile from `~/.webfetchrc`. |
+| `--pick` | Interactive picker (TTY only). Choose one, download it. |
+| `--no-sidecar` | Skip writing the XMP sidecar on download. |
+| `--timeout-ms N` | Per-request timeout (default 15000). |
+
+## Examples
+
+```bash
+# Basic search
+webfetch search "drake portrait" --limit 5
+
+# JSON output for pipelines
+webfetch search "radiohead album cover" --json --limit 3 | jq '.[0]'
+
+# Interactive pick, downloads the selected candidate
+webfetch search "kyoto autumn temple" --pick
+
+# Artist with profile + min size
+webfetch artist "Taylor Swift" --kind portrait --min-width 1200 --profile musicians
+
+# Batch from stdin
+echo -e "drake portrait\nradiohead album\nkyoto temple" \
+  | webfetch batch --concurrency 3 --json
+
+# Watch for new CC images, webhook on every new one
+webfetch watch "ukraine frontline" --interval 6h --webhook https://hooks.example/new
+
+# Verify an image you already have
+webfetch license https://upload.wikimedia.org/wikipedia/commons/...
+
+# Probe a page for every image's license
+webfetch probe https://blog.example.com/article-with-images
+```
+
+## Config file — `~/.webfetchrc`
+
+Initialize with:
+
+```bash
+webfetch config init
+```
+
+This writes a starter TOML-ish config. View the resolved config (including env var and profile overrides) with:
+
+```bash
+webfetch config show
+webfetch config show --profile editorial
+```
+
+Example:
+
+```toml
+# defaults applied to every run
+providers = ["wikimedia", "openverse", "unsplash", "pexels"]
+license   = "safe-only"
+minWidth  = 1200
+limit     = 10
+maxPerProvider = 3
+
+[profiles.musicians]
+providers = ["spotify", "musicbrainz-caa", "itunes", "wikimedia"]
+license   = "safe-only"
+
+[profiles.editorial]
+providers = ["wikimedia", "openverse", "library-of-congress", "europeana"]
+license   = "safe-only"
+minWidth  = 1600
+
+[profiles.stock]
+providers = ["unsplash", "pexels", "pixabay"]
+license   = "safe-only"
+minWidth  = 1600
+
+[auth]
+UNSPLASH_ACCESS_KEY  = "..."
+PEXELS_API_KEY       = "..."
+SPOTIFY_CLIENT_ID    = "..."
+SPOTIFY_CLIENT_SECRET = "..."
+```
+
+Precedence (highest wins): CLI flags → env vars → active profile → top-level config → built-in defaults.
+
+## Picker mode
+
+Pass `--pick` to any `search`, `artist`, or `album` call. webfetch renders the candidate table, waits for a keypress (1-9 to select, `q` to quit), and downloads the chosen one to `./` (override with `--out path`). The XMP sidecar is written next to the file.
+
+```bash
+webfetch search "sunrise over lake" --pick --out ./assets/
+# → Table with 5 candidates
+# → Press 2
+# → Downloads candidate 2 to ./assets/<sha256>.jpg
+# →                      + ./assets/<sha256>.jpg.xmp
+```
+
+## Batch mode
+
+Read a list of queries (one per line) from stdin or `--file path`. Each line may optionally include a tab-separated providers list:
+
+```text
+drake portrait
+radiohead album   spotify,musicbrainz-caa
+kyoto temple      wikimedia,openverse
+```
+
+```bash
+cat queries.txt | webfetch batch --concurrency 4 --json > results.jsonl
+```
+
+Output is JSONL — one line per input query, each a `{query, candidates, errors}` record.
+
+## Watch mode
+
+```bash
+webfetch watch "ukraine frontline photos" --interval 6h --webhook https://hooks.example/new
+```
+
+State is persisted at `~/.webfetch/watch/<slug>.json`. Each tick:
+
+1. Runs the query.
+2. Diffs against the last tick (by `sha256` or `url`).
+3. Emits only the new candidates to stdout (JSON lines) and, if `--webhook` set, POSTs them to the URL.
+
+Kill with Ctrl-C. Re-run — state is remembered. Reset with `--reset`.
+
+## Environment variables
+
+```bash
+# Provider keys
+UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, FLICKR_API_KEY,
+BRAVE_API_KEY, BING_API_KEY, SERPAPI_KEY,
+SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET,
+SMITHSONIAN_API_KEY, EUROPEANA_API_KEY, RAWPIXEL_API_KEY
+
+# Behavior overrides
+WEBFETCH_USER_AGENT       # UA for outbound requests (required by some providers)
+WEBFETCH_BLOCKLIST        # comma-separated hosts to skip
+WEBFETCH_CONFIG           # override ~/.webfetchrc path
+WEBFETCH_PROVIDERS        # override default provider list
+WEBFETCH_LICENSE          # default license mode
+WEBFETCH_LIMIT            # default --limit
+WEBFETCH_MIN_WIDTH        # default --min-width
+WEBFETCH_MIN_HEIGHT       # default --min-height
+WEBFETCH_ENABLE_BROWSER   # "1" to allow the browser fallback
+WEBFETCH_CACHE_DIR        # default: ~/.webfetch/cache
+```
+
+## Exit codes
+
+- `0` — success (including "no results"). No-results prints a friendly message.
+- `2` — usage error (unknown command, bad flag).
+- Anything else — unexpected failure; see stderr.
+
+## Tips
+
+- `--verbose` shows *why* a provider didn't return anything (missing auth, rate-limited, empty response). Use it when the result count is lower than you expect.
+- `--json` is always stable; use it for anything scripted. Table format is for humans.
+- When piping to `jq`, use `--json --limit 1` and `jq '.[0]'` to extract one record.
+- The first run against a new provider can be slow (DNS warm-up, auth handshake). Subsequent calls in the same process reuse connections.

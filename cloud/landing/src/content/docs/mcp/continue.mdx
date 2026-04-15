@@ -1,0 +1,71 @@
+---
+title: Continue MCP setup
+description: Register webfetch as an MCP tool in Continue (VS Code / JetBrains).
+section: MCP per IDE
+---
+
+Continue is the open-source AI code assistant for VS Code and JetBrains. MCP support ships in the stable channel.
+
+## Setup
+
+Edit `~/.continue/config.yaml` (or use the Continue settings UI → "Context providers / MCP"):
+
+```yaml
+mcpServers:
+  - name: webfetch
+    command: npx
+    args:
+      - "-y"
+      - "@webfetch/mcp"
+    env:
+      UNSPLASH_ACCESS_KEY: "..."
+      PEXELS_API_KEY: "..."
+      SPOTIFY_CLIENT_ID: "..."
+      SPOTIFY_CLIENT_SECRET: "..."
+```
+
+If your config is still the older JSON format (`~/.continue/config.json`):
+
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@webfetch/mcp"]
+        }
+      }
+    ]
+  }
+}
+```
+
+Restart VS Code / JetBrains after editing.
+
+## Verification
+
+Open the Continue chat panel and type:
+
+```text
+@webfetch search for a CC-BY photo of Mount Kilimanjaro. Give me the URL
+and the attribution line for the top result.
+```
+
+The `@webfetch` mention tells Continue to pull context from that MCP server. The response should include a provider-attributed image URL.
+
+## Troubleshooting
+
+- **`@webfetch` doesn't autocomplete** — restart the IDE. If still missing, check Continue's output logs for MCP subprocess errors.
+- **"experimental.modelContextProtocolServers is deprecated"** — migrate to the top-level `mcpServers` YAML form above.
+- **JetBrains + PATH issues** — macOS JetBrains launched from Dock doesn't inherit shell PATH. Use absolute paths: `command: /opt/homebrew/bin/npx`.
+
+## Screenshot
+
+![Continue MCP screenshot placeholder](/docs/img/continue-mcp-placeholder.png)
+
+## Next steps
+
+- [MCP overview](/docs/mcp).
+- [Recipe 5](/docs/cookbook/recipe-5) — blog-post enrichment flow.

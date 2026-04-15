@@ -1,0 +1,140 @@
+---
+title: "Recipe 10: Deploy a custom provider adapter"
+description: Add a new image source to webfetch — proprietary DAM, internal archive, partner API — by writing a 40-line adapter.
+section: Cookbook
+---
+
+webfetch's 24 built-in providers cover public sources. When you have a proprietary source (internal DAM, partner API, a museum collection API no one else has hit) you can add it as a custom adapter without forking the codebase.
+
+## Adapter anatomy
+
+Every provider implements the same interface:
+
+```ts
+import type { Provider, ImageCandidate, SearchContext } from "@webfetch/core";
+
+export const internalDam: Provider = {
+  id: "internal-dam",
+  displayName: "Internal DAM",
+  defaultLicense: "EDITORIAL_LICENSED",
+  needsAuth: true,
+  rateLimitPerSec: 5,
+  optIn: false,
+
+  auth(env) {
+    return env.INTERNAL_DAM_TOKEN ? { token: env.INTERNAL_DAM_TOKEN } : null;
+  },
+
+  async search(query: string, ctx: SearchContext): Promise<ImageCandidate[]> {
+    const auth = ctx.auth?.["internal-dam"];
+    if (!auth?.token) return [];
+    const r = await fetch(`https://dam.internal/api/v1/search?q=${encodeURIComponent(query)}`, {
+      headers: { authorization: `Bearer ${auth.token}` },
+      signal: ctx.signal,
+    });
+    if (!r.ok) throw new Error(`DAM: ${r.status}`);
+    const { hits } = (await r.json()) as { hits: Hit[] };
+    return hits.map((h) => normalize(h));
+  },
+};
+
+interface Hit {
+  id: string;
+  url: string;
+  thumb: string;
+  width: number;
+  height: number;
+  mime: string;
+  creator: string;
+  license: "internal-editorial" | "internal-cc0";
+  pageUrl: string;
+}
+
+function normalize(h: Hit): ImageCandidate {
+  const license = h.license === "internal-cc0" ? "CC0" : "EDITORIAL_LICENSED";
+  return {
+    url: h.url,
+    thumbnailUrl: h.thumb,
+    sourcePageUrl: h.pageUrl,
+    license,
+    confidence: 0.95,
+    author: h.creator,
+    authorUrl: undefined,
+    attributionLine: `"${h.id}" by ${h.creator} (Internal DAM)`,
+    provider: "internal-dam",
+    providerNative: h.id,
+    width: h.width,
+    height: h.height,
+    mime: h.mime,
+    licenseUrl: undefined,
+  };
+}
+```
+
+## Registering the adapter
+
+Two ways:
+
+### A — In-process (same runtime as your code)
+
+If you call `@webfetch/core` directly, register before the first search:
+
+```ts
+import { registerProvider, searchImages } from "@webfetch/core";
+import { internalDam } from "./providers/internal-dam";
+
+registerProvider(internalDam);
+
+const r = await searchImages("corporate keynote", {
+  providers: ["internal-dam", "wikimedia"],
+});
+```
+
+### B — Out-of-process (CLI / MCP / HTTP server)
+
+Create a tiny package that depends on `@webfetch/server` and your adapter, then registers it at startup. Ship the bundle as your deployment:
+
+```ts
+// my-webfetch-server/index.ts
+import { startServer } from "@webfetch/server";
+import { registerProvider } from "@webfetch/core";
+import { internalDam } from "./internal-dam";
+
+registerProvider(internalDam);
+await startServer({ port: 7777 });
+```
+
+Run this instead of the stock server. Your internal users see `internal-dam` in the `providers` list and can call it via CLI, HTTP, or MCP like any built-in source.
+
+## Guidelines
+
+1. **Respect `ctx.signal`.** Always pass it through to `fetch` so timeouts propagate.
+2. **Return `[]` on missing auth**, never throw. This keeps the default `searchImages` call resilient when some providers aren't configured.
+3. **Set confidence conservatively.** `0.95` only if your source has authoritative license metadata. If you're guessing, use `≤ 0.7`.
+4. **Normalize the license tag** into webfetch's seven canonical tags. Don't invent new ones. If your source has a weirder license, map to the closest safe tag and surface the original in a custom field.
+5. **Build `attributionLine`** in the normalizer. A callers-never-need-to-format-this rule is the whole point.
+6. **Respect rate limits.** Set `rateLimitPerSec` and the core's scheduler will throttle you.
+
+## Testing
+
+```ts
+import { describe, it, expect } from "bun:test";
+import { internalDam } from "./internal-dam";
+
+describe("internal-dam adapter", () => {
+  it("returns [] when no token configured", async () => {
+    const r = await internalDam.search("test", { auth: {}, signal: new AbortController().signal });
+    expect(r).toEqual([]);
+  });
+
+  it("normalizes a hit", async () => {
+    // mock fetch, assert candidate shape
+  });
+});
+```
+
+## When not to write a custom adapter
+
+- If your source is just a restricted Wikimedia mirror, you're better off hitting Wikimedia directly.
+- If your source's license model doesn't map to any of webfetch's seven tags, reconsider whether it belongs in this pipeline at all. webfetch's whole value is license uniformity.
+- If your source is a generic image search on an already-covered host, use the existing `browser` layer with a custom targeting rule instead of a new adapter.

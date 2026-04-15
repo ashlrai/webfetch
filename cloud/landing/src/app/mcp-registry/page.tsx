@@ -3,8 +3,24 @@ import { FadeUp } from "@/components/FadeUp";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MCP Registry",
-  description: "Machine-readable MCP manifest + copy-paste snippets for every major agent.",
+  title: "MCP Registry — Install webfetch in any agent",
+  description:
+    "Copy-paste MCP snippets for Claude Code, Cursor, Cline, Windsurf, and a machine-readable manifest. One-line registration in every major AI coding agent.",
+  alternates: { canonical: "/mcp-registry" },
+  openGraph: {
+    title: "webfetch MCP Registry — one-line install for every agent",
+    description:
+      "Copy-paste MCP configs for Claude Code, Cursor, Cline, Windsurf, plus a machine-readable manifest.",
+    url: "https://getwebfetch.com/mcp-registry",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "webfetch MCP Registry",
+    description: "One-line MCP install for Claude Code, Cursor, Cline, Windsurf.",
+    images: ["/og-image.png"],
+  },
 };
 
 const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [

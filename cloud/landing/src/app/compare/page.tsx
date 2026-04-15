@@ -2,9 +2,24 @@ import { ComparisonTable } from "@/components/ComparisonTable";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Compare",
+  title: "Compare — webfetch vs Google, Unsplash, Serper",
   description:
-    "webfetch vs Google Images, Unsplash, Bing Image Search, and Serper — feature by feature.",
+    "webfetch vs Google Images, Unsplash, Bing Image Search, and Serper. Federated sourcing, license ranking, attribution, and browser fallback side by side.",
+  alternates: { canonical: "/compare" },
+  openGraph: {
+    title: "webfetch vs Google Images, Unsplash, Bing, Serper",
+    description:
+      "Feature-by-feature comparison across federated sourcing, license ranking, attribution, and browser fallback.",
+    url: "https://getwebfetch.com/compare",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "webfetch vs the alternatives",
+    description: "Federated. License-ranked. Attribution-always. See the full comparison.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function ComparePage() {

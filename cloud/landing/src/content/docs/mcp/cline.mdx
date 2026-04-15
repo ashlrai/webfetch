@@ -1,0 +1,65 @@
+---
+title: Cline MCP setup
+description: Add webfetch as an MCP server in the Cline VS Code extension.
+section: MCP per IDE
+---
+
+Cline (formerly Claude Dev) is the leading MCP-enabled VS Code extension. It runs agent loops locally and calls MCP tools between steps.
+
+## Setup
+
+Cline reads its MCP config from a dedicated settings file. The path depends on your VS Code flavor:
+
+- **VS Code:** `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` (macOS). On Linux: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`. On Windows: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`.
+- **Cursor:** same path, swap `Code` → `Cursor`.
+
+Merge this block:
+
+```json
+{
+  "mcpServers": {
+    "webfetch": {
+      "command": "npx",
+      "args": ["-y", "@webfetch/mcp"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "...",
+        "PEXELS_API_KEY": "...",
+        "SPOTIFY_CLIENT_ID": "...",
+        "SPOTIFY_CLIENT_SECRET": "..."
+      },
+      "disabled": false,
+      "autoApprove": ["search_images", "search_artist_images", "search_album_cover"]
+    }
+  }
+}
+```
+
+`autoApprove` lets Cline call those tools without prompting you every time. Reserve it for read-only tools; don't auto-approve `download_image` or `fetch_with_license` if you want to review each file before it lands on disk.
+
+Save, then click the "MCP Servers" icon in the Cline sidebar and hit "Restart" next to `webfetch`.
+
+## Verification
+
+Open a Cline task:
+
+```text
+Search for a CC0 image of a 1960s film camera. Download the top result
+to ./assets/ and write me a one-line credit.
+```
+
+Cline's tool panel shows each call with arguments. It will ask for approval on `download_image` unless you auto-approved it.
+
+## Troubleshooting
+
+- **Server shows "Not Connected"** — open Cline's output panel (`View → Output → "Cline"`) and look for the MCP stderr. Usually a PATH issue; set `"command": "/opt/homebrew/bin/npx"`.
+- **Tools time out** — Cline defaults to a short tool timeout. Ask it to "rerun with a longer timeout" or edit the `cline.mcpRequestTimeout` setting.
+- **Cline keeps picking ToS-grey providers** — add to your task's system prompt: "Only use providers with license safe-only. Never set `providers: [\"browser\"]` or `providers: [\"serpapi\"]`."
+
+## Screenshot
+
+![Cline MCP screenshot placeholder](/docs/img/cline-mcp-placeholder.png)
+
+## Next steps
+
+- [MCP overview](/docs/mcp).
+- [License safety](/docs/license-safety) — how to keep Cline from shipping `UNKNOWN`.

@@ -1,0 +1,147 @@
+---
+title: MCP overview
+description: The webfetch Model Context Protocol server — tool surface, how it maps to the core, and which IDE setup guide to read.
+section: Interfaces
+---
+
+The webfetch MCP server exposes the same federated search and license logic as the CLI and HTTP API, but over the Model Context Protocol so an LLM agent can call it directly. This page explains the tool surface; per-IDE setup lives in a dedicated page per IDE.
+
+## What MCP is
+
+Model Context Protocol is Anthropic's open standard for giving LLM agents access to external tools. An MCP server exposes a list of tools (name, JSON schema, handler); a compatible client (Claude Code, Cursor, Cline, Continue, Roo Code, Codex) discovers them and lets the model call them with structured arguments.
+
+## Tool surface
+
+The webfetch MCP server exposes seven tools. Each one matches an HTTP endpoint one-to-one.
+
+### `search_images`
+
+General image search across the federated providers.
+
+```json
+{
+  "query": "string (required)",
+  "providers": "string[] (optional)",
+  "licensePolicy": "\"safe-only\" | \"prefer-safe\" | \"any\"",
+  "maxPerProvider": "number",
+  "minWidth": "number",
+  "minHeight": "number",
+  "timeoutMs": "number"
+}
+```
+
+Returns `{ candidates, providerReports, warnings }`. Most-used tool.
+
+### `search_artist_images`
+
+Artist-scoped search. Picks the right providers per `kind`.
+
+```json
+{
+  "artist": "string (required)",
+  "kind": "\"portrait\" | \"album\" | \"logo\" | \"performing\"",
+  "providers": "string[] (optional)",
+  "licensePolicy": "...",
+  "minWidth": "number"
+}
+```
+
+### `search_album_cover`
+
+Canonical album artwork. Enforces 1:1 aspect ratio.
+
+```json
+{
+  "artist": "string",
+  "album": "string",
+  "minWidth": "number"
+}
+```
+
+### `download_image`
+
+Fetch bytes to local cache. Returns SHA-256, MIME, size, cached path.
+
+```json
+{
+  "url": "string (required)",
+  "maxBytes": "number (default 20_000_000)",
+  "cacheDir": "string (optional)"
+}
+```
+
+### `fetch_with_license`
+
+One-shot: download the bytes *and* resolve the license + attribution for a given URL.
+
+```json
+{
+  "url": "string (required)",
+  "probe": "boolean (default true — false = metadata only)"
+}
+```
+
+### `find_similar`
+
+Reverse image search. Needs `SERPAPI_KEY`.
+
+```json
+{
+  "url": "string",
+  "providers": ["serpapi"]
+}
+```
+
+### `probe_page`
+
+Walk every `<img>` on an HTML page; per-image license inference.
+
+```json
+{
+  "url": "string",
+  "respectRobots": "boolean (default true)"
+}
+```
+
+## Choosing your IDE
+
+| IDE | Setup page |
+|---|---|
+| Claude Code | [Claude Code](/docs/mcp/claude-code) |
+| Cursor | [Cursor](/docs/mcp/cursor) |
+| Cline | [Cline](/docs/mcp/cline) |
+| Continue | [Continue](/docs/mcp/continue) |
+| Roo Code | [Roo Code](/docs/mcp/roo) |
+| Codex | [Codex](/docs/mcp/codex) |
+
+All six use the same underlying MCP binary (`@webfetch/mcp`), just wired up differently.
+
+## Transport modes
+
+The MCP server supports two transports:
+
+- **stdio** (default) — spawned as a child process by the IDE. No network surface. This is what every IDE's copy-paste snippet uses.
+- **HTTP/SSE** — the server listens on a port; the IDE points at it. Useful for remote / shared / team deployments. See [Self-hosting](/docs/self-hosting) for the HTTP MCP config.
+
+## Prompting tips
+
+The tools are named conventionally (`search_images`, `fetch_with_license`), so a Claude or GPT agent will find them without prompting. A few patterns that improve hit rate:
+
+- **"Use the webfetch MCP to find a CC0 photo of ..."** — nudges toward `search_images` with `licensePolicy: "safe-only"`.
+- **"Download the top result and give me the attribution line"** — `search_images` then `download_image`, or just `fetch_with_license` if you already have a URL.
+- **"Verify the license of this URL: ..."** — `fetch_with_license` with `probe: false` for metadata-only.
+
+If the agent picks a ToS-grey provider (`browser`, `serpapi`), you'll see a warning in the tool result. The agent can either relax the `licensePolicy` or pick different providers — don't let it silently ship an `UNKNOWN`-licensed result.
+
+## Security model
+
+The MCP server runs with the same permissions as the spawning IDE. It makes outbound HTTP requests to image provider APIs; it does not open inbound ports (in stdio mode). It caches downloaded bytes to `~/.webfetch/cache` by default.
+
+No telemetry is collected in the CLI / MCP binary. The Cloud API collects standard request metadata; see the [telemetry docs](/docs/faq#telemetry) and [PRIVACY.md](https://github.com/ashlrai/web-fetcher-mcp/blob/main/PRIVACY.md).
+
+## Troubleshooting
+
+- **"Tool call returned no candidates"** — most common cause is a too-strict `licensePolicy` combined with a niche query. Try `prefer-safe` to see what's available.
+- **"Spawn ENOENT"** — the IDE can't find the MCP binary. Use `npx -y @webfetch/mcp` instead of a direct path.
+- **"Provider X returned missing-auth"** — you haven't set the provider's env var. That's fine — the provider skips silently, and others cover for it.
+- **"viaBrowserFallback: true"** — a candidate was sourced by the headless browser. License is `UNKNOWN` and downstream code should treat it accordingly. See [Browser layer](/docs/browser).

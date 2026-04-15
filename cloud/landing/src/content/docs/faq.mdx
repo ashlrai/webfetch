@@ -1,0 +1,95 @@
+---
+title: FAQ
+description: Fifteen questions we get a lot — commercial safety, training, fetches, cost, privacy, jurisdictions, licensing.
+section: Introduction
+---
+
+## Is webfetch commercial-safe?
+
+With `licensePolicy: "safe-only"` (the default), yes — every result carries a tag that permits commercial use: `CC0`, `PUBLIC_DOMAIN`, `CC_BY`, `CC_BY_SA`, or `EDITORIAL_LICENSED` in editorial contexts. `CC_BY` and `CC_BY_SA` require visible attribution; we give you the `attributionLine` for free. See [License safety](/docs/license-safety) for the full rubric.
+
+## What's a "fetch"?
+
+One successful call to `search_images` / `search_artist_images` / `search_album_cover`, or one `download_image` / `fetch_with_license` / `probe_page` call. Calls that error out before returning candidates don't count. Calls to `/providers` and `/health` don't count.
+
+## Can I use webfetch-sourced images for AI training?
+
+For `CC0` and `PUBLIC_DOMAIN` content: yes, with no conditions.
+
+For `CC_BY` and `CC_BY_SA`: arguable. The CC licenses pre-date the training-data debate; their "attribution" clauses don't map cleanly to model weights. Most published training-data licenses (e.g., the Stable Diffusion 2 data card) interpret CC licenses as permitting training with attribution at the dataset level. Not legal advice.
+
+For `EDITORIAL_LICENSED` (Spotify, iTunes, CAA): no. Editorial licenses cover display-in-context, not training.
+
+For `UNKNOWN` (if you opted into `licensePolicy: "prefer-safe"` or `"any"`): almost certainly no — no license means no grant.
+
+Conservative posture: restrict training data to `CC0` + `PUBLIC_DOMAIN` sources only. The NASA / Smithsonian / Met / internet-archive providers give you millions of images you can train on without a second thought.
+
+## Will Google, Pinterest, or Twitter sue me?
+
+If you use `licensePolicy: "safe-only"` with the default providers: no, because you're never hitting those sites.
+
+If you opt into the browser layer: they *could* send a cease-and-desist for violating ToS. Historical pattern: they mostly enforce against high-volume scrapers that build competing products. Hobbyist and small-business use has been largely ignored. Not legal advice; read your local ToS.
+
+We flag every browser-sourced result with `viaBrowserFallback: true` so your code can refuse to ship it if you don't want the risk.
+
+## What if a provider goes down?
+
+Providers fail independently. Each one runs in its own try/catch and reports `{ ok: false, error, provider }` in the `providerReports` array. Other providers still return candidates. If you always stack 3+ providers for a use case, a single provider outage won't leave you empty-handed.
+
+For long outages (Bing API deprecation, Europeana mid-2024 cert issue, etc.), we publish workarounds in the [Changelog](/docs/changelog) and update the adapter as soon as we have a fix.
+
+## Do I need an account?
+
+No. Self-hosted webfetch with the default free-auth providers gets you ~19 working sources without signing up for anything. An account on webfetch Cloud adds pooled provider keys (you don't manage tokens), browser-tier pools, and usage dashboards. It's optional.
+
+## Do you store my queries?
+
+**Self-hosted:** no. webfetch writes one log line per request if logging is enabled; it never phones home.
+
+**webfetch Cloud:** yes, we store the query text, the provider set called, the number of candidates returned, and the requester ID, for 30 days. Used for abuse detection, billing, and your dashboard. We don't share it with third parties and we don't use it for anything else. See [PRIVACY.md](https://github.com/ashlrai/web-fetcher-mcp/blob/main/PRIVACY.md).
+
+You can opt out of Cloud query logging with `X-Webfetch-No-Log: 1` on every request — billing then runs on aggregate counts only.
+
+## Can I run it air-gapped?
+
+Mostly. The CLI and MCP work offline *once* you've cached the queries you need (`webfetch batch` against a whitelist of queries, then cache the results). The server makes outbound HTTPS calls to image provider APIs, so there's no way to run it fully air-gapped while still fetching new images.
+
+For a semi-offline pipeline: run webfetch in a DMZ that has internet access, ship the resulting `~/.webfetch/cache` directory into your air-gapped environment as a read-only volume.
+
+## What about EU GDPR?
+
+Self-hosted: you're the data controller; webfetch is just a library.
+
+webfetch Cloud: we are a processor for the query metadata listed above. We have a standard DPA available on request. We do not collect "personal data" in any query text analysis — we store queries verbatim, but we don't parse names out of them or build profiles.
+
+Image metadata returned by providers may include photographer names. Those are public on the original source by definition; we don't treat them as personal data because they're already published to identify the work's creator.
+
+## What's the webfetch license?
+
+Apache 2.0. The cloud-hosted product has a separate ToS; the self-hostable core is Apache all the way down. Forks and derivative products are welcome. See [LICENSE](https://github.com/ashlrai/web-fetcher-mcp/blob/main/LICENSE).
+
+## What does "confidence" mean, exactly?
+
+How much evidence backs the license tag. Metadata from an authoritative API (Wikimedia `extmetadata`, Openverse `license`) scores 0.95. Platform-owned licenses score 0.85. Host-based heuristics score ≤ 0.4. Zero evidence → 0. Ship only with `confidence ≥ 0.7` unless you're doing exploration. See the [License safety](/docs/license-safety) rubric.
+
+## Why does a search return fewer candidates than I expect?
+
+Three likely causes, in order of frequency:
+
+1. Most of the candidates had `license: "UNKNOWN"` and were filtered by the default `safe-only` policy. Pass `--verbose` to see the per-provider skip count.
+2. Some providers need auth keys you haven't set. `webfetch providers` shows which ones are active.
+3. Your `--min-width` or `--min-height` is dropping everything. Most provider thumbnails are 640px; set `--min-width 400` for a broader cut.
+
+## Is there a rate limit on self-hosted?
+
+No — you're limited only by the upstream providers. `webfetch providers` shows per-provider rate caps. If you push past a provider's limit, it returns HTTP 429 and we back off with exponential delay.
+
+## How does the cache work?
+
+Every downloaded image is hashed with SHA-256 and stored at `~/.webfetch/cache/<sha256>.<ext>`. The attribution JSON sidecar goes next to it. Re-fetches from any provider pointing at the same bytes are free — the cache layer collapses them. There's no TTL; delete files manually if you want to re-download.
+
+Search results themselves aren't cached by default — only downloads. If you want search-result caching, wire one in at your layer (Redis keyed on the request body hash).
+
+## How do I contribute?
+
+Open an issue or PR on [GitHub](https://github.com/ashlrai/web-fetcher-mcp). New provider adapters are especially welcome — see [Recipe 10](/docs/cookbook/recipe-10) for the interface. For substantive design changes, open an issue first so we can align on direction before you spend time building.

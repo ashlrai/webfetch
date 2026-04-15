@@ -1,0 +1,104 @@
+---
+title: "Recipe 7: Self-host the MCP server for an internal AI agent"
+description: Run @webfetch/server behind your VPN, expose it over HTTP to a team of agents, BYOK for provider auth.
+section: Cookbook
+---
+
+You have an internal AI agent (an LLM + some tools) running in your infrastructure. You want it to fetch license-safe images, but you can't send any traffic to a third-party cloud (compliance, PII in queries, etc.). Self-host the MCP server on your own box.
+
+## Minimal deployment — Docker Compose
+
+```yaml
+# docker-compose.yml
+services:
+  webfetch:
+    image: ghcr.io/ashlrai/webfetch-server:latest
+    ports:
+      - "127.0.0.1:7777:7777"
+    environment:
+      WEBFETCH_HTTP_TOKEN: "${WEBFETCH_HTTP_TOKEN}"
+      WEBFETCH_CACHE_DIR: "/var/cache/webfetch"
+      WEBFETCH_ENABLE_BROWSER: "0"
+      UNSPLASH_ACCESS_KEY: "${UNSPLASH_ACCESS_KEY}"
+      PEXELS_API_KEY: "${PEXELS_API_KEY}"
+      SPOTIFY_CLIENT_ID: "${SPOTIFY_CLIENT_ID}"
+      SPOTIFY_CLIENT_SECRET: "${SPOTIFY_CLIENT_SECRET}"
+    volumes:
+      - webfetch-cache:/var/cache/webfetch
+    restart: unless-stopped
+
+volumes:
+  webfetch-cache:
+```
+
+Start:
+
+```bash
+docker compose up -d
+curl -sS localhost:7777/providers -H "authorization: Bearer $WEBFETCH_HTTP_TOKEN"
+```
+
+## MCP bridge for the internal agent
+
+If your agent speaks MCP natively, you can point it at the webfetch HTTP endpoint. Two approaches:
+
+### A — HTTP transport (agent connects directly)
+
+```json
+{
+  "mcpServers": {
+    "webfetch": {
+      "transport": {
+        "type": "http",
+        "url": "http://webfetch.internal:7777",
+        "headers": {
+          "authorization": "Bearer INSERT_TOKEN_HERE"
+        }
+      }
+    }
+  }
+}
+```
+
+Only works if the agent's MCP client supports HTTP transport. Claude Code, Cursor, and Cline all do as of early 2026.
+
+### B — Local stdio shim
+
+For older MCP clients, run a local `@webfetch/mcp` that proxies to your HTTP server:
+
+```bash
+WEBFETCH_API_URL=http://webfetch.internal:7777 \
+WEBFETCH_API_TOKEN=... \
+npx -y @webfetch/mcp --remote
+```
+
+Point the MCP client at this local shim (same stdio config as the standard MCP setup).
+
+## Locking down the network
+
+- The server only needs outbound HTTPS to the configured providers (whitelist in your egress firewall: `en.wikipedia.org`, `api.openverse.org`, `api.unsplash.com`, `api.pexels.com`, etc.).
+- All inbound is scoped to your VPN.
+- Disable the browser layer unless you have a separate sandbox: `WEBFETCH_ENABLE_BROWSER=0`.
+
+## Team pattern: one box, many agents
+
+Deploy behind an ALB / Caddy / Nginx with per-team tokens:
+
+```caddyfile
+webfetch.internal {
+  @team-alpha header Authorization "Bearer alpha-token"
+  @team-beta  header Authorization "Bearer beta-token"
+  handle @team-alpha { reverse_proxy webfetch-alpha:7777 }
+  handle @team-beta  { reverse_proxy webfetch-beta:7777 }
+}
+```
+
+Separate deployments per team gives you separate caches and separate provider key sets. Cheaper than real multi-tenancy and keeps blast radius small.
+
+## Observability
+
+- `GET /health` for liveness probes.
+- Every request emits a structured JSON log line (`{timestamp, endpoint, duration_ms, providers_called, candidates, errors}`).
+- Ship logs to your SIEM; alert on `error_rate > 5%` for 5+ minutes.
+
+For full operational details, see [Self-hosting](/docs/self-hosting).

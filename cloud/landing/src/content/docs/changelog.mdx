@@ -1,0 +1,73 @@
+---
+title: Changelog
+description: Versioned release notes for webfetch.
+section: Operations
+---
+
+## v0.1.0 — Launch
+
+Initial public release.
+
+### Federated search across 24 providers
+
+- Public-domain / CC sources: `wikimedia`, `openverse`, `flickr`, `internet-archive`, `smithsonian`, `nasa`, `met-museum`, `europeana`, `library-of-congress`, `wellcome-collection`, `rawpixel`, `burst`, `europeana-archival`.
+- Stock photography: `unsplash`, `pexels`, `pixabay`.
+- Music identity: `itunes`, `musicbrainz-caa`, `spotify`, `youtube-thumb`.
+- Web search: `brave`, `bing`, `serpapi`.
+- Fallback: `browser` (Playwright, consent-gated).
+
+Default set is 19 providers, auto-skipping any without auth. Five opt-in for ToS-grey or paid use cases.
+
+### License-first ranking
+
+Canonical tags: `CC0`, `PUBLIC_DOMAIN`, `CC_BY`, `CC_BY_SA`, `EDITORIAL_LICENSED`, `PRESS_KIT_ALLOWLIST`, `UNKNOWN`. Ranking by license, then confidence, then resolution. Default `licensePolicy: "safe-only"` rejects `UNKNOWN` entirely.
+
+### Attribution machinery
+
+- `attributionLine` — single-string credit, rendered-ready.
+- XMP sidecars on `webfetch download` (ExifTool / Photoshop compatible).
+- JSON sidecars with full `ImageCandidate` provenance.
+- `buildAttribution()` exported from `@webfetch/core` for custom rendering.
+
+### Four front doors
+
+- **CLI** — `webfetch` binary with `search`, `artist`, `album`, `download`, `probe`, `license`, `providers`, `batch`, `watch`, `config`.
+- **HTTP server** — seven POST endpoints, bearer auth, structured JSON responses.
+- **MCP server** — stdio transport, seven tools, one-command install for Claude Code.
+- **Chrome extension** — loaded as unpacked, lets you right-click any image for license.
+
+### IDE integrations
+
+Copy-paste MCP config for Claude Code, Cursor, Cline, Continue, Roo Code, and Codex.
+
+### Browser fallback
+
+Consent-gated headless Chromium, four-tier fallback ladder (Bright Data → Camoufox → Rebrowser → Vanilla), per-target adapters for Google Images, Pinterest, Twitter/X, and generic pages. Every browser-sourced candidate tagged `UNKNOWN` and flagged `viaBrowserFallback: true`.
+
+### Performance + reliability
+
+- SHA-256-keyed content cache.
+- Per-provider rate limits with backoff.
+- Independent try/catch per provider — one failure doesn't cascade.
+- `providerReports` surface exposes per-provider timing and skip reasons.
+
+### Tooling
+
+- GitHub Action for build-time asset fetching.
+- Homebrew tap: `brew install ashlrai/tap/webfetch`.
+- npm: `npm install -g @webfetch/cli`.
+- Docker: `ghcr.io/ashlrai/webfetch` and `webfetch-server` images.
+- Curl installer: `curl -fsSL .../install.sh | bash`.
+
+### Documentation
+
+Shipped with this launch: the full docs site (you're reading it now). Covers install, providers, license model, per-IDE MCP setup, HTTP API, CLI, browser layer, cookbook (10 recipes), self-hosting, FAQ.
+
+### Known limitations
+
+- Bing adapter targets the v7 API, which Microsoft retired mid-2025. Works for legacy v7 endpoints only.
+- Self-hosted browser tier is Vanilla Playwright only; Bright Data / Camoufox / Rebrowser tiers are webfetch Cloud or BYOK.
+- No Helm chart yet — see [Self-hosting](/docs/self-hosting) for a hand-written Deployment.
+- `find_similar` only works with `serpapi`; other reverse-image providers planned.
+
+Roadmap and upcoming releases live in [GitHub issues](https://github.com/ashlrai/web-fetcher-mcp/issues).

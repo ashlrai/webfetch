@@ -1,0 +1,63 @@
+---
+title: Cursor MCP setup
+description: Enable the webfetch MCP server in Cursor's settings so Composer and chat can find license-safe images.
+section: MCP per IDE
+---
+
+Cursor ships first-party MCP support in the stable channel. The config lives in project- or user-level JSON.
+
+## One-command setup
+
+Cursor doesn't ship a `cursor mcp add`-style command yet, so the recommended path is the config file.
+
+## Manual setup
+
+Open Cursor Settings → MCP → "Add new MCP server", or edit `~/.cursor/mcp.json` directly:
+
+```json
+{
+  "mcpServers": {
+    "webfetch": {
+      "command": "npx",
+      "args": ["-y", "@webfetch/mcp"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "...",
+        "PEXELS_API_KEY": "...",
+        "PIXABAY_API_KEY": "...",
+        "SPOTIFY_CLIENT_ID": "...",
+        "SPOTIFY_CLIENT_SECRET": "..."
+      }
+    }
+  }
+}
+```
+
+For a project-scoped config, save the same JSON to `.cursor/mcp.json` at your repo root. Cursor merges project config over user config.
+
+Reload Cursor (Cmd-Shift-P → "Developer: Reload Window") for the server to register.
+
+## Verification
+
+Open Composer (Cmd-I) and prompt:
+
+```text
+Use the webfetch MCP to search for a CC0 portrait of Brian Eno,
+minimum 1200px wide, then print the attribution line for the top result.
+```
+
+The tool panel in Composer should show the `search_images` call with arguments and the returned candidates. The final message will include the attribution.
+
+## Troubleshooting
+
+- **MCP server doesn't appear in Settings** — Cursor caches aggressively. Fully quit and relaunch, not just Reload Window.
+- **"Server failed to start"** — open Cursor's Developer Console (Cmd-Shift-I) and look for the subprocess stderr. Most commonly `npx` isn't on the PATH visible to Cursor; set `"command": "/opt/homebrew/bin/npx"` (or wherever `which npx` reports).
+- **Tool calls return nothing** — check `licensePolicy`. Cursor's Composer tends to be cautious and may default to `safe-only` for your entire chat. If you need broader recall, prompt "use licensePolicy prefer-safe".
+
+## Screenshot
+
+![Cursor MCP tool call screenshot placeholder](/docs/img/cursor-mcp-placeholder.png)
+
+## Next steps
+
+- [MCP overview](/docs/mcp) — full tool list.
+- [Cookbook Recipe 5](/docs/cookbook/recipe-5) — blog-post enrichment flow.

@@ -1,0 +1,100 @@
+---
+title: Getting started
+description: Install webfetch, run your first federated image search, and wire it into your agent in under five minutes.
+section: Introduction
+---
+
+This page gets you from zero to a working license-safe image search in under five minutes. Pick an install path, run a sample query, and wire the MCP server into your IDE.
+
+## Install
+
+### Option A — one-line install (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
+```
+
+This clones the repo to `~/.webfetch/repo`, installs `bun` if missing, builds the CLI, symlinks `webfetch` onto your `$PATH`, and (with your consent) merges the MCP entry into `~/.claude/settings.json`. Re-run any time to update.
+
+For CI and Dockerfiles, use the non-interactive variant:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash -s -- --yes --no-claude
+```
+
+### Option B — npm
+
+```bash
+npm install -g @webfetch/cli
+```
+
+### Option C — Homebrew (macOS / Linux)
+
+```bash
+brew install ashlrai/tap/webfetch
+```
+
+### Option D — Docker
+
+```bash
+docker pull ghcr.io/ashlrai/webfetch:latest
+docker run --rm ghcr.io/ashlrai/webfetch:latest search "drake portrait" --limit 3
+```
+
+## Your first search
+
+```bash
+webfetch search "drake portrait" --limit 3
+```
+
+Expected output: a table of three candidates with license tags and confidence scores. Exit code `0`. Every row shows the provider, license tag, confidence, resolution, and source URL.
+
+```text
+#  PROVIDER         LICENSE       CONF   DIMS        URL
+1  wikimedia        CC_BY_SA      0.95   2048x1365   https://upload.wikimedia.org/...
+2  openverse        CC_BY         0.95   1600x1067   https://live.staticflickr.com/...
+3  spotify          EDITORIAL     0.90   1000x1000   https://i.scdn.co/image/...
+```
+
+### Result anatomy
+
+Every candidate is a JSON object with these fields:
+
+- `url` — canonical image URL (direct, not a search page).
+- `thumbnailUrl` — smaller variant if the provider exposes one.
+- `sourcePageUrl` — human-viewable page the image lives on.
+- `license` — one of `CC0 | PUBLIC_DOMAIN | CC_BY | CC_BY_SA | EDITORIAL_LICENSED | PRESS_KIT_ALLOWLIST | UNKNOWN`.
+- `licenseUrl` — permalink to the license text (when available).
+- `confidence` — 0–1; see [License safety](/docs/license-safety) for the rubric.
+- `author`, `authorUrl` — photographer or creator, if known.
+- `attributionLine` — pre-formatted single-line credit string ready to render.
+- `provider`, `providerNative` — which source surfaced it.
+- `width`, `height`, `mime` — pixel dimensions and MIME type when available.
+- `sha256`, `byteSize` — filled in after `webfetch download`.
+
+Run with `--json` to get the raw array, `--verbose` to see provider-level timing and warnings on stderr.
+
+## Install the MCP for Claude Code
+
+The installer above does this automatically. If you declined, or want to do it manually:
+
+```bash
+claude mcp add webfetch -- npx -y @webfetch/mcp
+```
+
+Restart Claude Code. In a new chat, ask it to "list the providers available in webfetch". It should return a JSON list with ~20 providers.
+
+Per-IDE instructions: [Claude Code](/docs/mcp/claude-code) · [Cursor](/docs/mcp/cursor) · [Cline](/docs/mcp/cline) · [Continue](/docs/mcp/continue) · [Roo Code](/docs/mcp/roo) · [Codex](/docs/mcp/codex).
+
+## Sign up for webfetch Cloud (optional)
+
+Self-hosting is fully supported and always will be. webfetch Cloud is a hosted version that adds pooled provider keys (so you don't have to manage 8 different API tokens), a shared cache, usage dashboards, and a Bright Data / Camoufox browser pool for the fallback layer. It's the fastest way to production.
+
+Sign up at [app.getwebfetch.com/signup](https://app.getwebfetch.com/signup) — first 1000 fetches per month are free.
+
+## What's next
+
+- Tune provider selection for your use case: [Providers](/docs/providers).
+- Understand the license model before shipping: [License safety](/docs/license-safety).
+- Pick a cookbook recipe closest to your goal: [Cookbook](/docs/cookbook).
+- Self-host everything: [Self-hosting](/docs/self-hosting).

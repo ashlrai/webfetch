@@ -1,0 +1,130 @@
+---
+title: License safety
+description: Why license-first ranking is a correctness concern, how the ranker works, and how to survive the next Getty case.
+section: Core concepts
+---
+
+This page explains why webfetch ranks by license before relevance, how every candidate earns its license tag, and how to ship the result to production with defensible attribution.
+
+## Why it matters
+
+The legal default for almost everything on the web is all-rights-reserved. The Berne Convention grants automatic copyright at the moment of creation — no registration required, no notice required. Absent a license, the default assumption is that you cannot reproduce, modify, or redistribute the work.
+
+Recent cases that shape how we think about this:
+
+- **Getty Images v. Stability AI** (UK, filed 2023) — Getty alleged that Stability scraped 12 million of its images for training, then that Stable Diffusion can reproduce Getty watermarks. Discovery is still ongoing; the settlement posture will shape scraping norms for the next decade.
+- **Andersen v. Stability AI / Midjourney / DeviantArt** (US class action, 2023–) — artists allege that training on their work without license is infringement. The court dismissed most claims in 2023 but let the direct-infringement claim against Stability proceed in 2024.
+- **Warhol v. Goldsmith** (US, 2023) — the Supreme Court narrowed fair-use "transformativeness", making it riskier to rely on derivative defenses.
+
+None of this is legal advice. The practical takeaway is that *any* pipeline that ships images without tracking provenance is on borrowed time. webfetch's job is to make provenance the default, not an afterthought.
+
+## License tags
+
+Every candidate carries exactly one of these tags:
+
+| Tag | Meaning | Ship without review? |
+|---|---|---|
+| `CC0` | Public-domain dedication. No attribution required, no restrictions. | Yes |
+| `PUBLIC_DOMAIN` | Expired copyright or government work. | Yes |
+| `CC_BY` | Commercial OK, attribution required. | Yes, with credit |
+| `CC_BY_SA` | Commercial OK, attribution + sharealike (derivative works must be CC-BY-SA). | Usually yes; check your contract |
+| `EDITORIAL_LICENSED` | Platform ToS allows editorial display (Spotify/CAA/iTunes). | Only in the context of the platform identity |
+| `PRESS_KIT_ALLOWLIST` | Official press kit from an allowlisted URL. | Within press-kit usage terms |
+| `UNKNOWN` | No license evidence found. | **No** |
+
+## The ranking algorithm
+
+Candidates are sorted by three keys, in order:
+
+1. **License rank** — `CC0 (1) < PUBLIC_DOMAIN (2) < CC_BY (3) < CC_BY_SA (4) < EDITORIAL_LICENSED (5) < PRESS_KIT_ALLOWLIST (6) < UNKNOWN (99)`.
+2. **Confidence** — higher is better. Metadata-backed beats heuristic.
+3. **Resolution** — `width × height`, higher first.
+
+The `--license` flag changes how strict the filter is:
+
+- `safe-only` (default) — `UNKNOWN` candidates are dropped entirely.
+- `prefer-safe` — `UNKNOWN` candidates are kept but sorted last.
+- `any` — no filter; sort only by license rank, confidence, resolution.
+
+This ordering is deliberate. A marginally-better photo under an unknown license is worthless to a factory that needs to ship without human review. Relevance ties are easy to break after the fact — provenance is not.
+
+## Why UNKNOWN is rejected by default
+
+A missing license is not "probably fine". It's missing. If webfetch guessed "safe" we'd ship infringing images. Better: surface structured coverage gaps so the caller can make an explicit call (pay for a press photo, email the photographer, or drop the feature).
+
+The `providerReports` field in every response tells you how many candidates each provider returned and how many were filtered for license. If the defaults are empty, the report shows exactly which provider had matches but couldn't produce a clean license.
+
+## Confidence score
+
+Each candidate carries a `confidence` in `[0, 1]`:
+
+- **0.95** — structured license metadata from an authoritative API (Wikimedia `extmetadata`, Openverse `license`).
+- **0.85** — platform-owned license (Unsplash, Pexels, Pixabay, Spotify).
+- **0.60–0.80** — heuristics + coercion (e.g., Brave result with Commons host).
+- **≤ 0.40** — host-based guess only.
+- **0** — no evidence.
+
+Any candidate with `confidence < 0.5` should be re-verified before shipping — even if its tag is "safe".
+
+## Attribution
+
+`buildAttribution()` produces a single human-readable string. Example:
+
+```text
+"Drake at OVO Fest 2019" by Jane Photog (Wikimedia Commons),
+licensed CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Drake_OVO_2019.jpg
+```
+
+We keep it a string, not structured markup, so callers can render it inline in a tooltip, a footer, or a dedicated credits page — your choice.
+
+## XMP sidecars
+
+When you download a candidate via `webfetch download`, we write an XMP sidecar next to the file (`image.jpg` → `image.jpg.xmp`) containing:
+
+- `dc:title`, `dc:creator`, `dc:rights`
+- `xmpRights:UsageTerms` — the attribution line
+- `xmpRights:WebStatement` — the license URL
+- `photoshop:Credit` — the full attribution string
+- `cc:license` — the license URL as a Creative Commons sentinel
+
+This survives round-trips through most asset pipelines (ExifTool, Photoshop, DAM systems). Disable with `--no-sidecar`.
+
+We also write a JSON sidecar (`image.jpg.json`) with the full `ImageCandidate` record, including `sha256`, `provider`, `confidence`, and the raw license URL. If your pipeline can handle JSON, prefer it over parsing XMP.
+
+## Browser-source consent gate
+
+The headless browser fallback is a separate subsystem. It's gated behind three independent checks:
+
+1. `WEBFETCH_ENABLE_BROWSER=1` in the environment.
+2. `"browser"` in the `providers` list.
+3. Playwright must be installed (`bunx playwright install chromium`).
+
+If any of the three is missing, the browser provider skips with a structured `missing-auth` or `disabled` reason visible in `providerReports`. Every candidate sourced through the browser is tagged:
+
+- `license: "UNKNOWN"` (default)
+- `confidence: ≤ 0.4`
+- `viaBrowserFallback: true`
+- `warnings: ["browser-sourced; verify license before use"]`
+
+Downstream code should treat `viaBrowserFallback` as a hard stop unless you have a specific reason (e.g., internal tool, human review in the loop).
+
+See [Browser layer](/docs/browser) for architecture details.
+
+## Practical checklist before shipping
+
+1. Filter to `confidence ≥ 0.85` unless you're doing exploratory work.
+2. Persist `attributionLine`, `sourcePageUrl`, and `licenseUrl` alongside the image bytes.
+3. Render `attributionLine` somewhere visible on every page that displays the image (footer, caption, or hover).
+4. Store the XMP sidecar alongside the image in your DAM.
+5. Ban `UNKNOWN` at the pipeline level. If you want to allow it, require a human approval step.
+6. Log the full `ImageCandidate` record so you can reproduce the provenance claim if challenged.
+
+## Failure modes we protect against
+
+- Wikimedia returning a thumbnail with no metadata → dropped.
+- Openverse result missing `license` field → dropped.
+- Brave result with no host heuristic match → tagged `UNKNOWN`, filtered by default.
+- Spotify API returning an image with no artist/album context → dropped (can't build attribution).
+- Any provider returning an image with `EDITORIAL_LICENSED` in a context that isn't editorial (unclear) → surfaced, but confidence capped at 0.7.
+
+If you want to see the coercion logic up close, read `packages/core/src/license/heuristic.ts` in the repo.

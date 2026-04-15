@@ -3,8 +3,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Blog",
-  description: "Essays on licensed image sourcing, MCP, and shipping webfetch.",
+  title: "Blog — Essays on licensed image sourcing and MCP",
+  description:
+    "Essays on licensed image sourcing, MCP, the human-like browser fallback, and the engineering behind webfetch. From the AshlrAI team.",
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "webfetch blog",
+    description:
+      "Essays on licensed image sourcing, MCP, and the engineering behind webfetch.",
+    url: "https://getwebfetch.com/blog",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "webfetch blog",
+    description: "Essays on licensed image sourcing, MCP, and shipping webfetch.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function BlogIndex() {

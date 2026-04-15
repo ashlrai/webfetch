@@ -89,6 +89,10 @@ export function ProviderMatrix() {
           Licensed sources rank first. Editorial-licensed sources next. UNKNOWN providers are
           strictly opt-in and always emit an attribution sidecar.
         </p>
+        <p className="mt-2 text-[13px] font-mono text-[var(--color-fg-faint)] max-w-2xl leading-relaxed">
+          Every result carries a real license, sourced from a real provider, with a real link back
+          to the original.
+        </p>
       </FadeUp>
 
       <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">

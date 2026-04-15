@@ -1,0 +1,114 @@
+---
+title: "Recipe 9: Mass-deduplicate an image library with pHash"
+description: SHA-256 catches byte-identical duplicates; pHash catches near-duplicates (recompressed, rescaled, watermarked). Combine both for a clean library.
+section: Cookbook
+---
+
+Your DAM has 50,000 images. Half are duplicates — same image, different resolution, different re-encode. webfetch caches by SHA-256 already, but that only catches byte-identical copies. For visually-identical dedupe you need a perceptual hash.
+
+## The approach
+
+1. Walk every image in your library.
+2. Compute two hashes per image: SHA-256 (exact) + pHash (perceptual).
+3. Bucket by pHash; within each bucket, pick the highest-resolution / highest-quality candidate as canonical.
+4. Write a mapping CSV; delete or symlink the losers.
+
+## pHash implementation
+
+`sharp` gives you the pipeline. A 64-bit DCT-based pHash is plenty for near-dup detection:
+
+```ts
+import sharp from "sharp";
+
+export async function phash64(path: string): Promise<bigint> {
+  // Resize to 32x32, grayscale, extract pixel values
+  const raw = await sharp(path)
+    .resize(32, 32, { fit: "fill" })
+    .grayscale()
+    .raw()
+    .toBuffer();
+  // Compute 2D DCT, take top-left 8x8 block (excluding DC), compare to median.
+  const pixels = Array.from(raw).map((v, i) => (i < 1024 ? v : 0));
+  const dct = dct2d(pixels, 32);
+  const block: number[] = [];
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      if (x === 0 && y === 0) continue;
+      block.push(dct[y * 32 + x]!);
+    }
+  }
+  const sorted = [...block].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)]!;
+  let hash = 0n;
+  for (let i = 0; i < 63; i++) {
+    if (block[i]! > median) hash |= 1n << BigInt(i);
+  }
+  return hash;
+}
+
+function dct2d(input: number[], n: number): number[] {
+  // 1D DCT-II in both dimensions. Straight textbook implementation —
+  // for 32x32 this is fine at library-walk scale. For 100k+ images,
+  // call out to a native lib (e.g. @types/phash).
+  const row = new Array(n * n).fill(0);
+  for (let y = 0; y < n; y++) {
+    for (let k = 0; k < n; k++) {
+      let s = 0;
+      for (let x = 0; x < n; x++) s += input[y * n + x]! * Math.cos(((2 * x + 1) * k * Math.PI) / (2 * n));
+      row[y * n + k] = s;
+    }
+  }
+  const out = new Array(n * n).fill(0);
+  for (let x = 0; x < n; x++) {
+    for (let k = 0; k < n; k++) {
+      let s = 0;
+      for (let y = 0; y < n; y++) s += row[y * n + x]! * Math.cos(((2 * y + 1) * k * Math.PI) / (2 * n));
+      out[k * n + x] = s;
+    }
+  }
+  return out;
+}
+
+export function hamming(a: bigint, b: bigint): number {
+  let x = a ^ b;
+  let count = 0;
+  while (x) {
+    count += Number(x & 1n);
+    x >>= 1n;
+  }
+  return count;
+}
+```
+
+## Bucketing at scale
+
+For 50k images, a naive O(n²) pairwise comparison is 1.25 billion hamming calls. Use a BK-tree or locality-sensitive hashing to bring that to O(n log n).
+
+A practical shortcut: bucket on the top 16 bits of the pHash first, then pairwise within each bucket. Empirically reduces compare count by 100–1000x with minimal recall loss at threshold 10.
+
+## Threshold
+
+- `hamming ≤ 5` — same image, different quality / crop / re-encode.
+- `5 < hamming ≤ 10` — probably same subject, different shoot.
+- `> 10` — different images.
+
+For a conservative dedupe (keep everything potentially different), use threshold 5. For aggressive dedupe (collapse variations), use 10.
+
+## Keep the best of each bucket
+
+Within a bucket, prefer:
+
+1. Higher resolution.
+2. Higher license rank (CC0 > CC-BY > UNKNOWN).
+3. Higher confidence.
+4. Lower file size for equal other attributes (likely better codec).
+
+Exactly the same ordering webfetch's core ranker uses. If your library was built through webfetch, the `ImageCandidate` records are already ranked.
+
+## What to do with losers
+
+- **Delete** — simplest. You have the SHA-256 cached if you need them.
+- **Symlink** — `<loser-path>` → `<canonical-path>`. Preserves old references.
+- **Move to archive** — `./archive/dedup/<loser-path>`.
+
+The webfetch cache at `~/.webfetch/cache/<sha256>.ext` is SHA-256-keyed by design, so if you only use webfetch to fetch, byte-identical dedupe happens for free. pHash only adds value for images that weren't byte-identical to start.

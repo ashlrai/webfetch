@@ -1,0 +1,261 @@
+---
+title: HTTP API
+description: The webfetch HTTP server — auth, endpoints, request/response schemas, error codes, and rate limits.
+section: Interfaces
+---
+
+The HTTP API is a thin wrapper around the same core library that powers the CLI and the MCP server. Every endpoint mirrors an MCP tool. Request bodies validate via Zod; responses are JSON envelopes.
+
+## Base URL
+
+- **Self-hosted:** `http://localhost:7777` (default; override with `WEBFETCH_HTTP_PORT`).
+- **webfetch Cloud:** `https://api.getwebfetch.com/v1`.
+
+## Authentication
+
+Every request (except `GET /health` when disabled) requires a bearer token:
+
+```http
+Authorization: Bearer <token>
+```
+
+- **Self-hosted:** set `WEBFETCH_HTTP_TOKEN=mytoken` when starting the server.
+- **Cloud:** your API key from [app.getwebfetch.com/keys](https://app.getwebfetch.com/keys).
+
+Missing or bad token → `401 Unauthorized`.
+
+## Response envelope
+
+Every response is JSON with this shape:
+
+```json
+{ "ok": true, "data": { /* endpoint-specific */ } }
+```
+
+On error:
+
+```json
+{ "ok": false, "error": "human-readable reason" }
+```
+
+Validation errors include the Zod issue path:
+
+```json
+{ "ok": false, "error": "query: Required; limit: expected number, received string" }
+```
+
+## Endpoints
+
+### `POST /search` — federated image search
+
+Request body:
+
+```json
+{
+  "query": "drake portrait",
+  "providers": ["wikimedia", "openverse", "unsplash"],
+  "licensePolicy": "safe-only",
+  "maxPerProvider": 3,
+  "minWidth": 1200,
+  "minHeight": 800,
+  "timeoutMs": 15000
+}
+```
+
+Response `data`:
+
+```json
+{
+  "candidates": [ /* ImageCandidate[] */ ],
+  "providerReports": [
+    { "provider": "wikimedia", "ok": true, "count": 12, "timeMs": 340 },
+    { "provider": "openverse", "ok": true, "count": 8, "timeMs": 520 }
+  ],
+  "warnings": []
+}
+```
+
+All fields except `query` are optional. Sensible defaults apply (see [Providers](/docs/providers)).
+
+### `POST /artist` — artist images by kind
+
+```json
+{
+  "artist": "Taylor Swift",
+  "kind": "portrait",
+  "providers": ["spotify", "musicbrainz-caa", "wikimedia"],
+  "licensePolicy": "safe-only"
+}
+```
+
+`kind` ∈ `"portrait" | "album" | "logo" | "performing"`. The adapter auto-picks the best providers per kind if `providers` is omitted.
+
+### `POST /album` — canonical album artwork
+
+```json
+{
+  "artist": "Radiohead",
+  "album": "In Rainbows",
+  "minWidth": 1000
+}
+```
+
+Enforces 1:1 aspect ratio. Returns the highest-resolution CAA candidate available.
+
+### `POST /download` — fetch image bytes to cache
+
+```json
+{
+  "url": "https://upload.wikimedia.org/wikipedia/...",
+  "maxBytes": 20000000,
+  "cacheDir": "/var/lib/webfetch/cache"
+}
+```
+
+Response:
+
+```json
+{
+  "url": "https://...",
+  "sha256": "abc123…",
+  "mime": "image/jpeg",
+  "byteSize": 482019,
+  "cachedPath": "/var/lib/webfetch/cache/abc123…jpeg"
+}
+```
+
+Uses a SHA-256-keyed cache — identical bytes from different URLs collapse into one file.
+
+### `POST /probe` — list every image on a page with per-image license
+
+```json
+{
+  "url": "https://example.com/article",
+  "respectRobots": true
+}
+```
+
+Returns an array of every `<img>` found on the page, each with an inferred license tag and confidence.
+
+### `POST /license` — determine license for a specific URL
+
+```json
+{
+  "url": "https://upload.wikimedia.org/wikipedia/commons/...",
+  "probe": true
+}
+```
+
+Response:
+
+```json
+{
+  "license": "CC_BY_SA",
+  "confidence": 0.95,
+  "author": "Jane Photog",
+  "attributionLine": "...",
+  "sourcePageUrl": "https://commons.wikimedia.org/...",
+  "mime": "image/jpeg",
+  "sha256": "abc…",
+  "cachedPath": "/var/lib/webfetch/cache/abc…",
+  "byteSize": 482019
+}
+```
+
+If `probe: true`, the adapter also downloads the bytes and caches them. If `false`, metadata only.
+
+### `POST /similar` — reverse-image search
+
+```json
+{
+  "url": "https://example.com/mystery.jpg",
+  "providers": ["serpapi"]
+}
+```
+
+Requires `SERPAPI_KEY`. Returns candidates visually similar to the input URL.
+
+### `GET /providers` — list configured providers + defaults
+
+```json
+{
+  "ok": true,
+  "data": {
+    "all": ["wikimedia", "openverse", "unsplash", "..."],
+    "defaults": ["wikimedia", "openverse", "..."],
+    "endpoints": ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar"]
+  }
+}
+```
+
+No auth-sensitive data is exposed; safe to call unauthenticated on healthcheck paths.
+
+### `GET /health` — liveness probe
+
+Returns `{ "ok": true, "data": { "status": "ok", "version": "0.1.0" } }`. Still requires auth unless disabled with `WEBFETCH_HEALTH_NOAUTH=1`.
+
+## Error codes
+
+| Status | Meaning | Recovery |
+|---|---|---|
+| 200 | Success | — |
+| 400 | Bad JSON body | Fix client-side parsing |
+| 401 | Missing or invalid token | Regenerate key |
+| 402 | Over your plan's fetch budget (Cloud only) | Upgrade plan or wait until next cycle |
+| 404 | Unknown endpoint | Check the endpoint list |
+| 422 | Schema validation failed | Check error message; fix payload |
+| 429 | Rate limit exceeded | Back off, retry with exponential delay |
+| 500 | Internal error | Retry once; if persistent, report to support |
+
+All 4xx bodies include `{ ok: false, error: "..." }`. 429 responses also include `X-RateLimit-Reset` (Unix seconds).
+
+## Rate limits per plan (Cloud)
+
+| Plan | Fetches/month | Burst | Browser budget |
+|---|---|---|---|
+| Free | 1,000 | 10/min | 0 |
+| Starter ($19/mo) | 25,000 | 60/min | 500 browser-sourced |
+| Growth ($99/mo) | 250,000 | 300/min | 5,000 |
+| Scale | custom | custom | custom |
+
+Self-hosted has no rate limit — you're limited only by the upstream providers. Respect their ToS.
+
+## Example: Node.js
+
+```ts
+const r = await fetch("http://localhost:7777/search", {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    authorization: `Bearer ${process.env.WEBFETCH_TOKEN}`,
+  },
+  body: JSON.stringify({
+    query: "kyoto temple",
+    licensePolicy: "safe-only",
+    minWidth: 1600,
+  }),
+});
+const { ok, data, error } = await r.json();
+if (!ok) throw new Error(error);
+console.log(data.candidates[0]);
+```
+
+## Example: curl
+
+```bash
+curl -sS -X POST http://localhost:7777/search \
+  -H "authorization: Bearer $WEBFETCH_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"query":"drake portrait","licensePolicy":"safe-only"}' \
+  | jq '.data.candidates[0]'
+```
+
+## Running the server
+
+```bash
+bun run --cwd packages/server start
+# or, Docker:
+docker run -p 7777:7777 -e WEBFETCH_HTTP_TOKEN=mytoken ghcr.io/ashlrai/webfetch-server
+```
+
+See [Self-hosting](/docs/self-hosting) for production deployment (Docker Compose, systemd, Kubernetes).

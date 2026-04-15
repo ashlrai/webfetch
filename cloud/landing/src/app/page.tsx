@@ -1,15 +1,29 @@
 import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
+import { ClaudeCodeDemo } from "@/components/ClaudeCodeDemo";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { FadeUp } from "@/components/FadeUp";
 import { Features } from "@/components/Features";
 import { Hero } from "@/components/Hero";
 import { ProviderMatrix } from "@/components/ProviderMatrix";
+import { RealImageGallery } from "@/components/RealImageGallery";
+import { UseCases } from "@/components/UseCases";
 import Link from "next/link";
 
-export default function Home() {
+export default async function Home() {
   return (
     <>
       <Hero />
+
+      <RealImageGallery />
+
+      <FadeUp>
+        <ClaudeCodeDemo />
+      </FadeUp>
+
+      <FadeUp>
+        <UseCases />
+      </FadeUp>
+
       <Features />
       <ArchitectureDiagram />
       <ProviderMatrix />

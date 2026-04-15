@@ -1,0 +1,182 @@
+---
+title: Self-hosting
+description: Run webfetch on your own infrastructure — Docker, Kubernetes, BYOK for provider auth, observability, and scaling notes.
+section: Operations
+---
+
+Everything in webfetch is self-hostable. The same binaries that power webfetch Cloud run on your infrastructure with zero functional difference. This page covers the operational details.
+
+## What you're hosting
+
+- **`@webfetch/cli`** — a Node/Bun binary. No daemon, no config server.
+- **`@webfetch/server`** — a stateless HTTP server on port 7777 by default.
+- **`@webfetch/mcp`** — an MCP stdio server. Used inline by IDEs; also runs standalone.
+
+All three share `@webfetch/core`, so behavior is identical across surfaces.
+
+## Prerequisites
+
+- Bun 1.1+ or Node 20+.
+- (Optional) Playwright + headless Chromium for the browser fallback: `bunx playwright install chromium`.
+- (Optional) Redis for shared cache in a horizontally-scaled deployment.
+
+## Run the HTTP server
+
+### Bare metal
+
+```bash
+git clone https://github.com/ashlrai/web-fetcher-mcp
+cd web-fetcher-mcp
+bun install
+WEBFETCH_HTTP_TOKEN=mytoken \
+UNSPLASH_ACCESS_KEY=... \
+PEXELS_API_KEY=... \
+bun run --cwd packages/server start
+```
+
+### Docker
+
+```bash
+docker run -d --name webfetch \
+  -p 7777:7777 \
+  -e WEBFETCH_HTTP_TOKEN=mytoken \
+  -e UNSPLASH_ACCESS_KEY=... \
+  -e PEXELS_API_KEY=... \
+  -v webfetch-cache:/var/cache/webfetch \
+  ghcr.io/ashlrai/webfetch-server:latest
+```
+
+### Docker Compose
+
+```yaml
+services:
+  webfetch:
+    image: ghcr.io/ashlrai/webfetch-server:latest
+    ports: ["127.0.0.1:7777:7777"]
+    environment:
+      WEBFETCH_HTTP_TOKEN: "${WEBFETCH_HTTP_TOKEN}"
+      WEBFETCH_CACHE_DIR: "/var/cache/webfetch"
+      UNSPLASH_ACCESS_KEY: "${UNSPLASH_ACCESS_KEY}"
+      PEXELS_API_KEY: "${PEXELS_API_KEY}"
+      SPOTIFY_CLIENT_ID: "${SPOTIFY_CLIENT_ID}"
+      SPOTIFY_CLIENT_SECRET: "${SPOTIFY_CLIENT_SECRET}"
+    volumes: ["webfetch-cache:/var/cache/webfetch"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--header=authorization: Bearer ${WEBFETCH_HTTP_TOKEN}", "http://localhost:7777/health"]
+      interval: 30s
+
+volumes:
+  webfetch-cache:
+```
+
+## Kubernetes (Helm hint)
+
+A first-party Helm chart is on the roadmap. In the meantime, a minimal Deployment + Service works:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: webfetch }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: webfetch } }
+  template:
+    metadata: { labels: { app: webfetch } }
+    spec:
+      containers:
+        - name: webfetch
+          image: ghcr.io/ashlrai/webfetch-server:latest
+          ports: [{ containerPort: 7777 }]
+          envFrom: [{ secretRef: { name: webfetch-secrets } }]
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits:   { cpu: "1",    memory: "1Gi" }
+          readinessProbe:
+            httpGet: { path: /health, port: 7777, httpHeaders: [{ name: authorization, value: "Bearer $(WEBFETCH_HTTP_TOKEN)" }] }
+            initialDelaySeconds: 5
+          volumeMounts: [{ name: cache, mountPath: /var/cache/webfetch }]
+      volumes: [{ name: cache, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: webfetch }
+spec:
+  selector: { app: webfetch }
+  ports: [{ port: 7777, targetPort: 7777 }]
+```
+
+For a horizontally-scaled deployment, put a shared Redis behind `WEBFETCH_CACHE_REDIS_URL` so every replica sees the same cache.
+
+## Bring your own keys
+
+Every provider key is a plain environment variable. See the [CLI reference](/docs/cli#environment-variables) for the full list. Providers without a configured key skip silently — no error, no warning unless you pass `--verbose`. Start with the free-tier keys (Unsplash, Pexels, Pixabay, Flickr, Europeana, Smithsonian) and add paid ones (Brave, SerpAPI) when you hit coverage gaps.
+
+## The cache
+
+Downloaded bytes land in `$WEBFETCH_CACHE_DIR` (default: `~/.webfetch/cache`) keyed by SHA-256. The cache is append-only; webfetch never deletes. Budget 10–50 GB depending on your image flow — `find $WEBFETCH_CACHE_DIR -atime +90 -delete` is a reasonable LRU policy if disk pressure appears.
+
+For shared-cache Kubernetes deployments, use a PVC or mount an object-storage bucket (S3, GCS) via FUSE.
+
+## Observability
+
+The server writes one JSON log line per request:
+
+```json
+{
+  "t": "2026-04-13T12:00:00Z",
+  "endpoint": "/search",
+  "duration_ms": 420,
+  "ok": true,
+  "providers_called": 5,
+  "candidates_returned": 12,
+  "licenses": { "CC_BY": 8, "CC_BY_SA": 4 }
+}
+```
+
+Ship to your logging stack. Useful queries:
+
+- `error_rate` — `count(ok=false) / count(*)` over 5m.
+- `p95_duration` — alert if > 5s sustained.
+- `provider_failure_rate` — per-provider skip/error rate; tracks provider health.
+
+No telemetry is sent anywhere. If you want webfetch Cloud's dashboards without Cloud, wire these logs into Grafana with the sample dashboards in `docs/grafana/`.
+
+## Security posture
+
+- Outbound traffic only: image provider APIs on port 443.
+- Inbound: port 7777, auth-required for everything except `/health` when `WEBFETCH_HEALTH_NOAUTH=1`.
+- No filesystem writes outside `$WEBFETCH_CACHE_DIR`.
+- No code execution — every response is JSON.
+
+See [SECURITY.md](https://github.com/ashlrai/web-fetcher-mcp/blob/main/SECURITY.md) in the repo for our disclosure policy.
+
+## Upgrading
+
+Pull the latest image or `git pull` + rebuild. State is in two places:
+
+- The cache directory (keep it).
+- `~/.webfetchrc` (keep it).
+
+No migrations are needed between minor versions. Major versions (0.x → 1.x) will ship an explicit migration note in the [Changelog](/docs/changelog).
+
+## Scaling rules of thumb
+
+- One CPU core sustains ~5 concurrent searches with the default provider set.
+- Memory is flat around 200 MB per replica; add ~50 MB per concurrent Chromium (browser tier).
+- The upstream provider rate limits are the real bottleneck. `webfetch providers --verbose` shows your current per-provider quota usage.
+- For global traffic, deploy one replica per region and pin clients geographically — image CDNs serve better locally-routed traffic.
+
+## Enabling the browser fallback
+
+Not recommended on self-hosted deployments unless you need it. It's resource-intensive and requires Playwright + Chromium:
+
+```bash
+docker run -d --name webfetch \
+  -e WEBFETCH_ENABLE_BROWSER=1 \
+  -e WEBFETCH_HTTP_TOKEN=... \
+  -v /dev/shm:/dev/shm \
+  ghcr.io/ashlrai/webfetch-server-browser:latest
+```
+
+The `-browser` image variant has Chromium pre-installed. See [Browser layer](/docs/browser) for what this costs and what it enables.

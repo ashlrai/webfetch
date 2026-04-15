@@ -1,0 +1,92 @@
+---
+title: "Recipe 2: Bulk-fetch portraits for an artist roster"
+description: Feed a CSV of artist names in; get license-safe portraits out. For booking agencies, labels, and artist directories.
+section: Cookbook
+---
+
+You have a list of 500 artists. You need a portrait for each one — 1200px+ wide, license-safe, with attribution — to populate your artist directory.
+
+## Approach
+
+- Use `webfetch batch` for parallelism.
+- Tune providers to the musician case: Spotify + MusicBrainz + Wikimedia.
+- Set `--license safe-only` so `UNKNOWN` never sneaks in.
+- Write results to JSONL; reconcile later.
+
+## Setup
+
+```bash
+# artists.txt — one name per line, optionally artist\tproviders
+cat > artists.txt <<EOF
+Taylor Swift
+Kendrick Lamar
+Björk
+Aphex Twin
+Mitski
+EOF
+```
+
+Build queries that include the artist kind marker:
+
+```bash
+while read name; do
+  echo -e "${name} portrait\tspotify,musicbrainz-caa,wikimedia"
+done < artists.txt > queries.tsv
+```
+
+## Run
+
+```bash
+webfetch batch --file queries.tsv \
+  --concurrency 4 \
+  --json \
+  --min-width 1200 \
+  --license safe-only \
+  > portraits.jsonl
+```
+
+Each output line:
+
+```json
+{
+  "query": "Taylor Swift portrait",
+  "candidates": [ /* ranked, license-safe */ ],
+  "errors": []
+}
+```
+
+## Reconcile
+
+```bash
+jq -r '
+  .query as $q |
+  (.candidates[0] // null) as $top |
+  if $top then
+    [$q, $top.url, $top.license, $top.confidence, $top.attributionLine]
+    | @tsv
+  else
+    [$q, "MISSING", "-", "-", "-"] | @tsv
+  end
+' portraits.jsonl > portraits.tsv
+```
+
+Audit the `MISSING` rows separately — those are artists where the safe providers didn't return a 1200px+ candidate. For those:
+
+1. Try `--license prefer-safe` to see if there's an `UNKNOWN`-tagged candidate worth human review.
+2. Or fall back to `brave` + manual review.
+
+## Download the bytes
+
+```bash
+jq -r '.candidates[0].url // empty' portraits.jsonl | while read url; do
+  webfetch download "$url" --out ./portraits/
+done
+```
+
+The XMP sidecar goes next to each file. Your DAM pipeline can ingest both.
+
+## Performance notes
+
+- 4x concurrency with the safe provider set sustains ~1.5 queries/sec on a laptop. 500 artists ≈ 6 minutes.
+- If you hit provider rate limits (visible in stderr with `--verbose`), drop `--concurrency` to 2 or stagger MusicBrainz specifically with `--max-per-provider 1`.
+- Spotify's client-credentials token is cached across the batch — only the first call pays the handshake cost.

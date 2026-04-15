@@ -371,6 +371,43 @@ a:hover {
   animation: wf-blink 1s step-end infinite;
 }
 
+/* Marquee — Real images gallery */
+@keyframes wf-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.wf-marquee {
+  --wf-marquee-duration: 70s;
+}
+.wf-marquee-track {
+  width: max-content;
+  animation: wf-marquee-scroll var(--wf-marquee-duration) linear infinite;
+  will-change: transform;
+}
+.wf-marquee[data-paused="true"] .wf-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .wf-caret {
+    animation: none;
+    opacity: 1;
+  }
+  .wf-live-dot {
+    animation: none;
+  }
+}
+
 @keyframes wf-pulse-dot {
   0%,
   100% {

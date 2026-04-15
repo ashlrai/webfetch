@@ -1,0 +1,80 @@
+---
+title: "Recipe 5: Use webfetch from Claude Code to enrich a blog post"
+description: Writer-facing workflow — Claude Code finds the right image, downloads it, writes the caption, and commits everything.
+section: Cookbook
+---
+
+You're writing a blog post in your IDE. Halfway through you realize you need a hero image and two inline illustrations. Instead of alt-tabbing to Unsplash, ask Claude.
+
+## One-time setup
+
+Install the MCP server: [Claude Code MCP setup](/docs/mcp/claude-code). Verify with "list webfetch providers".
+
+## The prompt
+
+```text
+I'm writing /blog/2026-04-kafka-migrations.mdx. I need:
+
+1. A hero image — modern data center, CC0 or CC-BY, minimum 1600px wide.
+2. An inline illustration of distributed log architecture (technical
+   diagram style), CC-BY or CC0, 800px+ wide.
+3. A closing image — abstract network/graph visualization, CC0 preferred.
+
+For each, use the webfetch MCP. Download the chosen image to
+./public/blog/2026-04-kafka/<kind>.jpg, save the attributionLine in
+the frontmatter, and paste the markdown image tag at the right spot
+in the post.
+```
+
+Claude Code will:
+
+1. Call `search_images` three times with appropriate queries and `licensePolicy: "safe-only"`.
+2. Pick the top candidate for each slot.
+3. Call `download_image` to grab bytes to the correct directory.
+4. Edit the MDX frontmatter to add `credits:` mapping.
+5. Insert `![caption](path)` tags.
+
+## The final post (simplified)
+
+```mdx
+---
+title: Shipping zero-downtime Kafka topic migrations
+date: 2026-04-13
+credits:
+  hero: "'Open server racks' by Taylor Vick on Unsplash (Unsplash License)"
+  inline: "'Distributed log' by Jane Author (Wikimedia Commons), CC BY-SA 4.0"
+  closing: "'Network 01' by Brett Jordan on Unsplash (Unsplash License)"
+---
+
+![](/blog/2026-04-kafka/hero.jpg)
+
+Kafka topic migrations... [post body]
+
+![](/blog/2026-04-kafka/inline.jpg)
+
+More content...
+
+![](/blog/2026-04-kafka/closing.jpg)
+```
+
+Render the `credits` object in your blog layout's footer.
+
+## Why this is better than "just use Unsplash"
+
+- Every image carries a provenance record. If your CMS ever asks "where did this come from", you have an answer.
+- The XMP sidecar goes with the bytes, so your CDN's DAM ingestion captures license too.
+- Claude can pick from 20 providers, not just Unsplash — better stylistic fit for technical or editorial posts.
+- You never have to manually type an attribution line.
+
+## System prompt for stricter results
+
+Add this to your CLAUDE.md or the per-project system prompt:
+
+```text
+When you call the webfetch MCP, always:
+- Set `licensePolicy: "safe-only"`.
+- Prefer providers in this order: wikimedia, openverse, unsplash, pexels.
+- Never use `browser` or `serpapi`.
+- Reject any candidate with `viaBrowserFallback: true`.
+- Surface the full attributionLine verbatim in the frontmatter.
+```

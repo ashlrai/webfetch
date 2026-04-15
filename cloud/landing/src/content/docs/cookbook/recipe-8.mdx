@@ -1,0 +1,114 @@
+---
+title: "Recipe 8: Pipeline — fetch → vision AI → alt-text → publish"
+description: Full accessibility pipeline. webfetch hands off to a vision model which produces alt-text, and the post publishes with license + alt-text wired up.
+section: Cookbook
+---
+
+Every image on your site should have descriptive alt-text. Every image on your site should have attribution. This pipeline gives you both, automatically.
+
+## The stages
+
+1. **Search** — webfetch `search_images` with `licensePolicy: "safe-only"`.
+2. **Download** — webfetch `download_image` to local bytes.
+3. **Describe** — vision model (Claude 3.5+ Haiku, GPT-4o, Gemini Pro Vision) generates alt-text from the bytes.
+4. **Publish** — your CMS receives `{ url, alt, attribution }` and renders the image with both.
+
+## Code (TypeScript, Node)
+
+```ts
+import { searchImages, downloadImage } from "@webfetch/core";
+import Anthropic from "@anthropic-ai/sdk";
+import fs from "node:fs/promises";
+
+const client = new Anthropic();
+
+export async function enrichedImage(query: string) {
+  const { candidates } = await searchImages(query, {
+    licensePolicy: "safe-only",
+    minWidth: 1200,
+  });
+  const top = candidates[0];
+  if (!top) throw new Error(`no safe image for ${query}`);
+
+  const r = await downloadImage(top.url, { maxBytes: 10_000_000 });
+  const bytes = await fs.readFile(r.cachedPath);
+  const base64 = bytes.toString("base64");
+  const mediaType = r.mime as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+  const resp = await client.messages.create({
+    model: "claude-3-5-haiku-latest",
+    max_tokens: 200,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+          {
+            type: "text",
+            text: "Write one sentence of descriptive alt-text for this image. Describe what's visible, concretely. No 'image of' preamble. Under 125 characters.",
+          },
+        ],
+      },
+    ],
+  });
+
+  const alt = resp.content
+    .filter((c): c is Anthropic.TextBlock => c.type === "text")
+    .map((c) => c.text)
+    .join(" ")
+    .trim();
+
+  return {
+    url: top.url,
+    sha256: r.sha256,
+    cachedPath: r.cachedPath,
+    alt,
+    attribution: top.attributionLine,
+    license: top.license,
+    confidence: top.confidence,
+  };
+}
+```
+
+## Usage
+
+```ts
+const img = await enrichedImage("hummingbird in flight, macro photography");
+/*
+{
+  url: "...",
+  alt: "A ruby-throated hummingbird hovers mid-air with wings blurred,
+        iridescent feathers catching sunlight against a blurred green background.",
+  attribution: "'Hummingbird' by Skyler Ewing on Pexels",
+  license: "CC0",
+  confidence: 0.85
+}
+*/
+```
+
+## Rendering
+
+```html
+<figure>
+  <img src="/assets/hummingbird.jpg" alt="A ruby-throated hummingbird hovers..." />
+  <figcaption>'Hummingbird' by Skyler Ewing on Pexels</figcaption>
+</figure>
+```
+
+## Prompt caching tip
+
+If you're running this at scale (thousands of images/day), use Anthropic prompt caching on the system prompt that describes your alt-text style. You'll cut per-call cost by 80–90%:
+
+```ts
+system: [{
+  type: "text",
+  text: "You write alt-text for a publication... [style guide]",
+  cache_control: { type: "ephemeral" },
+}],
+```
+
+## Accessibility notes
+
+- Alt-text under 125 chars plays nicely with most screen readers.
+- Purely decorative images: set `alt=""` (empty), and don't bother with the AI call. The figure caption still carries attribution.
+- Complex technical diagrams: don't auto-generate. Have a human write the alt-text.

@@ -1,0 +1,94 @@
+---
+title: Browser layer
+description: The consent-gated headless browser that fills the gap when APIs miss. Hybrid router, license posture, per-target adapters.
+section: Core concepts
+---
+
+When the 23 API providers don't cover a query — a new product, a niche meme, a specific Pinterest board — webfetch falls through to a headless browser. This page explains the architecture, the consent model, and the pricing implications.
+
+## Why it exists
+
+The API providers cover ~90% of real-world image queries with commercial-safe licensing. The remaining 10% — especially current events, niche subcultures, and fresh product launches — often only exist in places with no image-search API: Pinterest, Twitter, Google Images, random product pages.
+
+The browser layer is our graceful degradation path. It's opt-in, gated, flagged, and never the default.
+
+## The hybrid router
+
+A browser-sourced search walks a four-tier fallback ladder. The first tier that succeeds wins; later tiers only run when the earlier ones are blocked or empty.
+
+1. **Bright Data** — commercial proxy network with rotating residential IPs. Highest success rate, highest cost. Used first for queries where the cloud detects the target site blocks datacenter IPs.
+2. **Camoufox** — a custom Firefox build with realistic fingerprint scrambling. Free to run; modest success rate on lightly-defended targets.
+3. **Rebrowser** — patched Playwright with anti-detection patches. Faster than Camoufox; loses to Bright Data on hardened sites.
+4. **Vanilla Playwright** — last resort. Mostly only works on completely undefended public pages.
+
+The router tracks per-target success rates and reshuffles the order every 24 hours so we don't over-fire at Bright Data for queries that Camoufox handles fine.
+
+Self-hosted deployments get **Vanilla Playwright** only out of the box. Bright Data / Camoufox / Rebrowser are available on webfetch Cloud or via BYOK (see [Self-hosting](/docs/self-hosting)).
+
+## The consent gate
+
+Three independent locks:
+
+1. **Environment.** `WEBFETCH_ENABLE_BROWSER=1` must be set. Default is off.
+2. **Explicit opt-in per call.** `"browser"` must appear in the `providers` list. It's never in `DEFAULT_PROVIDERS`.
+3. **Runtime dependency.** Playwright + a headless Chromium must be installed: `bunx playwright install chromium`.
+
+Miss any of the three and the adapter returns a structured skip record (`skipped: "browser-disabled"` or `"missing-playwright"`) so downstream code can tell the difference between "we tried and failed" and "we never tried".
+
+## License posture for browser-sourced candidates
+
+Every candidate that comes through this layer is tagged:
+
+- `license: "UNKNOWN"` (unless a host-level heuristic overrides — e.g., Commons, Unsplash).
+- `confidence ≤ 0.4`.
+- `viaBrowserFallback: true`.
+- A warning on the result: `"browser-sourced; verify license before use"`.
+
+The license policy default (`safe-only`) drops these candidates entirely. You have to opt in twice — once to enable the browser, once to loosen the license filter — to actually receive them.
+
+This is deliberate. Browser-sourced content is the provenance equivalent of "I saw it on the internet". Downstream pipelines should treat `viaBrowserFallback: true` as a hard stop unless the use case explicitly tolerates it (internal tools with human review, research, etc.).
+
+## Per-target adapters
+
+Each target gets its own extractor because every site's DOM is different.
+
+### Google Images
+
+- Query: `https://www.google.com/search?q=...&tbm=isch`.
+- Extraction: walks the result grid, pulls `imgres?...&imgurl=...` params, unwraps to the real image URL.
+- Gotcha: Google rate-limits aggressively. Bright Data tier is required for any sustained throughput.
+
+### Pinterest
+
+- Query: `https://www.pinterest.com/search/pins/?q=...`.
+- Extraction: pulls `<img>` `srcset` attributes, takes the 736w variant (highest public-facing resolution).
+- Gotcha: Pinterest requires an authenticated session for deep results. Unauth gets ~25 pins; the rest need login. webfetch doesn't do authenticated Pinterest scraping.
+
+### Twitter / X
+
+- Query: `https://x.com/search?q=...&f=image`.
+- Extraction: pulls `pbs.twimg.com` image URLs, upgrades `?name=small` → `?name=orig`.
+- Gotcha: Twitter has the most aggressive anti-bot of any major target. Expect high failure rates without Bright Data. Media on deleted/protected tweets returns 404 — we filter and retry.
+
+### Generic page
+
+- When you pass a URL instead of a query, the adapter loads the page, walks every `<img>`, runs the per-image license heuristic on each, and returns ranked candidates.
+- This is the mode that powers `webfetch probe <url>`.
+
+## Pricing implications
+
+- Bright Data tier: ~$0.001–0.003 per request depending on geography. For a typical 20-result search, that's $0.02–0.06 per query.
+- Camoufox / Rebrowser / Vanilla: free to run; you pay for the compute (a worker can sustain ~5 queries/second on a single Chromium instance).
+- Every cache hit is free. SHA-256-keyed cache collapses repeated requests automatically.
+
+On webfetch Cloud, browser-sourced queries count against your plan's "browser budget" (separate from regular fetches). See [Pricing](/pricing).
+
+## Opting out entirely
+
+If you want to be 100% sure browser-sourced content can never enter your pipeline:
+
+1. Don't set `WEBFETCH_ENABLE_BROWSER`.
+2. Never put `"browser"` in your `providers` list.
+3. (Belt and suspenders) Add a hook in your pipeline: `if (candidate.viaBrowserFallback) throw new Error("rejected")`.
+
+For most production use cases, this is the right posture. Turn on the browser layer only for exploration flows or for internal tools with human review in the loop.

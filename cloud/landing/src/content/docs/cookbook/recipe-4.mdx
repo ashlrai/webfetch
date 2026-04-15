@@ -1,0 +1,90 @@
+---
+title: "Recipe 4: Watch for new CC images of a query"
+description: Cron + webhook. webfetch polls providers for new images matching your query and pings you only when something new appears.
+section: Cookbook
+---
+
+You care about a topic — a news event, a product launch, a public figure — and want to know whenever new CC-licensed imagery lands. `webfetch watch` handles the diffing and persistence; you handle what to do with new hits.
+
+## Run it
+
+```bash
+webfetch watch "ukraine frontline 2026" \
+  --interval 6h \
+  --license safe-only \
+  --providers wikimedia,openverse,flickr \
+  --webhook https://hooks.example.com/webfetch
+```
+
+On every tick:
+
+1. Runs the search with your flags.
+2. Compares to the previous tick's state file at `~/.webfetch/watch/<slug>.json` (keyed by `sha256` or `url`).
+3. Emits only the net-new candidates — to stdout as JSONL *and* to your webhook (POST, JSON body).
+
+## State file
+
+```json
+{
+  "query": "ukraine frontline 2026",
+  "lastTickAt": "2026-04-13T10:00:00Z",
+  "known": [
+    { "url": "...", "sha256": "..." },
+    { "url": "...", "sha256": "..." }
+  ]
+}
+```
+
+Reset with `--reset` if you want to re-emit everything.
+
+## Running under cron / systemd
+
+Cron every 6h:
+
+```cron
+0 */6 * * * webfetch watch "ukraine frontline 2026" --interval 0 --webhook https://... >> /var/log/webfetch-watch.log 2>&1
+```
+
+`--interval 0` means "one tick, exit". That way cron owns the scheduling, not the long-running webfetch process.
+
+systemd timer:
+
+```ini
+# /etc/systemd/system/webfetch-watch@.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/webfetch watch "%i" --interval 0 --webhook %E{WEBHOOK_URL}
+```
+
+```ini
+# /etc/systemd/system/webfetch-watch@.timer
+[Timer]
+OnCalendar=*-*-* */6:00:00
+Unit=webfetch-watch@%i.service
+```
+
+Then `systemctl enable --now webfetch-watch@ukraine-frontline.timer`.
+
+## Webhook payload
+
+```json
+{
+  "query": "ukraine frontline 2026",
+  "tickAt": "2026-04-13T16:00:00Z",
+  "new": [
+    {
+      "url": "...",
+      "license": "CC_BY",
+      "confidence": 0.95,
+      "provider": "wikimedia",
+      "attributionLine": "..."
+    }
+  ]
+}
+```
+
+## Tips
+
+- Use a distinct `--slug` to give multiple watchers for related queries their own state file.
+- If your webhook endpoint isn't idempotent, add request deduplication keyed on the candidate `sha256`.
+- For high-volume watchers (thousands of new items per tick), pipe the stdout JSONL to your message queue instead of relying on the synchronous webhook.

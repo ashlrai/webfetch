@@ -17,9 +17,11 @@ export async function generateMetadata({
   return {
     title: post.meta.title,
     description: post.meta.excerpt,
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.meta.title,
       description: post.meta.excerpt,
+      url: `https://getwebfetch.com/blog/${slug}`,
       type: "article",
       publishedTime: post.meta.date,
       authors: [post.meta.author],
@@ -29,6 +31,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: post.meta.title,
       description: post.meta.excerpt,
+      images: post.meta.cover ? [post.meta.cover] : ["/og-image.png"],
     },
   };
 }

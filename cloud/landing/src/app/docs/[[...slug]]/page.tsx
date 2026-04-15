@@ -1,77 +1,66 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { notFound } from "next/navigation";
+import { CopyableCodeEnhancer } from "@/components/docs/CopyableCodeEnhancer";
+import { OnPageToc } from "@/components/docs/OnPageToc";
+import { PrevNextNav } from "@/components/docs/PrevNextNav";
+import { flatOrder, loadDoc } from "@/lib/docs";
 
-export const metadata: Metadata = {
-  title: "Docs",
-  description: "webfetch installation, provider tuning, license policy, cost model.",
-};
+export function generateStaticParams() {
+  return flatOrder().map((i) => ({
+    slug: i.slug ? i.slug.split("/") : undefined,
+  }));
+}
 
-const DOC_LINKS = [
-  {
-    title: "Quickstart",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/QUICKSTART.md",
-    blurb:
-      "Four install paths: curl one-liner, CLI, MCP, HTTP server, Chrome extension, GitHub Action.",
-  },
-  {
-    title: "Providers",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/PROVIDERS.md",
-    blurb: "Every provider, its auth, rate limits, gotchas, and default license class.",
-  },
-  {
-    title: "Provider tuning",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/PROVIDER_TUNING.md",
-    blurb:
-      "Per-use-case picks: musician portrait, album art, historical event, product shot, stock hero.",
-  },
-  {
-    title: "License policy",
-    href: "/legal/license-policy",
-    blurb: "Ranking table, why UNKNOWN is rejected, attribution format, confidence score rubric.",
-  },
-  {
-    title: "Cost model",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/COST.md",
-    blurb: "Per-fetch unit economics, cache hit rates, pooled vs BYOK provider keys.",
-  },
-  {
-    title: "Install: Claude Code",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/INSTALL_CLAUDE_CODE.md",
-    blurb: "One-line MCP registration for Claude Code.",
-  },
-  {
-    title: "Install: Cursor",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/INSTALL_CURSOR.md",
-    blurb: "One-line MCP registration for Cursor.",
-  },
-  {
-    title: "Install: Cline",
-    href: "https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/INSTALL_CLINE.md",
-    blurb: "One-line MCP registration for Cline.",
-  },
-  {
-    title: "MCP registry",
-    href: "/mcp-registry",
-    blurb: "Machine manifest + copy-paste snippets for every major agent.",
-  },
-];
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug?: string[] }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const slugStr = (slug ?? []).join("/");
+  const doc = loadDoc(slugStr);
+  if (!doc) return { title: "Docs" };
+  return {
+    title: doc.meta.title,
+    description: doc.meta.description,
+  };
+}
 
-export default function DocsIndex() {
+export default async function DocPage({
+  params,
+}: {
+  params: Promise<{ slug?: string[] }>;
+}) {
+  const { slug } = await params;
+  const slugStr = (slug ?? []).join("/");
+  const doc = loadDoc(slugStr);
+  if (!doc) return notFound();
+
   return (
-    <section className="max-w-4xl mx-auto px-6 py-20">
-      <h1 className="text-4xl font-semibold tracking-tight">Docs</h1>
-      <p className="mt-3 text-[var(--fg-dim)] max-w-2xl">
-        Installation guides, provider reference, license policy, and the cost model. Canonical
-        source of the repo docs; product docs live here.
-      </p>
-      <div className="mt-10 grid gap-4 md:grid-cols-2">
-        {DOC_LINKS.map((d) => (
-          <Link key={d.title} href={d.href} className="wf-card block">
-            <div className="font-semibold">{d.title}</div>
-            <p className="mt-2 text-sm text-[var(--fg-dim)] leading-relaxed">{d.blurb}</p>
-          </Link>
-        ))}
-      </div>
-    </section>
+    <div className="xl:flex xl:gap-10">
+      <article className="docs-article min-w-0 flex-1 max-w-3xl">
+        <header className="mb-8 pb-6 border-b border-[var(--color-border)]">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-[var(--color-fg-faint)] mb-2">
+            {doc.meta.section ?? "Docs"}
+          </div>
+          <h1 className="text-3xl md:text-4xl font-mono font-semibold tracking-tight text-[var(--color-fg)]">
+            {doc.meta.title}
+          </h1>
+          {doc.meta.description && (
+            <p className="mt-3 text-[var(--color-fg-dim)] text-base leading-relaxed">
+              {doc.meta.description}
+            </p>
+          )}
+        </header>
+        <div
+          className="prose-wf"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted MDX content
+          dangerouslySetInnerHTML={{ __html: doc.html }}
+        />
+        <PrevNextNav slug={slugStr} />
+        <CopyableCodeEnhancer />
+      </article>
+      <OnPageToc headings={doc.headings} />
+    </div>
   );
 }

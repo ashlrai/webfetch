@@ -24,6 +24,14 @@ export const metadata: Metadata = {
   },
   description:
     "One API, CLI, and MCP that federates 24 licensed image sources, falls through to a human-like browser when APIs miss, and always ships attribution.",
+  applicationName: "webfetch",
+  authors: [{ name: "Mason Wyatt", url: "https://ashlr.ai" }],
+  creator: "AshlrAI",
+  publisher: "AshlrAI",
+  manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "webfetch — the license-first image layer for AI agents",
     description:
@@ -32,19 +40,93 @@ export const metadata: Metadata = {
     siteName: "webfetch",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: "webfetch — the license-first image layer",
     description: "Federated, license-aware image search for AI agents and humans.",
     images: ["/og-image.png"],
+    creator: "@ashlr_ai",
+    site: "@ashlr_ai",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   icons: { icon: "/favicon.svg" },
+  other: {
+    "theme-color": "#ff5a1f",
+  },
+};
+
+const ORGANIZATION_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "AshlrAI",
+  alternateName: "Ashlr AI",
+  url: "https://ashlr.ai",
+  logo: "https://getwebfetch.com/og-image.png",
+  description:
+    "AshlrAI is a small studio building developer infrastructure for the AI agent era.",
+  founder: {
+    "@type": "Person",
+    name: "Mason Wyatt",
+  },
+  sameAs: ["https://ashlr.ai", "https://github.com/ashlrai", "https://x.com/ashlr_ai"],
+};
+
+const SOFTWARE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "webfetch",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS, Linux, Windows",
+  url: "https://getwebfetch.com",
+  description:
+    "The license-first image layer for AI agents. One API, CLI, and MCP federating 24 licensed image sources with attribution baked in.",
+  publisher: {
+    "@type": "Organization",
+    name: "AshlrAI",
+    url: "https://ashlr.ai",
+  },
+  screenshot: "https://getwebfetch.com/og-image.png",
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Free",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro",
+      price: "19",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
+      name: "Team",
+      price: "79",
+      priceCurrency: "USD",
+    },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSONLD) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_JSONLD) }}
+        />
+      </head>
       <body>
         <Nav />
         <main className="min-h-screen">{children}</main>

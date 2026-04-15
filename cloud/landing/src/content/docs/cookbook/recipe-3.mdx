@@ -1,0 +1,78 @@
+---
+title: "Recipe 3: Verify license of an image you already have"
+description: Someone sent you a URL. You need to know if you can ship it. This is that workflow.
+section: Cookbook
+---
+
+You didn't fetch this image through webfetch. Someone pasted a URL in Slack, or it's in your DAM from years ago, or a partner sent over an asset. Before you ship, you need a defensible license claim.
+
+## One-shot CLI
+
+```bash
+webfetch license https://upload.wikimedia.org/wikipedia/commons/a/a4/Drake_in_2018.jpg
+```
+
+Output:
+
+```text
+License: CC_BY_SA
+Confidence: 0.95
+Author: The Come Up Show
+Attribution: "Drake Portrait" by The Come Up Show (Wikimedia Commons), licensed CC BY-SA 2.0
+Source page: https://commons.wikimedia.org/wiki/File:Drake_in_2018.jpg
+```
+
+Add `--probe` to also download the bytes (verifies the URL actually resolves, caches for later):
+
+```bash
+webfetch license https://... --probe
+```
+
+## HTTP
+
+```bash
+curl -sS -X POST http://localhost:7777/license \
+  -H "authorization: Bearer $WEBFETCH_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"url":"https://upload.wikimedia.org/...","probe":true}' \
+  | jq
+```
+
+## How it works
+
+1. The adapter normalizes the URL (strips tracking params, resolves CDN redirects).
+2. It walks upward to the host-level heuristic (e.g., Wikimedia Commons → try `extmetadata` API).
+3. If a metadata API exists, it fetches the structured license + author.
+4. If not, it runs `heuristicLicenseFromUrl` — Unsplash hosts → CC0, Getty hosts → all-rights-reserved, etc.
+5. If the page is HTML (not a direct image), it runs `probe_page` logic to find the image in context and infer license from surrounding markup.
+
+The confidence score tells you how much to trust the result. Anything ≥ 0.9 is metadata-backed. Anything ≤ 0.4 is a host heuristic alone — treat as "probably fine, verify before shipping".
+
+## Probe a whole page
+
+If you have a URL that's a webpage (not a direct image), use `probe` to get every image on the page with a per-image license:
+
+```bash
+webfetch probe https://blog.example.com/article --json \
+  | jq '.images[] | select(.license == "UNKNOWN") | .url'
+```
+
+That prints every image on the page whose license couldn't be resolved — these are the ones to chase down before republishing.
+
+## Automating a "safe to ship" check
+
+```ts
+import { fetchWithLicense } from "@webfetch/core";
+
+export async function isSafeToShip(url: string): Promise<{ ok: boolean; reason: string; attribution?: string }> {
+  const r = await fetchWithLicense(url, { probe: false });
+  if (r.license === "UNKNOWN") return { ok: false, reason: "no license evidence" };
+  if (r.confidence < 0.7) return { ok: false, reason: `low confidence (${r.confidence})` };
+  if (["CC0", "PUBLIC_DOMAIN", "CC_BY", "CC_BY_SA"].includes(r.license)) {
+    return { ok: true, reason: `${r.license} @ ${r.confidence}`, attribution: r.attributionLine };
+  }
+  return { ok: false, reason: `non-commercial tag: ${r.license}` };
+}
+```
+
+Wire that into your DAM's upload pipeline. Reject uploads where `ok: false`; require human review for mid-confidence hits.

@@ -1,0 +1,73 @@
+---
+title: "Recipe 1: CC0 album cover for a music app"
+description: Find a canonical album cover that's safe to display in a commercial music app, with attribution.
+section: Cookbook
+---
+
+You're building a music app (Spotify clone, personal library, podcast tool). For each album in your catalog, you want the official cover image, ideally 1:1 aspect and 1000px+, with a license you can defend.
+
+## Approach
+
+Stack three providers, in order of authority:
+
+1. **musicbrainz-caa** — the Cover Art Archive. If an album has a canonical cover, it's here.
+2. **itunes** — Apple's search API. Fast, broad, zero-auth. Returns editorial-licensed artwork.
+3. **spotify** — as fallback for albums iTunes doesn't carry (indie releases, DSP-exclusive).
+
+All three tag as `EDITORIAL_LICENSED`. For a music app identifying the album by its cover, that's the correct tag: platform ToS allows editorial display in the context of album/artist identification.
+
+## CLI
+
+```bash
+webfetch album "Radiohead" "In Rainbows" \
+  --providers musicbrainz-caa,itunes,spotify \
+  --min-width 1000 --json
+```
+
+Output:
+
+```json
+[
+  {
+    "url": "https://coverartarchive.org/release/.../1000.jpg",
+    "width": 1000,
+    "height": 1000,
+    "license": "EDITORIAL_LICENSED",
+    "confidence": 0.9,
+    "attributionLine": "Cover art for 'In Rainbows' by Radiohead (Cover Art Archive)",
+    "provider": "musicbrainz-caa"
+  }
+]
+```
+
+## Programmatic (Node)
+
+```ts
+import { searchAlbumCover } from "@webfetch/core";
+
+async function coverFor(artist: string, album: string) {
+  const { candidates } = await searchAlbumCover(artist, album, {
+    providers: ["musicbrainz-caa", "itunes", "spotify"],
+    minWidth: 1000,
+    licensePolicy: "safe-only",
+  });
+  const top = candidates[0];
+  if (!top) throw new Error(`no cover for ${artist} — ${album}`);
+  return {
+    url: top.url,
+    attribution: top.attributionLine,
+    confidence: top.confidence,
+  };
+}
+```
+
+## Shipping it
+
+1. Store `url`, `attributionLine`, `confidence`, and the album+artist keys in your DB.
+2. Render `attributionLine` in the album details page footer (small, accessible).
+3. Re-run monthly for albums where `confidence < 0.8` — Cover Art Archive adds new canonical covers over time.
+4. Cache the bytes on your CDN, keyed by SHA-256. webfetch returns the hash; use it as the asset filename.
+
+## Not sure the tag is right for you?
+
+`EDITORIAL_LICENSED` specifically covers "this image identifies the thing you're displaying it alongside". If you're using cover art as generic decoration (e.g., a generic music playlist hero), you need CC0/CC-BY art instead — use [Recipe 4](/docs/cookbook/recipe-4) or the stock provider tune from [Providers](/docs/providers).
