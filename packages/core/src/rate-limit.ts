@@ -47,13 +47,21 @@ export function getBucket(p: ProviderId) {
   let b = buckets.get(p);
   if (!b) {
     const d = DEFAULTS[p];
-    b = { capacity: d.capacity, tokens: d.capacity, refillRate: d.perSec / 1000, lastRefill: Date.now() };
+    b = {
+      capacity: d.capacity,
+      tokens: d.capacity,
+      refillRate: d.perSec / 1000,
+      lastRefill: Date.now(),
+    };
     buckets.set(p, b);
   }
   const bucket = b;
   const refill = () => {
     const now = Date.now();
-    bucket.tokens = Math.min(bucket.capacity, bucket.tokens + (now - bucket.lastRefill) * bucket.refillRate);
+    bucket.tokens = Math.min(
+      bucket.capacity,
+      bucket.tokens + (now - bucket.lastRefill) * bucket.refillRate,
+    );
     bucket.lastRefill = now;
   };
   return {

@@ -20,11 +20,17 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export async function loadSettings(): Promise<Settings> {
-  const got = await chrome.storage.local.get(["serverUrl", "token", "defaultPolicy", "defaultProviders"]);
+  const got = await chrome.storage.local.get([
+    "serverUrl",
+    "token",
+    "defaultPolicy",
+    "defaultProviders",
+  ]);
   return {
     serverUrl: (got.serverUrl as string) || DEFAULT_SETTINGS.serverUrl,
     token: (got.token as string) || "",
-    defaultPolicy: (got.defaultPolicy as Settings["defaultPolicy"]) || DEFAULT_SETTINGS.defaultPolicy,
+    defaultPolicy:
+      (got.defaultPolicy as Settings["defaultPolicy"]) || DEFAULT_SETTINGS.defaultPolicy,
     defaultProviders: (got.defaultProviders as string[]) || [],
   };
 }
@@ -33,9 +39,18 @@ export async function saveSettings(patch: Partial<Settings>): Promise<void> {
   await chrome.storage.local.set(patch);
 }
 
-export interface ApiResult<T> { ok: boolean; data?: T; error?: string; status: number; }
+export interface ApiResult<T> {
+  ok: boolean;
+  data?: T;
+  error?: string;
+  status: number;
+}
 
-export async function call<T = unknown>(path: string, body?: unknown, method: "GET" | "POST" = "POST"): Promise<ApiResult<T>> {
+export async function call<T = unknown>(
+  path: string,
+  body?: unknown,
+  method: "GET" | "POST" = "POST",
+): Promise<ApiResult<T>> {
   const s = await loadSettings();
   if (!s.token) return { ok: false, error: "no token configured — open options", status: 0 };
   const url = s.serverUrl.replace(/\/+$/, "") + path;
@@ -50,8 +65,13 @@ export async function call<T = unknown>(path: string, body?: unknown, method: "G
     });
     const text = await res.text();
     let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { ok: false, error: text }; }
-    if (!res.ok) return { ok: false, error: parsed.error ?? `HTTP ${res.status}`, status: res.status };
+    try {
+      parsed = text ? JSON.parse(text) : {};
+    } catch {
+      parsed = { ok: false, error: text };
+    }
+    if (!res.ok)
+      return { ok: false, error: parsed.error ?? `HTTP ${res.status}`, status: res.status };
     return { ok: true, data: parsed.data as T, status: res.status };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "network error", status: 0 };

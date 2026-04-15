@@ -18,7 +18,7 @@
 
 import type { Context } from "hono";
 import type { Env } from "./env.ts";
-import { ulid, sha256Hex, constantTimeEq } from "./ids.ts";
+import { constantTimeEq, sha256Hex, ulid } from "./ids.ts";
 
 // Better Auth is imported lazily inside the handlers below to avoid pulling its
 // cold-start cost into the hot path. The types import is fine though.
@@ -94,7 +94,9 @@ export async function getSessionUser(c: Context<{ Bindings: Env }>): Promise<Ses
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id = ?1
       LIMIT 1`,
-  ).bind(tokenHash).first<{ id: string; user_id: string; expires_at: number; email: string }>();
+  )
+    .bind(tokenHash)
+    .first<{ id: string; user_id: string; expires_at: number; email: string }>();
   if (!row) return null;
   if (row.expires_at < Date.now()) return null;
   // SECURITY (SA-008): The previous `constantTimeEq(row.id, tokenHash)` was a
@@ -119,46 +121,77 @@ function d1Adapter(env: Env) {
     async create({ model, data }: { model: string; data: Record<string, any> }) {
       const id = data.id ?? ulid();
       const now = Date.now();
-      const row: Record<string, unknown> = { id, ...data, createdAt: data.createdAt ?? now, updatedAt: now };
+      const row: Record<string, unknown> = {
+        id,
+        ...data,
+        createdAt: data.createdAt ?? now,
+        updatedAt: now,
+      };
       const cols = Object.keys(row);
       const placeholders = cols.map((_, i) => `?${i + 1}`).join(",");
       await env.DB.prepare(
         `INSERT INTO ${escapeIdent(model)} (${cols.map(escapeIdent).join(",")})
          VALUES (${placeholders})`,
-      ).bind(...cols.map((c) => row[c])).run();
+      )
+        .bind(...cols.map((c) => row[c]))
+        .run();
       return row;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async findOne({ model, where }: { model: string; where: Array<{ field: string; value: any }> }) {
+    async findOne({
+      model,
+      where,
+    }: { model: string; where: Array<{ field: string; value: any }> }) {
       const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
-      const res = await env.DB.prepare(`SELECT * FROM ${escapeIdent(model)} WHERE ${clause} LIMIT 1`)
-        .bind(...where.map((w) => w.value)).first();
+      const res = await env.DB.prepare(
+        `SELECT * FROM ${escapeIdent(model)} WHERE ${clause} LIMIT 1`,
+      )
+        .bind(...where.map((w) => w.value))
+        .first();
       return res ?? null;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async findMany({ model, where }: { model: string; where?: Array<{ field: string; value: any }> }) {
+    async findMany({
+      model,
+      where,
+    }: { model: string; where?: Array<{ field: string; value: any }> }) {
       if (!where?.length) {
         const res = await env.DB.prepare(`SELECT * FROM ${escapeIdent(model)}`).all();
         return res.results ?? [];
       }
       const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
       const res = await env.DB.prepare(`SELECT * FROM ${escapeIdent(model)} WHERE ${clause}`)
-        .bind(...where.map((w) => w.value)).all();
+        .bind(...where.map((w) => w.value))
+        .all();
       return res.results ?? [];
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async update({ model, where, update }: { model: string; where: Array<{ field: string; value: any }>; update: Record<string, any> }) {
-      const sets = Object.keys(update).map((k, i) => `${escapeIdent(k)} = ?${i + 1}`).join(", ");
-      const whereClause = where.map((w, i) => `${escapeIdent(w.field)} = ?${Object.keys(update).length + i + 1}`).join(" AND ");
+    async update({
+      model,
+      where,
+      update,
+    }: {
+      model: string;
+      where: Array<{ field: string; value: any }>;
+      update: Record<string, any>;
+    }) {
+      const sets = Object.keys(update)
+        .map((k, i) => `${escapeIdent(k)} = ?${i + 1}`)
+        .join(", ");
+      const whereClause = where
+        .map((w, i) => `${escapeIdent(w.field)} = ?${Object.keys(update).length + i + 1}`)
+        .join(" AND ");
       await env.DB.prepare(`UPDATE ${escapeIdent(model)} SET ${sets} WHERE ${whereClause}`)
-        .bind(...Object.values(update), ...where.map((w) => w.value)).run();
+        .bind(...Object.values(update), ...where.map((w) => w.value))
+        .run();
       return { ...update };
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async delete({ model, where }: { model: string; where: Array<{ field: string; value: any }> }) {
       const clause = where.map((w, i) => `${escapeIdent(w.field)} = ?${i + 1}`).join(" AND ");
       await env.DB.prepare(`DELETE FROM ${escapeIdent(model)} WHERE ${clause}`)
-        .bind(...where.map((w) => w.value)).run();
+        .bind(...where.map((w) => w.value))
+        .run();
     },
   };
 }
@@ -178,8 +211,10 @@ export async function issueSessionForTest(
   const token = crypto.randomUUID() + crypto.randomUUID();
   const tokenHash = await sha256Hex(token);
   await env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)`,
-  ).bind(tokenHash, userId, now + SESSION_TTL_MS, now).run();
+    "INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
+  )
+    .bind(tokenHash, userId, now + SESSION_TTL_MS, now)
+    .run();
   return token;
 }
 

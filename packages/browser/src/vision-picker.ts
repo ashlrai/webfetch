@@ -58,10 +58,7 @@ export function buildVisionPrompt(candidates: ImageCandidate[]): string {
 }
 
 /** Extract the first integer 0..N from a free-form model reply. */
-export function parseVisionReply(
-  text: string,
-  n: number,
-): number | null {
+export function parseVisionReply(text: string, n: number): number | null {
   const m = text.match(/-?\d+/);
   if (!m) return null;
   const n0 = Number(m[0]);

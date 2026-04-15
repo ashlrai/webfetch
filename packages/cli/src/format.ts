@@ -3,8 +3,7 @@
  */
 
 const useColor =
-  !process.env.NO_COLOR &&
-  (process.env.FORCE_COLOR === "1" || process.stdout.isTTY === true);
+  !process.env.NO_COLOR && (process.env.FORCE_COLOR === "1" || process.stdout.isTTY === true);
 
 function wrap(code: number, s: string): string {
   if (!useColor) return s;
@@ -38,13 +37,9 @@ export interface TableColumn {
 
 export function renderTable(cols: TableColumn[], rows: string[][]): string {
   const lines: string[] = [];
-  const headerCells = cols.map((col) =>
-    pad(col.header, col.width, col.align ?? "left"),
-  );
+  const headerCells = cols.map((col) => pad(col.header, col.width, col.align ?? "left"));
   lines.push(c.bold(headerCells.join("  ")));
-  lines.push(
-    c.gray(cols.map((col) => "-".repeat(col.width)).join("  ")),
-  );
+  lines.push(c.gray(cols.map((col) => "-".repeat(col.width)).join("  ")));
   for (const row of rows) {
     const cells = cols.map((col, i) => {
       const raw = row[i] ?? "";

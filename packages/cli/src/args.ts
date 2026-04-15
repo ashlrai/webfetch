@@ -90,7 +90,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return { positional, flags };
 }
 
-export function getString(flags: Record<string, string | boolean>, ...keys: string[]): string | undefined {
+export function getString(
+  flags: Record<string, string | boolean>,
+  ...keys: string[]
+): string | undefined {
   for (const k of keys) {
     const v = flags[k];
     if (typeof v === "string") return v;
@@ -103,7 +106,10 @@ export function getBool(flags: Record<string, string | boolean>, ...keys: string
   return false;
 }
 
-export function getInt(flags: Record<string, string | boolean>, ...keys: string[]): number | undefined {
+export function getInt(
+  flags: Record<string, string | boolean>,
+  ...keys: string[]
+): number | undefined {
   const s = getString(flags, ...keys);
   if (s === undefined) return undefined;
   const n = Number.parseInt(s, 10);

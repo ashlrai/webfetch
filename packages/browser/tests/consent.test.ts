@@ -1,15 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import {
-  BrowserConsentError,
-  createBrowserProvider,
-} from "../src/index.ts";
+import { BrowserConsentError, createBrowserProvider } from "../src/index.ts";
 
 describe("consent gate", () => {
   it("throws BrowserConsentError when userConsent is false", () => {
-    expect(() =>
-      createBrowserProvider({ userConsent: false }),
-    ).toThrow(BrowserConsentError);
+    expect(() => createBrowserProvider({ userConsent: false })).toThrow(BrowserConsentError);
   });
 
   it("throws when userConsent is omitted (undefined)", () => {

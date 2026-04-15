@@ -141,7 +141,7 @@ export function buildPayload(
   return {
     name,
     domain: "webfetch.cli",
-    url: "app://webfetch/" + name,
+    url: `app://webfetch/${name}`,
     props: {
       ...scrubProps(props),
       install: installHash(opts),
@@ -165,7 +165,8 @@ export async function trackEvent(
   if (!isTelemetryEnabled(opts)) return false;
 
   const fetcher: Fetcher | undefined =
-    opts.fetcher ?? (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : undefined);
+    opts.fetcher ??
+    (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : undefined);
   if (!fetcher) return false;
 
   const endpoint = opts.endpoint ?? DEFAULT_ENDPOINT;

@@ -5,10 +5,10 @@
 
 import type {
   D1Database,
-  KVNamespace,
-  R2Bucket,
-  Queue,
   DurableObjectNamespace,
+  KVNamespace,
+  Queue,
+  R2Bucket,
 } from "@cloudflare/workers-types";
 
 export interface Env {

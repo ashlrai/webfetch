@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  coerceLicense,
   buildAttribution,
+  coerceLicense,
   heuristicLicenseFromUrl,
   isSafeLicense,
 } from "../packages/core/src/license.ts";

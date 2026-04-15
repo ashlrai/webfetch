@@ -56,10 +56,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, send) => {
 
 async function saveImage(imageUrl: string, pageUrl: string) {
   try {
-    const licenseRes = await call<{ license?: string; attributionLine?: string; sourcePageUrl?: string; author?: string }>(
-      "/license",
-      { url: imageUrl, probe: false },
-    );
+    const licenseRes = await call<{
+      license?: string;
+      attributionLine?: string;
+      sourcePageUrl?: string;
+      author?: string;
+    }>("/license", { url: imageUrl, probe: false });
 
     let probeData: any = null;
     if (pageUrl) {

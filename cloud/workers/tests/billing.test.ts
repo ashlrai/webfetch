@@ -1,7 +1,7 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { STRIPE_EVENTS_HANDLED, flushMeteredBilling, handleStripeEvent } from "../src/billing.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
-import { handleStripeEvent, STRIPE_EVENTS_HANDLED, flushMeteredBilling } from "../src/billing.ts";
 
 describe("stripe webhook — event handlers", () => {
   test("checkout.session.completed attaches customer id to workspace", async () => {
@@ -12,9 +12,9 @@ describe("stripe webhook — event handlers", () => {
       type: "checkout.session.completed",
       data: { object: { client_reference_id: workspaceId, customer: "cus_abc" } },
     });
-    const row = await env.DB.prepare(
-      `SELECT stripe_customer_id FROM workspaces WHERE id = ?1`,
-    ).bind(workspaceId).first<{ stripe_customer_id: string }>();
+    const row = await env.DB.prepare("SELECT stripe_customer_id FROM workspaces WHERE id = ?1")
+      .bind(workspaceId)
+      .first<{ stripe_customer_id: string }>();
     expect(row?.stripe_customer_id).toBe("cus_abc");
   });
 
@@ -37,12 +37,16 @@ describe("stripe webhook — event handlers", () => {
         },
       },
     });
-    const ws = await env.DB.prepare(`SELECT plan, subscription_status FROM workspaces WHERE id = ?1`)
-      .bind(workspaceId).first<{ plan: string; subscription_status: string }>();
+    const ws = await env.DB.prepare(
+      "SELECT plan, subscription_status FROM workspaces WHERE id = ?1",
+    )
+      .bind(workspaceId)
+      .first<{ plan: string; subscription_status: string }>();
     expect(ws?.plan).toBe("pro");
     expect(ws?.subscription_status).toBe("active");
-    const sub = await env.DB.prepare(`SELECT plan FROM subscriptions WHERE workspace_id = ?1`)
-      .bind(workspaceId).first<{ plan: string }>();
+    const sub = await env.DB.prepare("SELECT plan FROM subscriptions WHERE workspace_id = ?1")
+      .bind(workspaceId)
+      .first<{ plan: string }>();
     expect(sub?.plan).toBe("pro");
   });
 
@@ -59,8 +63,11 @@ describe("stripe webhook — event handlers", () => {
         },
       },
     });
-    const ws = await env.DB.prepare(`SELECT plan, subscription_status FROM workspaces WHERE id = ?1`)
-      .bind(workspaceId).first<{ plan: string; subscription_status: string }>();
+    const ws = await env.DB.prepare(
+      "SELECT plan, subscription_status FROM workspaces WHERE id = ?1",
+    )
+      .bind(workspaceId)
+      .first<{ plan: string; subscription_status: string }>();
     expect(ws?.plan).toBe("free");
     expect(ws?.subscription_status).toBe("canceled");
   });
@@ -69,14 +76,16 @@ describe("stripe webhook — event handlers", () => {
     const { env } = makeEnv();
     const { workspaceId } = await seedWorkspaceWithKey(env, { plan: "pro" });
     await env.DB.prepare(`UPDATE workspaces SET stripe_customer_id = 'cus_pd' WHERE id = ?1`)
-      .bind(workspaceId).run();
+      .bind(workspaceId)
+      .run();
     await handleStripeEvent(env, {
       id: "evt_4",
       type: "invoice.payment_failed",
       data: { object: { customer: "cus_pd" } },
     });
-    const ws = await env.DB.prepare(`SELECT subscription_status FROM workspaces WHERE id = ?1`)
-      .bind(workspaceId).first<{ subscription_status: string }>();
+    const ws = await env.DB.prepare("SELECT subscription_status FROM workspaces WHERE id = ?1")
+      .bind(workspaceId)
+      .first<{ subscription_status: string }>();
     expect(ws?.subscription_status).toBe("past_due");
   });
 

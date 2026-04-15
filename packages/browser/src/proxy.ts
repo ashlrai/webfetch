@@ -16,11 +16,7 @@ export interface FormattedProxy {
 export function formatProxy(cfg: ProxyConfig): FormattedProxy {
   const ep = cfg.endpoint.trim();
   // Accept bare host:port or full URL with scheme.
-  const server = /^https?:\/\//i.test(ep)
-    ? ep
-    : ep.startsWith("socks")
-      ? ep
-      : `http://${ep}`;
+  const server = /^https?:\/\//i.test(ep) ? ep : ep.startsWith("socks") ? ep : `http://${ep}`;
   switch (cfg.kind) {
     case "brightdata": {
       // Bright Data encodes session + country in the username.
@@ -31,8 +27,6 @@ export function formatProxy(cfg: ProxyConfig): FormattedProxy {
         password: cfg.pass,
       };
     }
-    case "smartproxy":
-    case "custom":
     default:
       return {
         server,

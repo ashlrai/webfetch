@@ -7,7 +7,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -28,7 +28,9 @@ export function ensureToken(opts: { regenerate?: boolean } = {}): AuthState {
     token = generate();
   }
   writeFileSync(tokenPath, token, { encoding: "utf8" });
-  try { chmodSync(tokenPath, 0o600); } catch {}
+  try {
+    chmodSync(tokenPath, 0o600);
+  } catch {}
   return { token, tokenPath };
 }
 

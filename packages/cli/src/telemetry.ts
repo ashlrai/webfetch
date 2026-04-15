@@ -17,11 +17,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
-  isTelemetryEnabled as coreIsEnabled,
-  trackEvent,
   type TelemetryEvent,
   type TelemetryOptions,
   type TelemetryProps,
+  isTelemetryEnabled as coreIsEnabled,
+  trackEvent,
 } from "@webfetch/core";
 
 export type TelemetryState = "enabled" | "disabled" | "unset";
@@ -52,7 +52,7 @@ async function readConfigFile(path: string): Promise<Record<string, unknown>> {
 
 async function writeConfigFile(path: string, data: Record<string, unknown>): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(data, null, 2) + "\n", "utf8");
+  await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
 export async function getTelemetryState(opts: CliTelemetryOptions = {}): Promise<TelemetryState> {
@@ -62,7 +62,10 @@ export async function getTelemetryState(opts: CliTelemetryOptions = {}): Promise
   return "unset";
 }
 
-export async function setTelemetry(enabled: boolean, opts: CliTelemetryOptions = {}): Promise<void> {
+export async function setTelemetry(
+  enabled: boolean,
+  opts: CliTelemetryOptions = {},
+): Promise<void> {
   const path = configPath(opts);
   const cfg = await readConfigFile(path);
   cfg.telemetry = enabled;
@@ -76,7 +79,7 @@ export async function runTelemetryCommand(
   subcommand: string | undefined,
   opts: CliTelemetryOptions = {},
 ): Promise<number> {
-  const write = opts.writer ?? ((line: string) => process.stdout.write(line + "\n"));
+  const write = opts.writer ?? ((line: string) => process.stdout.write(`${line}\n`));
   switch (subcommand) {
     case "enable": {
       await setTelemetry(true, opts);
@@ -125,9 +128,11 @@ export async function maybeFirstRunPrompt(opts: CliTelemetryOptions = {}): Promi
     return;
   }
 
-  const answer = (await prompt(
-    "Optional: share anonymous usage to help prioritize providers? [y/N] ",
-  )).trim().toLowerCase();
+  const answer = (
+    await prompt("Optional: share anonymous usage to help prioritize providers? [y/N] ")
+  )
+    .trim()
+    .toLowerCase();
   const yes = answer === "y" || answer === "yes";
   await setTelemetry(yes, opts);
 }

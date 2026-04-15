@@ -1,5 +1,5 @@
-import type { AuditEntry } from "@shared/types";
 import { formatRelative } from "@/lib/format";
+import type { AuditEntry } from "@shared/types";
 
 export default function AuditRow({ entry }: { entry: AuditEntry }) {
   return (

@@ -12,8 +12,8 @@
  * Free tier hard-rejects with HTTP 402 + Link header to the upgrade page.
  */
 
+import { PLANS, type PlanConfig, type PlanId, planFor } from "../../shared/pricing.ts";
 import type { Env } from "./env.ts";
-import { planFor, PLANS, type PlanConfig, type PlanId } from "../../shared/pricing.ts";
 
 export interface QuotaDecision {
   allow: boolean;
@@ -54,7 +54,12 @@ function counterKey(workspaceId: string, plan: PlanConfig, now: number): string 
  * errors — treats errors as `used=0` so we fail-open on infrastructure blips
  * (legitimate traffic keeps flowing; billing is still authoritative via D1).
  */
-export async function readUsage(env: Env, workspaceId: string, plan: PlanConfig, now = Date.now()): Promise<number> {
+export async function readUsage(
+  env: Env,
+  workspaceId: string,
+  plan: PlanConfig,
+  now = Date.now(),
+): Promise<number> {
   const raw = await env.QUOTA.get(counterKey(workspaceId, plan, now));
   if (!raw) return 0;
   const n = Number(raw);
@@ -145,7 +150,12 @@ export async function checkQuota(
 }
 
 /** Diagnostic summary used by `/v1/usage`. */
-export async function usageSnapshot(env: Env, workspaceId: string, planId: PlanId, now = Date.now()) {
+export async function usageSnapshot(
+  env: Env,
+  workspaceId: string,
+  planId: PlanId,
+  now = Date.now(),
+) {
   const plan = planFor(planId);
   const { start, end } = plan.window === "daily" ? dailyWindow(now) : monthlyWindow(now);
   const used = await readUsage(env, workspaceId, plan, now);

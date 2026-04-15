@@ -14,13 +14,11 @@ export const wellcomeCollection: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("wellcome-collection").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.wellcomecollection.org/catalogue/v2/images?" +
-      new URLSearchParams({
-        query,
-        license: "cc-by,cc-by-nc-nd,pdm,cc0",
-        pageSize: String(opts.maxPerProvider ?? 10),
-      });
+    const url = `https://api.wellcomecollection.org/catalogue/v2/images?${new URLSearchParams({
+      query,
+      license: "cc-by,cc-by-nc-nd,pdm,cc0",
+      pageSize: String(opts.maxPerProvider ?? 10),
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`wellcome-collection http ${resp.status}`);
     const json = (await resp.json()) as any;
@@ -30,7 +28,8 @@ export const wellcomeCollection: Provider = {
     for (const r of results) {
       const imgUrl = r.thumbnail?.url ?? r.locations?.[0]?.url;
       if (!imgUrl) continue;
-      const licenseId: string | undefined = r.locations?.[0]?.license?.id ?? r.thumbnail?.license?.id;
+      const licenseId: string | undefined =
+        r.locations?.[0]?.license?.id ?? r.thumbnail?.license?.id;
       const license = mapLicense(licenseId);
       if (license === "UNKNOWN") continue; // enforce safe-only filter
       const contributors = r.source?.contributors ?? [];
@@ -42,7 +41,9 @@ export const wellcomeCollection: Provider = {
         url: imgUrl,
         thumbnailUrl: r.thumbnail?.url,
         source: "wellcome-collection",
-        sourcePageUrl: r.id ? `https://wellcomecollection.org/works/${r.source?.id ?? r.id}` : undefined,
+        sourcePageUrl: r.id
+          ? `https://wellcomecollection.org/works/${r.source?.id ?? r.id}`
+          : undefined,
         title: r.source?.title,
         author: author || undefined,
         license,

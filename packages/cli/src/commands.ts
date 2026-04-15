@@ -9,19 +9,14 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type {
-  ImageCandidate,
-  ProviderId,
-  SearchOptions,
-  SearchResultBundle,
-} from "@webfetch/core";
-import { getBool, getInt, getString, parseArgs, type ParsedArgs } from "./args.ts";
+import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "@webfetch/core";
+import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
+  type ResolvedConfig,
   defaultConfigPath,
   expandHome,
   loadResolved,
-  type ResolvedConfig,
   writeStarterConfig,
 } from "./config.ts";
 import { core } from "./core.ts";
@@ -53,8 +48,8 @@ export interface CommandIO {
 }
 
 const DEFAULT_IO: CommandIO = {
-  stdout: (s) => process.stdout.write(s + "\n"),
-  stderr: (s) => process.stderr.write(s + "\n"),
+  stdout: (s) => process.stdout.write(`${s}\n`),
+  stderr: (s) => process.stderr.write(`${s}\n`),
   env: process.env,
 };
 
@@ -85,10 +80,16 @@ function buildSearchOptions(
   const providersFlag = getString(args.flags, "providers", "p");
   const envProviders = env.WEBFETCH_PROVIDERS;
   const providers: ProviderId[] | undefined = providersFlag
-    ? (providersFlag.split(",").map((s) => s.trim()).filter(Boolean) as ProviderId[])
+    ? (providersFlag
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) as ProviderId[])
     : envProviders
-    ? (envProviders.split(",").map((s) => s.trim()).filter(Boolean) as ProviderId[])
-    : cfg.providers;
+      ? (envProviders
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) as ProviderId[])
+      : cfg.providers;
 
   const licensePolicy =
     normalizeLicense(getString(args.flags, "license")) ??
@@ -104,8 +105,7 @@ function buildSearchOptions(
     getInt(args.flags, "min-height") ??
     (env.WEBFETCH_MIN_HEIGHT ? Number.parseInt(env.WEBFETCH_MIN_HEIGHT, 10) : undefined) ??
     cfg.minHeight;
-  const maxPerProvider =
-    getInt(args.flags, "max-per-provider") ?? cfg.maxPerProvider;
+  const maxPerProvider = getInt(args.flags, "max-per-provider") ?? cfg.maxPerProvider;
 
   const limit =
     getInt(args.flags, "limit", "n") ??
@@ -379,7 +379,10 @@ export async function cmdProbe(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
 }
 
 function shortLicense(lic: string): string {
-  return lic.replace("PUBLIC_DOMAIN", "PD").replace("EDITORIAL_LICENSED", "EDITORIAL").replace("PRESS_KIT_ALLOWLIST", "PRESSKIT");
+  return lic
+    .replace("PUBLIC_DOMAIN", "PD")
+    .replace("EDITORIAL_LICENSED", "EDITORIAL")
+    .replace("PRESS_KIT_ALLOWLIST", "PRESSKIT");
 }
 
 export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
@@ -393,9 +396,7 @@ export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): 
   const r = await core().fetchWithLicense(url, { probe });
   if (json) {
     const { bytes: _bytes, ...rest } = r as any;
-    io.stdout(
-      JSON.stringify({ ...rest, byteSize: r.bytes?.byteLength }, null, 2),
-    );
+    io.stdout(JSON.stringify({ ...rest, byteSize: r.bytes?.byteLength }, null, 2));
     return 0;
   }
   io.stdout(`${c.bold("license:    ")} ${licenseColor(r.license)(r.license)}`);
@@ -404,7 +405,9 @@ export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): 
   if (r.sourcePageUrl) io.stdout(`${c.bold("source:     ")} ${r.sourcePageUrl}`);
   if (r.attributionLine) io.stdout(`${c.bold("attribution:")} ${r.attributionLine}`);
   if (r.cachedPath) {
-    io.stdout(`${c.bold("cachedPath: ")} ${r.cachedPath} ${c.dim(`(${formatBytes(r.bytes?.byteLength)}, ${r.mime})`)}`);
+    io.stdout(
+      `${c.bold("cachedPath: ")} ${r.cachedPath} ${c.dim(`(${formatBytes(r.bytes?.byteLength)}, ${r.mime})`)}`,
+    );
   }
   return 0;
 }
@@ -425,11 +428,12 @@ export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO)
     { header: "env vars", width: 40 },
   ];
   const tableRows = rows.map((r) => {
-    const authStatus = r.envVars.length === 0
-      ? c.dim("none required")
-      : r.authed
-      ? c.green("configured")
-      : c.red("missing");
+    const authStatus =
+      r.envVars.length === 0
+        ? c.dim("none required")
+        : r.authed
+          ? c.green("configured")
+          : c.red("missing");
     return [
       r.id,
       r.defaultOn ? c.green("yes") : c.dim("no"),
@@ -477,7 +481,7 @@ export async function cmdConfig(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
     }
     return 0;
   }
-  io.stderr(c.red(`usage: webfetch config <init|show> [--profile name] [--force] [--json]`));
+  io.stderr(c.red("usage: webfetch config <init|show> [--profile name] [--force] [--json]"));
   return 2;
 }
 
@@ -553,8 +557,8 @@ export async function cmdBatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
   const source: AsyncIterable<string> = io.readStdin
     ? io.readStdin()
     : file
-    ? linesFromFile(file)
-    : linesFromProcessStdin();
+      ? linesFromFile(file)
+      : linesFromProcessStdin();
 
   const entries: BatchEntry[] = [];
   for await (const line of source) {
@@ -596,7 +600,9 @@ export async function cmdBatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
     const topPart = r.top
       ? `${c.dim("top:")} ${r.top.source} ${licenseColor(r.top.license)(shortLicense(r.top.license))} ${r.top.url}`
       : c.yellow("(no results)");
-    io.stdout(`${c.bold(r.query)}  ${c.dim(`${r.candidateCount} candidates`)}  ${topPart}${r.downloadedPath ? c.green(`  +saved ${r.downloadedPath}`) : ""}`);
+    io.stdout(
+      `${c.bold(r.query)}  ${c.dim(`${r.candidateCount} candidates`)}  ${topPart}${r.downloadedPath ? c.green(`  +saved ${r.downloadedPath}`) : ""}`,
+    );
   }
   io.stdout(c.dim(`\n${results.length} queries (concurrency ${concurrency}).`));
   void limit;
@@ -638,7 +644,13 @@ export async function cmdWatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
       const tickAt = new Date().toISOString();
 
       if (json) {
-        io.stdout(JSON.stringify({ at: tickAt, query, new: fresh, total: bundle.candidates.length }, null, 2));
+        io.stdout(
+          JSON.stringify(
+            { at: tickAt, query, new: fresh, total: bundle.candidates.length },
+            null,
+            2,
+          ),
+        );
       } else {
         io.stdout(c.dim(`[${tickAt}] ${query}  new=${fresh.length}/${bundle.candidates.length}`));
         if (fresh.length > 0) io.stdout(renderCandidateTable(fresh));
@@ -725,9 +737,7 @@ ${c.bold("ENV")}
   WEBFETCH_PROVIDERS, WEBFETCH_LICENSE, WEBFETCH_LIMIT, WEBFETCH_MIN_WIDTH
 `;
 
-export interface Dispatcher {
-  (args: ParsedArgs, io?: CommandIO): Promise<number> | number;
-}
+export type Dispatcher = (args: ParsedArgs, io?: CommandIO) => Promise<number> | number;
 
 export const COMMANDS: Record<string, Dispatcher> = {
   search: cmdSearch,

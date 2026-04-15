@@ -46,7 +46,9 @@ export function AreaChart({
     const y = pad.t + innerH - (d.value / max) * innerH;
     return [x, y] as const;
   });
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const line = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
   const area = `${line} L${pad.l + innerW},${pad.t + innerH} L${pad.l},${pad.t + innerH} Z`;
 
   // 4 horizontal gridlines
@@ -55,7 +57,13 @@ export function AreaChart({
 
   return (
     <div className="surface p-3">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height }} role="img" aria-label="Usage over time">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ width: "100%", height }}
+        role="img"
+        aria-label="Usage over time"
+      >
         {grids.map((g) => {
           const y = pad.t + innerH - g * innerH;
           return (
@@ -68,9 +76,23 @@ export function AreaChart({
           );
         })}
         <path d={area} fill={fill} />
-        <path d={line} stroke={accent} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={line}
+          stroke={accent}
+          strokeWidth={1.5}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {pts.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={2} fill={accent} opacity={i === pts.length - 1 ? 1 : 0} />
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={2}
+            fill={accent}
+            opacity={i === pts.length - 1 ? 1 : 0}
+          />
         ))}
         {data.map((d, i) => {
           if (i % tickEvery !== 0 && i !== data.length - 1) return null;
@@ -120,13 +142,21 @@ export function BarChart({
 
   return (
     <div className="surface p-3">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height }} role="img" aria-label="Bar chart">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ width: "100%", height }}
+        role="img"
+        aria-label="Bar chart"
+      >
         {grids.map((g) => {
           const y = pad.t + innerH - g * innerH;
           return (
             <g key={g}>
               <line className="chart-grid" x1={pad.l} x2={pad.l + innerW} y1={y} y2={y} />
-              <text className="chart-tick" x={pad.l - 6} y={y + 3} textAnchor="end">{format(Math.round(g * max))}</text>
+              <text className="chart-tick" x={pad.l - 6} y={y + 3} textAnchor="end">
+                {format(Math.round(g * max))}
+              </text>
             </g>
           );
         })}
@@ -136,7 +166,15 @@ export function BarChart({
           const y = pad.t + innerH - h;
           return (
             <g key={i}>
-              <rect x={x} y={y} width={barW} height={Math.max(1, h)} rx={1.5} fill={accent} opacity={0.85}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={Math.max(1, h)}
+                rx={1.5}
+                fill={accent}
+                opacity={0.85}
+              >
                 <title>{`${d.label}: ${format(d.value)}${d.sub ? ` · ${d.sub}` : ""}`}</title>
               </rect>
             </g>
@@ -178,7 +216,9 @@ export function HBarList({
           <li key={d.label} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-[12.5px]">
               <span className="mono truncate">{d.label}</span>
-              <span className="mono tnum" style={{ color: "var(--text-dim)" }}>{format(d.value)}</span>
+              <span className="mono tnum" style={{ color: "var(--text-dim)" }}>
+                {format(d.value)}
+              </span>
             </div>
             <div className="bar">
               <span style={{ width: `${Math.max(2, pct)}%`, background: accent }} />

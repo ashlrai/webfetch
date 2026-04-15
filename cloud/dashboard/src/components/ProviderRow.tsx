@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { saveProviderKey, testProvider } from "@/lib/api";
-import { formatRelative } from "@/lib/format";
 import type { ProviderStatus } from "@/lib/fixtures";
-import Modal from "./Modal";
+import { formatRelative } from "@/lib/format";
+import { useState } from "react";
 import { Icon } from "./Icon";
+import Modal from "./Modal";
 
 /**
  * Renamed conceptually to ProviderCard — keeps file name to not break imports.
@@ -14,8 +14,16 @@ import { Icon } from "./Icon";
  */
 
 const LICENSE_DEFAULT = new Set([
-  "unsplash", "pexels", "pixabay", "wikimedia", "openverse",
-  "flickr", "smithsonian", "metmuseum", "europeana", "nasa",
+  "unsplash",
+  "pexels",
+  "pixabay",
+  "wikimedia",
+  "openverse",
+  "flickr",
+  "smithsonian",
+  "metmuseum",
+  "europeana",
+  "nasa",
 ]);
 
 export default function ProviderRow({ provider }: { provider: ProviderStatus }) {
@@ -26,11 +34,13 @@ export default function ProviderRow({ provider }: { provider: ProviderStatus }) 
   const [savedState, setSavedState] = useState(provider);
 
   const modeLabel =
-    savedState.mode === "byok" ? "your key" :
-    savedState.mode === "pool" ? "pool" : "missing";
+    savedState.mode === "byok" ? "your key" : savedState.mode === "pool" ? "pool" : "missing";
   const modeBadge =
-    savedState.mode === "byok" ? "badge-ok" :
-    savedState.mode === "pool" ? "badge-info" : "badge-warn";
+    savedState.mode === "byok"
+      ? "badge-ok"
+      : savedState.mode === "pool"
+        ? "badge-info"
+        : "badge-warn";
 
   const licenseDefault = LICENSE_DEFAULT.has(savedState.name);
 
@@ -90,7 +100,8 @@ export default function ProviderRow({ provider }: { provider: ProviderStatus }) 
           {savedState.lastTestAt ? (
             <span className={`badge ${savedState.lastTestOk ? "badge-ok" : "badge-err"}`}>
               <Icon name={savedState.lastTestOk ? "check" : "x"} size={10} />
-              {savedState.lastTestOk ? "tested" : "test failed"} {formatRelative(savedState.lastTestAt)}
+              {savedState.lastTestOk ? "tested" : "test failed"}{" "}
+              {formatRelative(savedState.lastTestAt)}
             </span>
           ) : (
             <span className="badge">untested</span>
@@ -114,8 +125,14 @@ export default function ProviderRow({ provider }: { provider: ProviderStatus }) 
           onClose={() => setOpen(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={busy !== null || !value.trim()}>
+              <button className="btn" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={busy !== null || !value.trim()}
+              >
                 {busy === "save" ? "Saving…" : "Save key"}
               </button>
             </>
@@ -126,7 +143,6 @@ export default function ProviderRow({ provider }: { provider: ProviderStatus }) 
               <span className="eyebrow">API key</span>
               <input
                 type="password"
-                autoFocus
                 className="input mono"
                 placeholder="Paste your API key"
                 value={value}

@@ -14,8 +14,8 @@
  * tombstone TTL on the KV side handles edge-of-cache reads.
  */
 
-import type { Env } from "./env.ts";
 import type { PlanId } from "../../shared/pricing.ts";
+import type { Env } from "./env.ts";
 import { sha256Hex, ulid } from "./ids.ts";
 
 export const KEY_PREFIX = "wf_live_";
@@ -63,7 +63,9 @@ export async function resolveKey(env: Env, bearer: string): Promise<KeyLookup | 
        JOIN workspaces w ON w.id = k.workspace_id
       WHERE k.hash = ?1
       LIMIT 1`,
-  ).bind(hash).first<{ id: string; workspace_id: string; revoked_at: number | null; plan: PlanId }>();
+  )
+    .bind(hash)
+    .first<{ id: string; workspace_id: string; revoked_at: number | null; plan: PlanId }>();
   if (!row || row.revoked_at) return null;
 
   const lookup: KeyLookup = {
@@ -77,8 +79,9 @@ export async function resolveKey(env: Env, bearer: string): Promise<KeyLookup | 
 
 export async function touchLastUsed(env: Env, apiKeyId: string, now = Date.now()): Promise<void> {
   // Fire and forget. Best-effort; failure doesn't break the request.
-  await env.DB.prepare(`UPDATE api_keys SET last_used_at = ?1 WHERE id = ?2`)
-    .bind(now, apiKeyId).run();
+  await env.DB.prepare("UPDATE api_keys SET last_used_at = ?1 WHERE id = ?2")
+    .bind(now, apiKeyId)
+    .run();
 }
 
 export interface CreateKeyInput {
@@ -95,7 +98,9 @@ export async function createKey(env: Env, input: CreateKeyInput) {
   await env.DB.prepare(
     `INSERT INTO api_keys (id, workspace_id, created_by_user_id, prefix, hash, name, created_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
-  ).bind(id, input.workspaceId, input.userId, prefix, hash, input.name, now).run();
+  )
+    .bind(id, input.workspaceId, input.userId, prefix, hash, input.name, now)
+    .run();
   await env.KEYS.put(
     hash,
     JSON.stringify({ workspaceId: input.workspaceId, apiKeyId: id, plan: input.plan }),
@@ -110,17 +115,23 @@ export async function listKeys(env: Env, workspaceId: string) {
        FROM api_keys
       WHERE workspace_id = ?1
       ORDER BY created_at DESC`,
-  ).bind(workspaceId).all();
+  )
+    .bind(workspaceId)
+    .all();
   return res.results ?? [];
 }
 
 export async function revokeKey(env: Env, workspaceId: string, apiKeyId: string): Promise<boolean> {
   const row = await env.DB.prepare(
-    `SELECT hash FROM api_keys WHERE id = ?1 AND workspace_id = ?2 AND revoked_at IS NULL`,
-  ).bind(apiKeyId, workspaceId).first<{ hash: string }>();
+    "SELECT hash FROM api_keys WHERE id = ?1 AND workspace_id = ?2 AND revoked_at IS NULL",
+  )
+    .bind(apiKeyId, workspaceId)
+    .first<{ hash: string }>();
   if (!row) return false;
   const now = Date.now();
-  await env.DB.prepare(`UPDATE api_keys SET revoked_at = ?1 WHERE id = ?2`).bind(now, apiKeyId).run();
+  await env.DB.prepare("UPDATE api_keys SET revoked_at = ?1 WHERE id = ?2")
+    .bind(now, apiKeyId)
+    .run();
   await env.KEYS.delete(row.hash);
   return true;
 }

@@ -45,8 +45,7 @@ export const brightdataStack: Stack = {
     }
     const { chromium } = await loadPlaywright();
     const browser = await chromium.connectOverCDP(ws);
-    const context =
-      browser.contexts()[0] ?? (await browser.newContext());
+    const context = browser.contexts()[0] ?? (await browser.newContext());
     return {
       stack: STACK_ID,
       async newPage() {

@@ -102,7 +102,12 @@ function resolveUrl(src: string, base: string): string | null {
   }
 }
 
-async function robotsAllows(url: string, ua: string, fetcher: Fetcher, signal?: AbortSignal): Promise<boolean> {
+async function robotsAllows(
+  url: string,
+  ua: string,
+  fetcher: Fetcher,
+  signal?: AbortSignal,
+): Promise<boolean> {
   try {
     const u = new URL(url);
     const resp = await fetcher(`${u.origin}/robots.txt`, { headers: { "User-Agent": ua }, signal });
@@ -117,7 +122,8 @@ async function robotsAllows(url: string, ua: string, fetcher: Fetcher, signal?: 
       if (!line) continue;
       const [k, v] = line.split(":").map((s) => s?.trim());
       if (!k || v === undefined) continue;
-      if (k.toLowerCase() === "user-agent") active = v === "*" || ua.toLowerCase().includes(v.toLowerCase());
+      if (k.toLowerCase() === "user-agent")
+        active = v === "*" || ua.toLowerCase().includes(v.toLowerCase());
       if (active && k.toLowerCase() === "disallow" && v && path.startsWith(v)) return false;
     }
     return true;

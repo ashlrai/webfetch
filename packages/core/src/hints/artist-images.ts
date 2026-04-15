@@ -8,7 +8,7 @@
  */
 
 import { searchImages } from "../federation.ts";
-import type { SearchOptions, SearchResultBundle, ProviderId } from "../types.ts";
+import type { ProviderId, SearchOptions, SearchResultBundle } from "../types.ts";
 
 export type ArtistImageKind = "portrait" | "album" | "logo" | "performing";
 

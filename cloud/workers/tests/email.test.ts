@@ -1,17 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { SESSION_COOKIE } from "../src/auth.ts";
+import { renderInviteBodies, sendInviteEmail } from "../src/email.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
-import { sendInviteEmail, renderInviteBodies } from "../src/email.ts";
-import { SESSION_COOKIE } from "../src/auth.ts";
 
 const cookie = (t: string) => `${SESSION_COOKIE}=${encodeURIComponent(t)}`;
 
 describe("email — invite delivery", () => {
   beforeEach(() => {
-    delete (globalThis as { __webfetchResend?: unknown }).__webfetchResend;
+    (globalThis as { __webfetchResend?: unknown }).__webfetchResend = undefined;
   });
   afterEach(() => {
-    delete (globalThis as { __webfetchResend?: unknown }).__webfetchResend;
+    (globalThis as { __webfetchResend?: unknown }).__webfetchResend = undefined;
   });
 
   test("renderInviteBodies includes accept URL + escapes HTML", () => {
@@ -107,12 +107,14 @@ describe("email — invite delivery", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(201);
-    const body = await res.json() as { data: { acceptUrl: string; emailDelivery: { status: string } } };
+    const body = (await res.json()) as {
+      data: { acceptUrl: string; emailDelivery: { status: string } };
+    };
     expect(body.data.acceptUrl).toContain("/invite/");
     expect(body.data.emailDelivery.status).toBe("failed");
-    const row = await env.DB.prepare(
-      `SELECT email FROM invitations WHERE workspace_id = ?1`,
-    ).bind(workspaceId).first<{ email: string }>();
+    const row = await env.DB.prepare("SELECT email FROM invitations WHERE workspace_id = ?1")
+      .bind(workspaceId)
+      .first<{ email: string }>();
     expect(row?.email).toBe("fail@test.dev");
   });
 
@@ -136,7 +138,7 @@ describe("email — invite delivery", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(201);
-    const body = await res.json() as { data: { emailDelivery: { status: string; id?: string } } };
+    const body = (await res.json()) as { data: { emailDelivery: { status: string; id?: string } } };
     expect(body.data.emailDelivery.status).toBe("sent");
     expect(body.data.emailDelivery.id).toBe("re_ok_1");
   });

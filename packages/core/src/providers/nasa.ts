@@ -13,13 +13,11 @@ export const nasa: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("nasa").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://images-api.nasa.gov/search?" +
-      new URLSearchParams({
-        q: query,
-        media_type: "image",
-        page_size: String(opts.maxPerProvider ?? 10),
-      });
+    const url = `https://images-api.nasa.gov/search?${new URLSearchParams({
+      q: query,
+      media_type: "image",
+      page_size: String(opts.maxPerProvider ?? 10),
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`nasa http ${resp.status}`);
     const json = (await resp.json()) as any;

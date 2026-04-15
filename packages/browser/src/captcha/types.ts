@@ -1,8 +1,4 @@
-export type CaptchaType =
-  | "recaptcha-v2"
-  | "recaptcha-v3"
-  | "turnstile"
-  | "hcaptcha";
+export type CaptchaType = "recaptcha-v2" | "recaptcha-v3" | "turnstile" | "hcaptcha";
 
 export interface CaptchaChallenge {
   type: CaptchaType;

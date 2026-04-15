@@ -6,12 +6,14 @@ export default function TermsPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 prose-wf">
       <h1>Terms of Service</h1>
-      <p><em>Last updated: April 13, 2026.</em></p>
+      <p>
+        <em>Last updated: April 13, 2026.</em>
+      </p>
 
       <h2>1. Agreement</h2>
       <p>
-        By using getwebfetch.com, api.getwebfetch.com, or any @webfetch/* package, you agree to these
-        terms. If you disagree, do not use the service.
+        By using getwebfetch.com, api.getwebfetch.com, or any @webfetch/* package, you agree to
+        these terms. If you disagree, do not use the service.
       </p>
 
       <h2>2. The service</h2>
@@ -30,30 +32,29 @@ export default function TermsPage() {
 
       <h2>4. Browser-sourced images</h2>
       <p>
-        Images retrieved via the opt-in browser fallback come with <code>license: UNKNOWN</code>{" "}
-        and a sidecar containing the source URL. You are solely responsible for determining
-        whether your use is lawful. Ashlar AI provides no warranty on copyright clearance for
-        browser-sourced images. Enterprise customers may purchase legal indemnification as a
-        separate rider.
+        Images retrieved via the opt-in browser fallback come with <code>license: UNKNOWN</code> and
+        a sidecar containing the source URL. You are solely responsible for determining whether your
+        use is lawful. Ashlar AI provides no warranty on copyright clearance for browser-sourced
+        images. Enterprise customers may purchase legal indemnification as a separate rider.
       </p>
 
       <h2>5. Billing and refunds</h2>
       <p>
-        Paid tiers are billed monthly or annually via Stripe. Overage fees are metered per fetch
-        and invoiced at the end of each cycle. Refunds are prorated at our discretion.
+        Paid tiers are billed monthly or annually via Stripe. Overage fees are metered per fetch and
+        invoiced at the end of each cycle. Refunds are prorated at our discretion.
       </p>
 
       <h2>6. Acceptable use</h2>
       <p>
         You may not use webfetch to violate applicable law, circumvent access controls, or mass
-        scrape sites in violation of their terms of service. Abuse results in account
-        termination without refund.
+        scrape sites in violation of their terms of service. Abuse results in account termination
+        without refund.
       </p>
 
       <h2>7. Disclaimers</h2>
       <p>
-        The service is provided "as is" without warranty of any kind. Ashlar AI is not liable
-        for indirect or consequential damages.
+        The service is provided "as is" without warranty of any kind. Ashlar AI is not liable for
+        indirect or consequential damages.
       </p>
 
       <h2>8. Changes</h2>

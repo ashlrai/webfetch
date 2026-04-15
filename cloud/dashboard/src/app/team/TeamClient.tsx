@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import type { PlanId, User, WorkspaceRole } from "@shared/types";
-import TeamRow from "@/components/TeamRow";
-import UpgradePrompt from "@/components/UpgradePrompt";
 import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
+import TeamRow from "@/components/TeamRow";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { inviteMember, listMembers } from "@/lib/api";
+import type { PlanId, User, WorkspaceRole } from "@shared/types";
+import { useState, useTransition } from "react";
 
 interface RowMember {
   userId: string;
@@ -75,18 +75,26 @@ export default function TeamClient({
           </div>
           <div className="num-md">{members.length}</div>
           <div className="bar">
-            <span style={{ width: `${pct}%`, background: pct >= 100 ? "var(--warn)" : "var(--accent)" }} />
+            <span
+              style={{ width: `${pct}%`, background: pct >= 100 ? "var(--warn)" : "var(--accent)" }}
+            />
           </div>
         </div>
         <div className="surface p-4 flex flex-col gap-1">
           <span className="eyebrow">Pending invites</span>
           <div className="num-md">{members.filter((m) => m.acceptedAt == null).length}</div>
-          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>invites expire in 7 days</span>
+          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+            invites expire in 7 days
+          </span>
         </div>
         <div className="surface p-4 flex flex-col gap-1">
           <span className="eyebrow">Admins</span>
-          <div className="num-md">{members.filter((m) => m.role === "admin" || m.role === "owner").length}</div>
-          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>can manage keys + members</span>
+          <div className="num-md">
+            {members.filter((m) => m.role === "admin" || m.role === "owner").length}
+          </div>
+          <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+            can manage keys + members
+          </span>
         </div>
       </div>
 
@@ -128,7 +136,9 @@ export default function TeamClient({
       )}
 
       {error && (
-        <div className="text-[12px] mono" style={{ color: "var(--danger)" }}>{error}</div>
+        <div className="text-[12px] mono" style={{ color: "var(--danger)" }}>
+          {error}
+        </div>
       )}
       {ok && (
         <div className="text-[12px] mono flex items-center gap-2" style={{ color: "var(--ok)" }}>
@@ -163,7 +173,9 @@ export default function TeamClient({
       )}
 
       {pending && (
-        <div className="text-[11px] mono" style={{ color: "var(--text-mute)" }}>refreshing…</div>
+        <div className="text-[11px] mono" style={{ color: "var(--text-mute)" }}>
+          refreshing…
+        </div>
       )}
     </>
   );

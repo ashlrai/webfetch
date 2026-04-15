@@ -67,7 +67,9 @@ export async function ping(context: vscode.ExtensionContext): Promise<CallResult
   return call(context, "/health", undefined, "GET");
 }
 
-export async function getProviders(context: vscode.ExtensionContext): Promise<CallResult<ProvidersResponse>> {
+export async function getProviders(
+  context: vscode.ExtensionContext,
+): Promise<CallResult<ProvidersResponse>> {
   return call<ProvidersResponse>(context, "/providers", undefined, "GET");
 }
 
@@ -97,7 +99,8 @@ export async function fetchImageBytes(url: string): Promise<{ bytes: Uint8Array;
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
     const buf = new Uint8Array(await res.arrayBuffer());
-    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "application/octet-stream";
+    const mime =
+      res.headers.get("content-type")?.split(";")[0]?.trim() ?? "application/octet-stream";
     return { bytes: buf, mime };
   } finally {
     clearTimeout(timer);
@@ -116,7 +119,6 @@ export function licenseBadgeColor(license: ImageCandidate["license"]): string {
       return "#7c3aed";
     case "EDITORIAL_LICENSED":
       return "#d97706";
-    case "UNKNOWN":
     default:
       return "#6b7280";
   }

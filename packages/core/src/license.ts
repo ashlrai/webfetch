@@ -67,9 +67,7 @@ export function buildAttribution(input: AttributionInput): string {
   if (sourceName) parts.push(`(${sourceName})`);
 
   const head = parts.join(" ");
-  const tail = sourceUrl
-    ? `licensed ${prettyLicense} — ${sourceUrl}`
-    : `licensed ${prettyLicense}`;
+  const tail = sourceUrl ? `licensed ${prettyLicense} — ${sourceUrl}` : `licensed ${prettyLicense}`;
   return `${head}, ${tail}`;
 }
 
@@ -102,7 +100,12 @@ export function coerceLicense(raw: string | undefined | null): License {
   if (s === "cc0" || s.includes("public domain dedication") || s.includes("publicdomain/zero"))
     return "CC0";
   if (s.includes("public domain") || s === "pd" || s.includes("pdm")) return "PUBLIC_DOMAIN";
-  if (s.includes("by-sa") || s.includes("by sa") || s.includes("sharealike") || s.includes("by-sa-"))
+  if (
+    s.includes("by-sa") ||
+    s.includes("by sa") ||
+    s.includes("sharealike") ||
+    s.includes("by-sa-")
+  )
     return "CC_BY_SA";
   if (s.includes("cc-by") || s.includes("cc by") || s === "ccby" || /\bby\b/.test(s))
     return "CC_BY";

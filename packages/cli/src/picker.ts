@@ -23,7 +23,10 @@ export type PickerChoice =
   | { kind: "quit" };
 
 function shortLic(lic: string): string {
-  return lic.replace("PUBLIC_DOMAIN", "PD").replace("EDITORIAL_LICENSED", "EDITORIAL").replace("PRESS_KIT_ALLOWLIST", "PRESSKIT");
+  return lic
+    .replace("PUBLIC_DOMAIN", "PD")
+    .replace("EDITORIAL_LICENSED", "EDITORIAL")
+    .replace("PRESS_KIT_ALLOWLIST", "PRESSKIT");
 }
 
 export function renderCandidateTable(cands: ImageCandidate[]): string {

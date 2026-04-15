@@ -54,7 +54,12 @@ export const searchAlbumCoverSchema = z.object({
 
 export const downloadImageSchema = z.object({
   url: z.string().url(),
-  maxBytes: z.number().int().min(1024).max(100 * 1024 * 1024).optional(),
+  maxBytes: z
+    .number()
+    .int()
+    .min(1024)
+    .max(100 * 1024 * 1024)
+    .optional(),
   cacheDir: z.string().optional(),
 });
 

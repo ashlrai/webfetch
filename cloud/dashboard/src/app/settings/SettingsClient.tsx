@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { User } from "@shared/types";
-import Modal from "@/components/Modal";
 import { Icon } from "@/components/Icon";
+import Modal from "@/components/Modal";
+import type { User } from "@shared/types";
+import { useState } from "react";
 
 export default function SettingsClient({ user }: { user: User }) {
   const [name, setName] = useState(user.name ?? "");
@@ -46,7 +46,10 @@ export default function SettingsClient({ user }: { user: User }) {
     const current = form.get("current") as string;
     const next = form.get("next") as string;
     const confirm = form.get("confirm") as string;
-    if (next !== confirm) { setPasswordMsg("Passwords do not match."); return; }
+    if (next !== confirm) {
+      setPasswordMsg("Passwords do not match.");
+      return;
+    }
     setSaving("password");
     setPasswordMsg(null);
     try {
@@ -83,14 +86,22 @@ export default function SettingsClient({ user }: { user: User }) {
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="eyebrow">Email</span>
-            <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input
+              type="email"
+              className="input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </label>
           <div className="flex items-center justify-between mt-1">
             <button type="submit" className="btn btn-primary" disabled={saving === "profile"}>
               {saving === "profile" ? "Saving…" : "Save profile"}
             </button>
             {profileMsg && (
-              <span className="text-[11.5px] mono flex items-center gap-1" style={{ color: profileMsg === "Saved." ? "var(--ok)" : "var(--danger)" }}>
+              <span
+                className="text-[11.5px] mono flex items-center gap-1"
+                style={{ color: profileMsg === "Saved." ? "var(--ok)" : "var(--danger)" }}
+              >
                 {profileMsg === "Saved." && <Icon name="check" size={11} />}
                 {profileMsg}
               </span>
@@ -102,22 +113,50 @@ export default function SettingsClient({ user }: { user: User }) {
           <h2 className="h2">Password</h2>
           <label className="flex flex-col gap-1.5">
             <span className="eyebrow">Current password</span>
-            <input type="password" name="current" className="input" required autoComplete="current-password" />
+            <input
+              type="password"
+              name="current"
+              className="input"
+              required
+              autoComplete="current-password"
+            />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="eyebrow">New password</span>
-            <input type="password" name="next" className="input" required minLength={8} autoComplete="new-password" />
+            <input
+              type="password"
+              name="next"
+              className="input"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="eyebrow">Confirm</span>
-            <input type="password" name="confirm" className="input" required minLength={8} autoComplete="new-password" />
+            <input
+              type="password"
+              name="confirm"
+              className="input"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
           </label>
           <div className="flex items-center justify-between mt-1">
             <button type="submit" className="btn btn-primary" disabled={saving === "password"}>
               {saving === "password" ? "Saving…" : "Update password"}
             </button>
             {passwordMsg && (
-              <span className="text-[11.5px] mono" style={{ color: passwordMsg.includes("match") || passwordMsg.includes("fail") ? "var(--danger)" : "var(--ok)" }}>
+              <span
+                className="text-[11.5px] mono"
+                style={{
+                  color:
+                    passwordMsg.includes("match") || passwordMsg.includes("fail")
+                      ? "var(--danger)"
+                      : "var(--ok)",
+                }}
+              >
                 {passwordMsg}
               </span>
             )}
@@ -130,7 +169,8 @@ export default function SettingsClient({ user }: { user: User }) {
             <span className="badge badge-warn">not enabled</span>
           </div>
           <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>
-            Add a TOTP code from Authy, 1Password, or any authenticator app. Strongly recommended for workspace owners and admins.
+            Add a TOTP code from Authy, 1Password, or any authenticator app. Strongly recommended
+            for workspace owners and admins.
           </p>
           <div>
             <button className="btn" onClick={() => setTwoFaOpen(true)}>
@@ -147,14 +187,15 @@ export default function SettingsClient({ user }: { user: User }) {
             ["weeklyReport", "Weekly usage report"],
             ["productUpdates", "Product updates and announcements"],
           ].map(([key, label]) => (
-            <label key={key} className="flex items-center justify-between gap-2 text-[13px] cursor-pointer">
+            <label
+              key={key}
+              className="flex items-center justify-between gap-2 text-[13px] cursor-pointer"
+            >
               <span>{label}</span>
               <input
                 type="checkbox"
                 checked={notifications[key as keyof typeof notifications]}
-                onChange={(e) =>
-                  setNotifications((prev) => ({ ...prev, [key]: e.target.checked }))
-                }
+                onChange={(e) => setNotifications((prev) => ({ ...prev, [key]: e.target.checked }))}
               />
             </label>
           ))}
@@ -190,12 +231,14 @@ export default function SettingsClient({ user }: { user: User }) {
                     {s.current && <span className="badge badge-ok">this session</span>}
                   </div>
                 </td>
-                <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>{s.ip}</td>
-                <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>{s.ts}</td>
+                <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                  {s.ip}
+                </td>
+                <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                  {s.ts}
+                </td>
                 <td style={{ textAlign: "right" }}>
-                  {!s.current && (
-                    <button className="btn btn-sm btn-danger">Revoke</button>
-                  )}
+                  {!s.current && <button className="btn btn-sm btn-danger">Revoke</button>}
                 </td>
               </tr>
             ))}
@@ -210,9 +253,12 @@ export default function SettingsClient({ user }: { user: User }) {
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="h2" style={{ color: "var(--danger)" }}>Danger zone</h2>
+            <h2 className="h2" style={{ color: "var(--danger)" }}>
+              Danger zone
+            </h2>
             <p className="text-[13px] mt-1" style={{ color: "var(--text-dim)" }}>
-              Deleting your account revokes every key, cancels your subscription at the end of the period, and purges usage logs after 90 days.
+              Deleting your account revokes every key, cancels your subscription at the end of the
+              period, and purges usage logs after 90 days.
             </p>
           </div>
           <button className="btn btn-danger" onClick={() => setDangerOpen(true)}>
@@ -228,7 +274,9 @@ export default function SettingsClient({ user }: { user: User }) {
           onClose={() => setTwoFaOpen(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setTwoFaOpen(false)}>Cancel</button>
+              <button className="btn" onClick={() => setTwoFaOpen(false)}>
+                Cancel
+              </button>
               <button className="btn btn-primary">Verify and enable</button>
             </>
           }
@@ -244,7 +292,9 @@ export default function SettingsClient({ user }: { user: User }) {
                   const x = (i % 10) * 12;
                   const y = Math.floor(i / 10) * 12;
                   const on = (i * 13) % 3 === 0;
-                  return on ? <rect key={i} x={x} y={y} width={10} height={10} fill="var(--text)" /> : null;
+                  return on ? (
+                    <rect key={i} x={x} y={y} width={10} height={10} fill="var(--text)" />
+                  ) : null;
                 })}
               </svg>
             </div>
@@ -267,9 +317,11 @@ export default function SettingsClient({ user }: { user: User }) {
             className="grid grid-cols-2 gap-1.5 mt-2 p-3 rounded-[8px] mono text-[12.5px]"
             style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)" }}
           >
-            {["ATKW-99LP", "B4XR-QQ2K", "Z3EE-MN7T", "YP61-DD0X", "RC4H-XX1L", "U802-WW9E"].map((c) => (
-              <span key={c}>{c}</span>
-            ))}
+            {["ATKW-99LP", "B4XR-QQ2K", "Z3EE-MN7T", "YP61-DD0X", "RC4H-XX1L", "U802-WW9E"].map(
+              (c) => (
+                <span key={c}>{c}</span>
+              ),
+            )}
           </div>
         </Modal>
       )}
@@ -281,7 +333,9 @@ export default function SettingsClient({ user }: { user: User }) {
           onClose={() => setDangerOpen(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setDangerOpen(false)}>Cancel</button>
+              <button className="btn" onClick={() => setDangerOpen(false)}>
+                Cancel
+              </button>
               <button className="btn btn-danger">Delete account</button>
             </>
           }

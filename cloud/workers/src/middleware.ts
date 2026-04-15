@@ -8,12 +8,12 @@
  *                                                                 recordUsage
  */
 
-import type { MiddlewareHandler, Context } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
+import { planFor, unitsFor } from "../../shared/pricing.ts";
 import type { Env, RequestCtx } from "./env.ts";
+import { requestId } from "./ids.ts";
 import { parseBearer, resolveKey, touchLastUsed } from "./keys.ts";
 import { checkQuota } from "./quota.ts";
-import { planFor, unitsFor } from "../../shared/pricing.ts";
-import { requestId } from "./ids.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -158,20 +158,26 @@ export const quotaGate: MiddlewareHandler<HonoEnv> = async (c, next) => {
       c.header("link", `<${decision.upgradeUrl}>; rel="alternate"`);
     }
     if (decision.reason === "plan_endpoint_forbidden") {
-      return c.json({
-        ok: false,
-        error: "endpoint not available on your plan",
-        upgrade: decision.upgradeUrl,
-      }, 403);
+      return c.json(
+        {
+          ok: false,
+          error: "endpoint not available on your plan",
+          upgrade: decision.upgradeUrl,
+        },
+        403,
+      );
     }
-    return c.json({
-      ok: false,
-      error: "out of daily allowance — upgrade to continue",
-      upgrade: decision.upgradeUrl,
-      plan: decision.plan,
-      used: decision.used,
-      included: decision.included,
-    }, 402);
+    return c.json(
+      {
+        ok: false,
+        error: "out of daily allowance — upgrade to continue",
+        upgrade: decision.upgradeUrl,
+        plan: decision.plan,
+        used: decision.used,
+        included: decision.included,
+      },
+      402,
+    );
   }
   return next();
 };

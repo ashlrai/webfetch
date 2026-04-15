@@ -13,15 +13,15 @@
  */
 
 import { Hono } from "hono";
-import type { Env } from "./env.ts";
 import type { WorkspaceRole } from "../../shared/types.ts";
-import { getSessionUser } from "./auth.ts";
-import { ok, err, parseJson } from "./responses.ts";
-import { createWorkspaceSchema, inviteMemberSchema, updateMemberSchema } from "./schemas.ts";
-import { ulid, sha256Hex } from "./ids.ts";
 import { audit } from "./audit.ts";
+import { getSessionUser } from "./auth.ts";
+import { type EmailResult, sendInviteEmail } from "./email.ts";
+import type { Env } from "./env.ts";
+import { sha256Hex, ulid } from "./ids.ts";
 import { monthlyWindow } from "./quota.ts";
-import { sendInviteEmail, type EmailResult } from "./email.ts";
+import { err, ok, parseJson } from "./responses.ts";
+import { createWorkspaceSchema, inviteMemberSchema, updateMemberSchema } from "./schemas.ts";
 
 export const teamsRouter = new Hono<{ Bindings: Env }>();
 
@@ -43,8 +43,10 @@ export async function roleFor(
   userId: string,
 ): Promise<WorkspaceRole | null> {
   const row = await env.DB.prepare(
-    `SELECT role FROM members WHERE workspace_id = ?1 AND user_id = ?2 LIMIT 1`,
-  ).bind(workspaceId, userId).first<{ role: WorkspaceRole }>();
+    "SELECT role FROM members WHERE workspace_id = ?1 AND user_id = ?2 LIMIT 1",
+  )
+    .bind(workspaceId, userId)
+    .first<{ role: WorkspaceRole }>();
   return row?.role ?? null;
 }
 
@@ -57,8 +59,9 @@ teamsRouter.post("/workspaces", async (c) => {
   const parsed = await parseJson(c, createWorkspaceSchema);
   if (!parsed.ok) return parsed.response;
 
-  const exists = await c.env.DB.prepare(`SELECT id FROM workspaces WHERE slug = ?1`)
-    .bind(parsed.data.slug).first();
+  const exists = await c.env.DB.prepare("SELECT id FROM workspaces WHERE slug = ?1")
+    .bind(parsed.data.slug)
+    .first();
   if (exists) return err(c, "slug already taken", 409);
 
   const now = Date.now();
@@ -68,11 +71,15 @@ teamsRouter.post("/workspaces", async (c) => {
     `INSERT INTO workspaces (id, slug, name, owner_id, plan, subscription_status,
        quota_resets_at, created_at, updated_at)
      VALUES (?1, ?2, ?3, ?4, 'free', 'none', ?5, ?6, ?6)`,
-  ).bind(id, parsed.data.slug, parsed.data.name, user.userId, end, now).run();
+  )
+    .bind(id, parsed.data.slug, parsed.data.name, user.userId, end, now)
+    .run();
   await c.env.DB.prepare(
     `INSERT INTO members (workspace_id, user_id, role, invited_at, accepted_at)
      VALUES (?1, ?2, 'owner', ?3, ?3)`,
-  ).bind(id, user.userId, now).run();
+  )
+    .bind(id, user.userId, now)
+    .run();
 
   await audit(c.env, {
     workspaceId: id,
@@ -97,7 +104,9 @@ teamsRouter.get("/workspaces", async (c) => {
        FROM workspaces w
        JOIN members m ON m.workspace_id = w.id AND m.user_id = ?1
       ORDER BY w.created_at DESC`,
-  ).bind(user.userId).all();
+  )
+    .bind(user.userId)
+    .all();
   return ok(c, { workspaces: res.results ?? [] });
 });
 
@@ -122,7 +131,18 @@ teamsRouter.post("/workspaces/:id/invite", async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO invitations (id, workspace_id, email, role, token_hash, expires_at, invited_by, created_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
-  ).bind(id, workspaceId, parsed.data.email, parsed.data.role, tokenHash, expires, user.userId, now).run();
+  )
+    .bind(
+      id,
+      workspaceId,
+      parsed.data.email,
+      parsed.data.role,
+      tokenHash,
+      expires,
+      user.userId,
+      now,
+    )
+    .run();
 
   await audit(c.env, {
     workspaceId,
@@ -136,8 +156,9 @@ teamsRouter.post("/workspaces/:id/invite", async (c) => {
   const acceptUrl = `${c.env.APP_URL}/invite/${rawToken}`;
   // Best-effort email delivery. Invitation row is already persisted; the
   // dashboard surfaces a "pending" state if the provider is offline.
-  const ws = await c.env.DB.prepare(`SELECT name FROM workspaces WHERE id = ?1`)
-    .bind(workspaceId).first<{ name: string }>();
+  const ws = await c.env.DB.prepare("SELECT name FROM workspaces WHERE id = ?1")
+    .bind(workspaceId)
+    .first<{ name: string }>();
   let email: EmailResult;
   try {
     email = await sendInviteEmail(c.env, {
@@ -150,16 +171,20 @@ teamsRouter.post("/workspaces/:id/invite", async (c) => {
     email = { ok: false, error: (e as Error).message };
   }
 
-  return ok(c, {
-    invitationId: id,
-    acceptUrl,
-    emailDelivery:
-      "ok" in email && email.ok
-        ? { status: "sent", id: email.id }
-        : "skipped" in email
-          ? { status: "skipped", reason: email.skipped }
-          : { status: "failed", error: email.error },
-  }, 201);
+  return ok(
+    c,
+    {
+      invitationId: id,
+      acceptUrl,
+      emailDelivery:
+        "ok" in email && email.ok
+          ? { status: "sent", id: email.id }
+          : "skipped" in email
+            ? { status: "skipped", reason: email.skipped }
+            : { status: "failed", error: email.error },
+    },
+    201,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -176,9 +201,9 @@ teamsRouter.patch("/workspaces/:id/members/:userId", async (c) => {
   const parsed = await parseJson(c, updateMemberSchema);
   if (!parsed.ok) return parsed.response;
 
-  await c.env.DB.prepare(
-    `UPDATE members SET role = ?1 WHERE workspace_id = ?2 AND user_id = ?3`,
-  ).bind(parsed.data.role, workspaceId, targetUserId).run();
+  await c.env.DB.prepare("UPDATE members SET role = ?1 WHERE workspace_id = ?2 AND user_id = ?3")
+    .bind(parsed.data.role, workspaceId, targetUserId)
+    .run();
 
   await audit(c.env, {
     workspaceId,
@@ -205,14 +230,16 @@ teamsRouter.delete("/workspaces/:id/members/:userId", async (c) => {
 
   // Prevent removing the owner. Owner must be transferred first.
   const target = await c.env.DB.prepare(
-    `SELECT role FROM members WHERE workspace_id = ?1 AND user_id = ?2`,
-  ).bind(workspaceId, targetUserId).first<{ role: WorkspaceRole }>();
+    "SELECT role FROM members WHERE workspace_id = ?1 AND user_id = ?2",
+  )
+    .bind(workspaceId, targetUserId)
+    .first<{ role: WorkspaceRole }>();
   if (!target) return err(c, "not a member", 404);
   if (target.role === "owner") return err(c, "cannot remove owner", 409);
 
-  await c.env.DB.prepare(
-    `DELETE FROM members WHERE workspace_id = ?1 AND user_id = ?2`,
-  ).bind(workspaceId, targetUserId).run();
+  await c.env.DB.prepare("DELETE FROM members WHERE workspace_id = ?1 AND user_id = ?2")
+    .bind(workspaceId, targetUserId)
+    .run();
 
   await audit(c.env, {
     workspaceId,
@@ -252,23 +279,35 @@ teamsRouter.get("/workspaces/:id/audit/export", async (c) => {
        FROM audit_log
       WHERE workspace_id = ?1 AND ts >= ?2 AND ts <= ?3
       ORDER BY ts ASC`,
-  ).bind(workspaceId, from, to).all<{
-    id: string;
-    actor_user_id: string | null;
-    action: string;
-    target_type: string | null;
-    target_id: string | null;
-    meta: string | null;
-    ts: number;
-  }>();
+  )
+    .bind(workspaceId, from, to)
+    .all<{
+      id: string;
+      actor_user_id: string | null;
+      action: string;
+      target_type: string | null;
+      target_id: string | null;
+      meta: string | null;
+      ts: number;
+    }>();
   const rows = res.results ?? [];
 
-  const HEADERS = ["ts", "user_id", "endpoint", "method", "status", "duration_ms", "provider", "ip", "action"];
+  const HEADERS = [
+    "ts",
+    "user_id",
+    "endpoint",
+    "method",
+    "status",
+    "duration_ms",
+    "provider",
+    "ip",
+    "action",
+  ];
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const enc = new TextEncoder();
-      controller.enqueue(enc.encode(HEADERS.join(",") + "\n"));
+      controller.enqueue(enc.encode(`${HEADERS.join(",")}\n`));
       for (const row of rows) {
         // Optional fields are pulled from meta JSON when present (audit
         // entries from request middleware include them); otherwise blank.
@@ -283,8 +322,10 @@ teamsRouter.get("/workspaces/:id/audit/export", async (c) => {
           stringField(meta.provider),
           stringField(meta.ip),
           row.action,
-        ].map(csvEscape).join(",");
-        controller.enqueue(enc.encode(cells + "\n"));
+        ]
+          .map(csvEscape)
+          .join(",");
+        controller.enqueue(enc.encode(`${cells}\n`));
       }
       controller.close();
     },
@@ -341,6 +382,8 @@ teamsRouter.get("/workspaces/:id/members", async (c) => {
        FROM members m JOIN users u ON u.id = m.user_id
       WHERE m.workspace_id = ?1
       ORDER BY m.invited_at ASC`,
-  ).bind(workspaceId).all();
+  )
+    .bind(workspaceId)
+    .all();
   return ok(c, { members: rows.results ?? [] });
 });

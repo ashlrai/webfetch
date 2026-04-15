@@ -84,8 +84,12 @@ export default function Shell({
         <header className="topbar">
           <Logo />
           <div className="flex items-center gap-2">
-            <Link href="/login" className="nav-link">Sign in</Link>
-            <Link href="/signup" className="btn btn-primary">Sign up</Link>
+            <Link href="/login" className="nav-link">
+              Sign in
+            </Link>
+            <Link href="/signup" className="btn btn-primary">
+              Sign up
+            </Link>
           </div>
         </header>
         <main className="mx-auto max-w-[1200px] px-6 py-10">{children}</main>
@@ -98,7 +102,10 @@ export default function Shell({
   return (
     <>
       <aside className="side" data-open={sideOpen}>
-        <div className="h-[48px] px-4 flex items-center border-b" style={{ borderColor: "var(--border)" }}>
+        <div
+          className="h-[48px] px-4 flex items-center border-b"
+          style={{ borderColor: "var(--border)" }}
+        >
           <Logo />
         </div>
 
@@ -177,7 +184,11 @@ export default function Shell({
           <button
             onClick={() => setCmdkOpen(true)}
             className="w-full flex items-center gap-2 px-2 h-8 rounded-[6px] text-[12px]"
-            style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)", color: "var(--text-dim)" }}
+            style={{
+              background: "var(--bg-elev)",
+              border: "1px solid var(--border-mid)",
+              color: "var(--text-dim)",
+            }}
           >
             <Icon name="search" />
             <span className="flex-1 text-left">Quick search</span>
@@ -238,19 +249,35 @@ export default function Shell({
                   </div>
                 </div>
                 <div className="rule my-1" />
-                <Link href="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5">
+                <Link
+                  href="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5"
+                >
                   <Icon name="cog" /> Settings
                 </Link>
-                <Link href="/billing" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5">
+                <Link
+                  href="/billing"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5"
+                >
                   <Icon name="card" /> Billing
                 </Link>
-                <a href="https://getwebfetch.com/docs" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5">
+                <a
+                  href="https://getwebfetch.com/docs"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5"
+                >
                   <Icon name="book" /> Docs
                 </a>
                 <div className="rule my-1" />
                 <button
                   onClick={async () => {
-                    await fetch("/api/proxy/v1/auth/signout", { method: "POST", credentials: "include" }).catch(() => {});
+                    await fetch("/api/proxy/v1/auth/signout", {
+                      method: "POST",
+                      credentials: "include",
+                    }).catch(() => {});
                     router.push("/login");
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 h-8 rounded-[6px] text-[13px] hover:bg-white/5"
@@ -265,14 +292,23 @@ export default function Shell({
 
         <main className="mx-auto max-w-[1280px] px-6 py-8">{children}</main>
 
-        <footer className="mx-auto max-w-[1280px] px-6 py-8 text-[11px] mono flex items-center gap-3" style={{ color: "var(--text-mute)" }}>
+        <footer
+          className="mx-auto max-w-[1280px] px-6 py-8 text-[11px] mono flex items-center gap-3"
+          style={{ color: "var(--text-mute)" }}
+        >
           <span>app.getwebfetch.com</span>
           <span>·</span>
-          <a href="https://getwebfetch.com/docs" className="hover:text-[color:var(--text-dim)]">docs</a>
+          <a href="https://getwebfetch.com/docs" className="hover:text-[color:var(--text-dim)]">
+            docs
+          </a>
           <span>·</span>
-          <a href="https://getwebfetch.com/status" className="hover:text-[color:var(--text-dim)]">status</a>
+          <a href="https://getwebfetch.com/status" className="hover:text-[color:var(--text-dim)]">
+            status
+          </a>
           <span>·</span>
-          <a href="mailto:support@getwebfetch.com" className="hover:text-[color:var(--text-dim)]">support</a>
+          <a href="mailto:support@getwebfetch.com" className="hover:text-[color:var(--text-dim)]">
+            support
+          </a>
         </footer>
       </div>
 
@@ -298,12 +334,20 @@ function Logo() {
         style={{ background: "var(--accent)" }}
       >
         <svg viewBox="0 0 16 16" fill="none" className="size-3.5">
-          <path d="M3 4l5 3 5-3M3 8l5 3 5-3M3 12l5 3 5-3" stroke="#1a0a04" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M3 4l5 3 5-3M3 8l5 3 5-3M3 12l5 3 5-3"
+            stroke="#1a0a04"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-[14px] font-medium tracking-tight">webfetch</span>
-        <span className="mono text-[10.5px]" style={{ color: "var(--text-mute)" }}>cloud</span>
+        <span className="mono text-[10.5px]" style={{ color: "var(--text-mute)" }}>
+          cloud
+        </span>
       </div>
     </Link>
   );
@@ -311,15 +355,23 @@ function Logo() {
 
 function Breadcrumb({ pathname }: { pathname: string }) {
   const label =
-    pathname === "/" ? "Overview" :
-    pathname.startsWith("/keys") ? "API keys" :
-    pathname.startsWith("/usage") ? "Usage" :
-    pathname.startsWith("/providers") ? "Providers" :
-    pathname.startsWith("/team") ? "Team" :
-    pathname.startsWith("/billing") ? "Billing" :
-    pathname.startsWith("/audit") ? "Audit log" :
-    pathname.startsWith("/settings") ? "Settings" :
-    "";
+    pathname === "/"
+      ? "Overview"
+      : pathname.startsWith("/keys")
+        ? "API keys"
+        : pathname.startsWith("/usage")
+          ? "Usage"
+          : pathname.startsWith("/providers")
+            ? "Providers"
+            : pathname.startsWith("/team")
+              ? "Team"
+              : pathname.startsWith("/billing")
+                ? "Billing"
+                : pathname.startsWith("/audit")
+                  ? "Audit log"
+                  : pathname.startsWith("/settings")
+                    ? "Settings"
+                    : "";
   return (
     <div className="flex items-center gap-2 text-[13px]">
       <span style={{ color: "var(--text-mute)" }}>webfetch</span>

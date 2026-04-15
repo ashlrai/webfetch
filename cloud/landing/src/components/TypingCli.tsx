@@ -11,12 +11,12 @@ type Row = {
 };
 
 const RESULTS: Row[] = [
-  { provider: "wikimedia",    license: "CC BY-SA 4.0",    stamp: "CC-BY-SA",      score: "0.96" },
-  { provider: "openverse",    license: "CC BY 2.0",       stamp: "CC-BY",         score: "0.92" },
-  { provider: "smithsonian",  license: "CC0 1.0",         stamp: "CC0",           score: "0.88" },
-  { provider: "met-museum",   license: "CC0 (OA)",        stamp: "CC0",           score: "0.84" },
-  { provider: "loc",          license: "Public Domain",   stamp: "PUBLIC DOMAIN", score: "0.79" },
-  { provider: "musicbrainz",  license: "Editorial",       stamp: "EDITORIAL",     score: "0.71" },
+  { provider: "wikimedia", license: "CC BY-SA 4.0", stamp: "CC-BY-SA", score: "0.96" },
+  { provider: "openverse", license: "CC BY 2.0", stamp: "CC-BY", score: "0.92" },
+  { provider: "smithsonian", license: "CC0 1.0", stamp: "CC0", score: "0.88" },
+  { provider: "met-museum", license: "CC0 (OA)", stamp: "CC0", score: "0.84" },
+  { provider: "loc", license: "Public Domain", stamp: "PUBLIC DOMAIN", score: "0.79" },
+  { provider: "musicbrainz", license: "Editorial", stamp: "EDITORIAL", score: "0.71" },
 ];
 
 /**

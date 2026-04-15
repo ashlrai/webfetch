@@ -84,7 +84,10 @@ ${seq("dc:creator", f.creator)}${langAlt("dc:rights", f.rights)}${langAlt("dc:ti
 `;
 }
 
-export async function writeSidecar(imagePath: string, cand: Partial<ImageCandidate>): Promise<string | undefined> {
+export async function writeSidecar(
+  imagePath: string,
+  cand: Partial<ImageCandidate>,
+): Promise<string | undefined> {
   const fields = candidateToXmpFields(cand);
   if (!hasAttribution(fields)) return undefined;
   const sidecarPath = `${imagePath}.xmp`;

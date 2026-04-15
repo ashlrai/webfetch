@@ -12,7 +12,7 @@
 
 import { downloadImage } from "./download.ts";
 import { buildAttribution, coerceLicense, heuristicLicenseFromUrl } from "./license.ts";
-import { readImageMetadata, type EmbeddedMetadata } from "./metadata-reader.ts";
+import { type EmbeddedMetadata, readImageMetadata } from "./metadata-reader.ts";
 import type { Fetcher, License } from "./types.ts";
 
 export interface FetchWithLicenseOptions {
@@ -37,13 +37,20 @@ export interface FetchWithLicenseResult {
   embeddedMetadata?: EmbeddedMetadata;
 }
 
-export async function fetchWithLicense(url: string, opts: FetchWithLicenseOptions = {}): Promise<FetchWithLicenseResult> {
+export async function fetchWithLicense(
+  url: string,
+  opts: FetchWithLicenseOptions = {},
+): Promise<FetchWithLicenseResult> {
   const fetcher = opts.fetcher ?? fetch;
   const ua = opts.userAgent ?? "webfetch-mcp/0.1";
   // Probe the URL shallowly to see if it's an image.
   let head: Response;
   try {
-    head = await fetcher(url, { method: "HEAD", headers: { "User-Agent": ua }, signal: opts.signal });
+    head = await fetcher(url, {
+      method: "HEAD",
+      headers: { "User-Agent": ua },
+      signal: opts.signal,
+    });
   } catch {
     // Some servers disallow HEAD; fall through to GET.
     head = new Response(null);
@@ -88,7 +95,10 @@ export async function fetchWithLicense(url: string, opts: FetchWithLicenseOption
   }
 
   // Treat as webpage: fetch HTML and extract hints.
-  const resp = await fetcher(url, { headers: { "User-Agent": ua, Accept: "text/html" }, signal: opts.signal });
+  const resp = await fetcher(url, {
+    headers: { "User-Agent": ua, Accept: "text/html" },
+    signal: opts.signal,
+  });
   if (!resp.ok) {
     return { license: "UNKNOWN", confidence: 0, sourcePageUrl: url };
   }
@@ -102,7 +112,10 @@ export function parseHtmlLicense(html: string, url: string): FetchWithLicenseRes
     matchAttr(html, /<link[^>]+rel=["']license["'][^>]+href=["']([^"']+)["']/i) ??
     matchAttr(html, /<meta[^>]+name=["']dc.rights["'][^>]+content=["']([^"']+)["']/i) ??
     matchAttr(html, /<meta[^>]+property=["']og:image:license["'][^>]+content=["']([^"']+)["']/i);
-  const ogAuthor = matchAttr(html, /<meta[^>]+property=["']article:author["'][^>]+content=["']([^"']+)["']/i);
+  const ogAuthor = matchAttr(
+    html,
+    /<meta[^>]+property=["']article:author["'][^>]+content=["']([^"']+)["']/i,
+  );
   const heur = heuristicLicenseFromUrl(url);
 
   let license: License = heur.license;

@@ -10,8 +10,13 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 async function init() {
   const status = $<HTMLElement>("status");
   const res = await chrome.runtime.sendMessage({ type: "webfetch:ping" });
-  if (res?.ok) { status.textContent = "server ok"; status.classList.add("ok"); }
-  else { status.textContent = res?.error ? "offline" : "no token"; status.classList.add("err"); }
+  if (res?.ok) {
+    status.textContent = "server ok";
+    status.classList.add("ok");
+  } else {
+    status.textContent = res?.error ? "offline" : "no token";
+    status.classList.add("err");
+  }
 
   $<HTMLButtonElement>("go").addEventListener("click", runSearch);
   $<HTMLInputElement>("q").addEventListener("keydown", (e) => {
@@ -30,7 +35,9 @@ async function runSearch() {
   if (!q) return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
-    try { await chrome.tabs.sendMessage(tab.id, { type: "webfetch:toggle-sidebar" }); } catch {}
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: "webfetch:toggle-sidebar" });
+    } catch {}
   }
   // Persist last query so sidebar can pick it up if desired later.
   await chrome.storage.local.set({ lastQuery: q });
@@ -55,10 +62,18 @@ async function renderRecents() {
 }
 
 function shortUrl(u: string): string {
-  try { const x = new URL(u); return x.hostname + x.pathname.slice(0, 30); } catch { return u.slice(0, 40); }
+  try {
+    const x = new URL(u);
+    return x.hostname + x.pathname.slice(0, 30);
+  } catch {
+    return u.slice(0, 40);
+  }
 }
 function escape(s: string): string {
-  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  return String(s).replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+  );
 }
 
 init();

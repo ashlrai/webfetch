@@ -1,8 +1,8 @@
-import { describe, test, expect } from "bun:test";
-import { makeEnv } from "./harness.ts";
-import { recordUsage, persistUsageRow } from "../src/metering.ts";
-import { readUsage } from "../src/quota.ts";
+import { describe, expect, test } from "bun:test";
 import { planFor } from "../../shared/pricing.ts";
+import { persistUsageRow, recordUsage } from "../src/metering.ts";
+import { readUsage } from "../src/quota.ts";
+import { makeEnv } from "./harness.ts";
 
 describe("metering", () => {
   test("recordUsage enqueues a message and increments KV counter", async () => {
@@ -37,8 +37,10 @@ describe("metering", () => {
       requestId: "rid-1",
     });
     const row = await env.DB.prepare(
-      `SELECT endpoint, units FROM usage_rows WHERE workspace_id = ?1`,
-    ).bind("ws-x").first<{ endpoint: string; units: number }>();
+      "SELECT endpoint, units FROM usage_rows WHERE workspace_id = ?1",
+    )
+      .bind("ws-x")
+      .first<{ endpoint: string; units: number }>();
     expect(row?.endpoint).toBe("/v1/search");
     expect(row?.units).toBe(2);
   });

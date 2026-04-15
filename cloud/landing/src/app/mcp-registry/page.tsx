@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
 import { CopyButton } from "@/components/CopyButton";
 import { FadeUp } from "@/components/FadeUp";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "MCP Registry",
@@ -118,7 +118,7 @@ export default function McpRegistryPage() {
             </div>
           </div>
           <pre className="rounded-lg border border-[var(--color-border)] bg-[var(--color-code-bg)] p-4 overflow-x-auto text-[12px] font-mono leading-relaxed">
-{MANIFEST}
+            {MANIFEST}
           </pre>
         </div>
       </FadeUp>
@@ -136,14 +136,12 @@ export default function McpRegistryPage() {
                   <div className="text-[13px] font-mono font-semibold text-[var(--color-fg)]">
                     {s.agent}
                   </div>
-                  <div className="text-[10px] font-mono text-[var(--color-fg-faint)]">
-                    {s.path}
-                  </div>
+                  <div className="text-[10px] font-mono text-[var(--color-fg-faint)]">{s.path}</div>
                 </div>
                 <CopyButton text={s.snippet} />
               </div>
               <pre className="p-4 overflow-x-auto text-[12px] font-mono leading-relaxed text-[var(--color-fg-muted)]">
-{s.snippet}
+                {s.snippet}
               </pre>
             </div>
           ))}

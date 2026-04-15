@@ -13,9 +13,7 @@ export const burst: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("burst").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://burst.shopify.com/photos/search.json?" +
-      new URLSearchParams({ q: query });
+    const url = `https://burst.shopify.com/photos/search.json?${new URLSearchParams({ q: query })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`burst http ${resp.status}`);
     const json = (await resp.json()) as any;

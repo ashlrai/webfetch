@@ -1,12 +1,12 @@
-import { redirect } from "next/navigation";
+import { Icon } from "@/components/Icon";
+import PageHeader from "@/components/PageHeader";
 import PlanCard from "@/components/PlanCard";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import PageHeader from "@/components/PageHeader";
-import { Icon } from "@/components/Icon";
-import { getServerSession } from "@/lib/auth";
 import { getBilling, getOverview } from "@/lib/api";
+import { getServerSession } from "@/lib/auth";
 import { formatDate, formatUsd } from "@/lib/format";
 import { PLANS } from "@shared/pricing";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,11 @@ export default async function BillingPage() {
   const portalUrl = billing.stripeCustomerPortalUrl;
 
   const statusClass =
-    billing.status === "active" || billing.status === "trialing" ? "badge-ok" :
-    billing.status === "past_due" || billing.status === "unpaid" ? "badge-err" : "";
+    billing.status === "active" || billing.status === "trialing"
+      ? "badge-ok"
+      : billing.status === "past_due" || billing.status === "unpaid"
+        ? "badge-err"
+        : "";
 
   // fake invoice history (portal owns the real ones)
   const invoices = [
@@ -36,7 +39,12 @@ export default async function BillingPage() {
         description="Manage your subscription, payment method, and invoice history. Payments processed by Stripe."
         actions={
           portalUrl ? (
-            <a href={portalUrl} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="btn btn-primary"
+            >
               <Icon name="external" /> Manage subscription
             </a>
           ) : (
@@ -59,14 +67,18 @@ export default async function BillingPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <span className={`badge ${statusClass}`}>{billing.status}</span>
-            {billing.cancelAtPeriodEnd && <span className="badge badge-warn">cancels at period end</span>}
+            {billing.cancelAtPeriodEnd && (
+              <span className="badge badge-warn">cancels at period end</span>
+            )}
           </div>
         </div>
         <div className="surface p-4 flex flex-col gap-2">
           <span className="eyebrow">Next invoice</span>
           <div className="num-lg">{formatDate(billing.currentPeriodEnd)}</div>
           <div className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
-            {plan.baseMonthlyUsd > 0 ? `${formatUsd(plan.baseMonthlyUsd)} base · overage extra` : "no charge — free tier"}
+            {plan.baseMonthlyUsd > 0
+              ? `${formatUsd(plan.baseMonthlyUsd)} base · overage extra`
+              : "no charge — free tier"}
           </div>
         </div>
         <div className="surface p-4 flex flex-col gap-2">
@@ -80,7 +92,9 @@ export default async function BillingPage() {
             </div>
             <div className="flex flex-col">
               <span className="mono text-[13px]">•••• 4242</span>
-              <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>exp 12/28</span>
+              <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+                exp 12/28
+              </span>
             </div>
           </div>
         </div>
@@ -97,7 +111,13 @@ export default async function BillingPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <h2 className="h2">Plans</h2>
-          <a href="https://getwebfetch.com/pricing" target="_blank" rel="noreferrer" className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+          <a
+            href="https://getwebfetch.com/pricing"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[12px]"
+            style={{ color: "var(--text-dim)" }}
+          >
             Full comparison →
           </a>
         </div>
@@ -109,9 +129,13 @@ export default async function BillingPage() {
               current={p === overview.workspace.plan}
               cta={
                 p === overview.workspace.plan ? (
-                  <button className="btn w-full" disabled>Current plan</button>
+                  <button className="btn w-full" disabled>
+                    Current plan
+                  </button>
                 ) : p === "enterprise" ? (
-                  <a href="mailto:sales@getwebfetch.com" className="btn w-full">Talk to sales</a>
+                  <a href="mailto:sales@getwebfetch.com" className="btn w-full">
+                    Talk to sales
+                  </a>
                 ) : (
                   <a
                     href={`/api/proxy/v1/billing/checkout?plan=${p}`}
@@ -131,7 +155,13 @@ export default async function BillingPage() {
         <div className="flex items-baseline justify-between">
           <h2 className="h2">Invoice history</h2>
           {portalUrl && (
-            <a href={portalUrl} target="_blank" rel="noreferrer" className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[12px]"
+              style={{ color: "var(--text-dim)" }}
+            >
               Download PDFs →
             </a>
           )}
@@ -160,7 +190,9 @@ export default async function BillingPage() {
                       {formatDate(inv.date)}
                     </td>
                     <td className="mono">{formatUsd(inv.amount)}</td>
-                    <td><span className="badge badge-ok">{inv.status}</span></td>
+                    <td>
+                      <span className="badge badge-ok">{inv.status}</span>
+                    </td>
                     <td style={{ textAlign: "right" }}>
                       <a
                         href={portalUrl ?? "#"}

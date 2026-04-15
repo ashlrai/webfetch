@@ -17,7 +17,7 @@ run(argv)
     const msg = (err as Error)?.message ?? String(err);
     process.stderr.write(`${c.red("error:")} ${msg}\n`);
     if (process.env.WEBFETCH_DEBUG) {
-      process.stderr.write(String((err as Error)?.stack ?? "") + "\n");
+      process.stderr.write(`${String((err as Error)?.stack ?? "")}\n`);
     }
     process.exit(1);
   });

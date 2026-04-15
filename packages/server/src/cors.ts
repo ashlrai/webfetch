@@ -25,7 +25,7 @@ export function evaluateCors(req: Request): CorsResult {
     "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-max-age": "86400",
-    "vary": "origin",
+    vary: "origin",
   };
   return { allowed, headers };
 }

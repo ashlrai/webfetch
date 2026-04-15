@@ -16,10 +16,7 @@ export interface InsertionOptions {
   attributionStyle: "html-comment" | "markdown-caption" | "none";
 }
 
-export function buildMarkdownInsertion(
-  candidate: ImageCandidate,
-  opts: InsertionOptions,
-): string {
+export function buildMarkdownInsertion(candidate: ImageCandidate, opts: InsertionOptions): string {
   const safeAlt = escapeMarkdown(opts.alt || candidate.title || "image");
   const safePath = encodeSpaces(opts.relativePath);
   const img = `![${safeAlt}](${safePath})`;
@@ -96,13 +93,15 @@ export function mimeToExt(mime: string | undefined, fallbackUrl: string): string
 }
 
 export function slugForFilename(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 48) || "image";
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 48) || "image"
+  );
 }
 
 function escapeMarkdown(s: string): string {
@@ -110,5 +109,8 @@ function escapeMarkdown(s: string): string {
 }
 
 function encodeSpaces(p: string): string {
-  return p.split("/").map((seg) => seg.replace(/ /g, "%20")).join("/");
+  return p
+    .split("/")
+    .map((seg) => seg.replace(/ /g, "%20"))
+    .join("/");
 }

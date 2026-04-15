@@ -53,8 +53,7 @@ export function tagCandidate(
   extractor: ExtractorId,
   stack: string,
 ): ImageCandidate {
-  const prior =
-    c.raw && typeof c.raw === "object" ? (c.raw as Record<string, unknown>) : {};
+  const prior = c.raw && typeof c.raw === "object" ? (c.raw as Record<string, unknown>) : {};
   return {
     ...c,
     viaBrowserFallback: true,

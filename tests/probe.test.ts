@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { extractImages } from "../packages/core/src/probe-page.ts";
 import { parseHtmlLicense } from "../packages/core/src/fetch-with-license.ts";
+import { extractImages } from "../packages/core/src/probe-page.ts";
 import { fixtureText } from "./stub-fetcher.ts";
 
 test("extractImages pulls imgs + og:image, resolves relative urls", () => {

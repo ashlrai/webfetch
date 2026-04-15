@@ -10,8 +10,22 @@ import { promptChoice } from "../src/picker.ts";
 const originalCore = { ...core() };
 
 const CANDS = [
-  { url: "https://a/1.jpg", source: "wikimedia", license: "CC0", width: 800, height: 600, title: "one" },
-  { url: "https://a/2.jpg", source: "openverse", license: "CC_BY", width: 1200, height: 900, title: "two" },
+  {
+    url: "https://a/1.jpg",
+    source: "wikimedia",
+    license: "CC0",
+    width: 800,
+    height: 600,
+    title: "one",
+  },
+  {
+    url: "https://a/2.jpg",
+    source: "openverse",
+    license: "CC_BY",
+    width: 1200,
+    height: 900,
+    title: "two",
+  },
 ];
 
 let downloadCalls: any[] = [];

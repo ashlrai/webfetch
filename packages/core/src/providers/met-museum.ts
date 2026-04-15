@@ -14,9 +14,7 @@ export const metMuseum: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("met-museum").take();
     const fetcher = opts.fetcher ?? fetch;
-    const searchUrl =
-      "https://collectionapi.metmuseum.org/public/collection/v1/search?" +
-      new URLSearchParams({ q: query, hasImages: "true" });
+    const searchUrl = `https://collectionapi.metmuseum.org/public/collection/v1/search?${new URLSearchParams({ q: query, hasImages: "true" })}`;
 
     const sResp = await fetcher(searchUrl, { signal: opts.signal });
     if (!sResp.ok) throw new Error(`met-museum http ${sResp.status}`);

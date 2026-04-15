@@ -4,9 +4,9 @@
  * needing a plugin. Drop-in replacement for playwright.
  */
 
-import { BrowserDependencyError, type BrowserOptions, type StackId } from "../types.ts";
 import { randomFingerprint } from "../fingerprint.ts";
 import { formatProxy } from "../proxy.ts";
+import { BrowserDependencyError, type BrowserOptions, type StackId } from "../types.ts";
 import type { Stack, StackSession } from "./contract.ts";
 
 const STACK_ID: StackId = "rebrowser";

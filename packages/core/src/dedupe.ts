@@ -9,11 +9,7 @@
  */
 
 import { downloadImage } from "./download.ts";
-import {
-  findDuplicates,
-  hammingDistance,
-  perceptualHash,
-} from "./perceptual-hash.ts";
+import { findDuplicates, hammingDistance, perceptualHash } from "./perceptual-hash.ts";
 import type { Fetcher, ImageCandidate } from "./types.ts";
 
 export { perceptualHash, hammingDistance, findDuplicates };
@@ -22,9 +18,12 @@ function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
     // Drop common cache-buster params.
-    for (const k of ["w", "h", "fit", "auto", "q", "fm", "dpr", "crop", "s", "t"]) u.searchParams.delete(k);
+    for (const k of ["w", "h", "fit", "auto", "q", "fm", "dpr", "crop", "s", "t"])
+      u.searchParams.delete(k);
     u.hash = "";
-    return u.origin + u.pathname + (u.searchParams.toString() ? `?${u.searchParams.toString()}` : "");
+    return (
+      u.origin + u.pathname + (u.searchParams.toString() ? `?${u.searchParams.toString()}` : "")
+    );
   } catch {
     return url;
   }
@@ -53,10 +52,7 @@ export interface DedupeByHashOptions {
 }
 
 /** pHash-level dedupe. Skips candidates without phash unless `computeHashes`. */
-export function dedupeByHash(
-  candidates: ImageCandidate[],
-  opts?: number,
-): ImageCandidate[];
+export function dedupeByHash(candidates: ImageCandidate[], opts?: number): ImageCandidate[];
 export function dedupeByHash(
   candidates: ImageCandidate[],
   opts: DedupeByHashOptions,

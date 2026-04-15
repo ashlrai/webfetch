@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import type { ApiKey } from "@shared/types";
-import KeyRow from "@/components/KeyRow";
-import Modal from "@/components/Modal";
 import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
+import KeyRow from "@/components/KeyRow";
+import Modal from "@/components/Modal";
 import { createKey, listKeys } from "@/lib/api";
+import type { ApiKey } from "@shared/types";
+import { useMemo, useState, useTransition } from "react";
 
 type SortKey = "name" | "createdAt" | "lastUsedAt";
 type SortDir = "asc" | "desc";
@@ -22,7 +22,10 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "createdAt", dir: "desc" });
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
+    key: "createdAt",
+    dir: "desc",
+  });
 
   const refresh = () =>
     startTransition(async () => {
@@ -66,7 +69,9 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
       await navigator.clipboard.writeText(reveal.raw);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   };
 
   const closeReveal = () => {
@@ -79,21 +84,32 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
   const revoked = keys.filter((k) => k.revokedAt != null);
 
   const toggleSort = (key: SortKey) => {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
+    );
   };
   const sortArrow = (key: SortKey) =>
-    sort.key !== key ? null : <Icon name={sort.dir === "asc" ? "arrow-up" : "arrow-down"} size={10} />;
+    sort.key !== key ? null : (
+      <Icon name={sort.dir === "asc" ? "arrow-up" : "arrow-down"} size={10} />
+    );
 
   return (
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="badge badge-ok"><span className="dot" />{active.length} active</span>
+          <span className="badge badge-ok">
+            <span className="dot" />
+            {active.length} active
+          </span>
           {revoked.length > 0 && <span className="badge">{revoked.length} revoked</span>}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text-mute)" }} />
+            <Icon
+              name="search"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--text-mute)" }}
+            />
             <input
               className="input"
               style={{ paddingLeft: 28, width: 220 }}
@@ -149,7 +165,10 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-dim)", padding: 32 }}>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", color: "var(--text-dim)", padding: 32 }}
+                  >
                     No keys match "{query}".
                   </td>
                 </tr>
@@ -172,8 +191,14 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
           onClose={() => setShowModal(false)}
           footer={
             <>
-              <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={(e) => handleCreate(e as unknown as React.FormEvent)}>
+              <button type="button" className="btn" onClick={() => setShowModal(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={(e) => handleCreate(e as unknown as React.FormEvent)}
+              >
                 Create key
               </button>
             </>
@@ -183,7 +208,6 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
             <label className="flex flex-col gap-1.5">
               <span className="eyebrow">Name</span>
               <input
-                autoFocus
                 className="input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -213,7 +237,9 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
         <Modal
           title="Save your key now"
           subtitle="This is the only time we'll show the full secret. Store it somewhere safe (1Password, a vault, your .env)."
-          onClose={() => { if (saved) closeReveal(); }}
+          onClose={() => {
+            if (saved) closeReveal();
+          }}
           footer={
             <button className="btn btn-primary" disabled={!saved} onClick={closeReveal}>
               Done
@@ -231,12 +257,11 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
                 {copied ? "Copied" : "Copy"}
               </button>
             </div>
-            <label className="flex items-center gap-2 text-[12.5px] cursor-pointer" style={{ color: "var(--text-dim)" }}>
-              <input
-                type="checkbox"
-                checked={saved}
-                onChange={(e) => setSaved(e.target.checked)}
-              />
+            <label
+              className="flex items-center gap-2 text-[12.5px] cursor-pointer"
+              style={{ color: "var(--text-dim)" }}
+            >
+              <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
               I've saved this key somewhere safe.
             </label>
           </div>

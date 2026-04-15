@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
-interface Tick { ts: number; endpoint: string; status: number; }
+interface Tick {
+  ts: number;
+  endpoint: string;
+  status: number;
+}
 
 export default function LiveUsage() {
   const [connected, setConnected] = useState(false);
@@ -42,7 +46,9 @@ export default function LiveUsage() {
           setFlash(true);
           if (flashTimer.current) clearTimeout(flashTimer.current);
           flashTimer.current = setTimeout(() => setFlash(false), 600);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       };
       es.addEventListener("tick", onTick as EventListener);
     };
@@ -67,7 +73,7 @@ export default function LiveUsage() {
             style={{
               color,
               animation: connected ? "pulse 1.6s ease-in-out infinite" : undefined,
-              boxShadow: flash ? `0 0 0 4px rgba(63,185,80,0.2)` : undefined,
+              boxShadow: flash ? "0 0 0 4px rgba(63,185,80,0.2)" : undefined,
               transition: "box-shadow 200ms ease",
             }}
           />
@@ -78,7 +84,10 @@ export default function LiveUsage() {
         </span>
       </div>
       {ticks.length === 0 ? (
-        <div className="text-[12.5px] flex items-center gap-2 py-6" style={{ color: "var(--text-dim)" }}>
+        <div
+          className="text-[12.5px] flex items-center gap-2 py-6"
+          style={{ color: "var(--text-dim)" }}
+        >
           <Icon name="clock" />
           Waiting for the next fetch.
         </div>
@@ -95,7 +104,9 @@ export default function LiveUsage() {
               }}
             >
               <span className="truncate">{t.endpoint}</span>
-              <span className={`badge ${t.status >= 500 ? "badge-err" : t.status >= 400 ? "badge-warn" : "badge-ok"}`}>
+              <span
+                className={`badge ${t.status >= 500 ? "badge-err" : t.status >= 400 ? "badge-warn" : "badge-ok"}`}
+              >
                 {t.status}
               </span>
             </li>

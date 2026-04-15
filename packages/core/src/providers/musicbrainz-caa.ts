@@ -14,13 +14,11 @@ export const musicbrainzCaa: Provider = {
     await getBucket("musicbrainz-caa").take();
     const fetcher = opts.fetcher ?? fetch;
     const ua = opts.auth?.userAgent ?? "webfetch-mcp/0.1 ( https://github.com/ )";
-    const mbUrl =
-      "https://musicbrainz.org/ws/2/release/?" +
-      new URLSearchParams({
-        query,
-        fmt: "json",
-        limit: String(Math.min(opts.maxPerProvider ?? 10, 10)),
-      });
+    const mbUrl = `https://musicbrainz.org/ws/2/release/?${new URLSearchParams({
+      query,
+      fmt: "json",
+      limit: String(Math.min(opts.maxPerProvider ?? 10, 10)),
+    })}`;
     const mbResp = await fetcher(mbUrl, {
       headers: { "User-Agent": ua, Accept: "application/json" },
       signal: opts.signal,

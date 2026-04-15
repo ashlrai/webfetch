@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,11 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <form action="/api/proxy/v1/auth/signup" method="post" className="surface p-5 flex flex-col gap-3">
+      <form
+        action="/api/proxy/v1/auth/signup"
+        method="post"
+        className="surface p-5 flex flex-col gap-3"
+      >
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Name</span>
           <input type="text" name="name" className="input" required autoComplete="name" />
@@ -24,12 +28,21 @@ export default function SignupPage() {
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Password</span>
-          <input type="password" name="password" className="input" required minLength={8} autoComplete="new-password" />
+          <input
+            type="password"
+            name="password"
+            className="input"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
           <span className="text-[11px] mono" style={{ color: "var(--text-mute)" }}>
             8+ characters
           </span>
         </label>
-        <button type="submit" className="btn btn-primary btn-lg">Create account</button>
+        <button type="submit" className="btn btn-primary btn-lg">
+          Create account
+        </button>
       </form>
 
       <ul className="flex flex-col gap-2 text-[12.5px]" style={{ color: "var(--text-dim)" }}>

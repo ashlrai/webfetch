@@ -13,10 +13,10 @@
  * and keeps p95 response times flat.
  */
 
-import type { Env, UsageMessage, RequestCtx } from "./env.ts";
 import { planFor } from "../../shared/pricing.ts";
-import { incrementUsage } from "./quota.ts";
+import type { Env, RequestCtx, UsageMessage } from "./env.ts";
 import { ulid } from "./ids.ts";
+import { incrementUsage } from "./quota.ts";
 
 export async function recordUsage(
   env: Env,
@@ -58,15 +58,17 @@ export async function persistUsageRow(env: Env, msg: UsageMessage): Promise<void
     `INSERT INTO usage_rows
        (id, workspace_id, api_key_id, user_id, endpoint, units, ts, status, request_id)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
-  ).bind(
-    id,
-    msg.workspaceId,
-    msg.apiKeyId,
-    msg.userId,
-    msg.endpoint,
-    msg.units,
-    msg.ts,
-    msg.status,
-    msg.requestId,
-  ).run();
+  )
+    .bind(
+      id,
+      msg.workspaceId,
+      msg.apiKeyId,
+      msg.userId,
+      msg.endpoint,
+      msg.units,
+      msg.ts,
+      msg.status,
+      msg.requestId,
+    )
+    .run();
 }

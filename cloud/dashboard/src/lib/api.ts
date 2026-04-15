@@ -9,17 +9,9 @@
  * the dashboard renders end-to-end even before api.getwebfetch.com exists.
  */
 
-import type {
-  ApiKey,
-  AuditEntry,
-  BillingSnapshot,
-  UsageRow,
-  UsageSummary,
-  User,
-  Workspace,
-} from "@shared/types";
 import { USE_FIXTURES } from "@/env";
 import {
+  type ProviderStatus,
   fixtureAudit,
   fixtureBilling,
   fixtureDailySeries,
@@ -33,8 +25,16 @@ import {
   fixtureUser,
   fixtureWorkspace,
   fixtureWorkspaces,
-  type ProviderStatus,
 } from "@/lib/fixtures";
+import type {
+  ApiKey,
+  AuditEntry,
+  BillingSnapshot,
+  UsageRow,
+  UsageSummary,
+  User,
+  Workspace,
+} from "@shared/types";
 
 export class ApiError extends Error {
   constructor(

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { AreaChart, BarChart, HBarList } from "@/components/Chart";
 import { Icon } from "@/components/Icon";
 import { formatInt, formatUsd, toCsv } from "@/lib/format";
+import { useMemo, useState } from "react";
 
 type Range = "7d" | "30d" | "90d";
 
@@ -36,7 +36,10 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
 
   const totalFetches = filtered.reduce((a, b) => a + b.fetches, 0);
   const totalCost = filtered.reduce((a, b) => a + b.costUsd, 0);
-  const peakDay = filtered.reduce((best, d) => (d.fetches > best.fetches ? d : best), filtered[0] ?? { fetches: 0, day: 0, costUsd: 0 });
+  const peakDay = filtered.reduce(
+    (best, d) => (d.fetches > best.fetches ? d : best),
+    filtered[0] ?? { fetches: 0, day: 0, costUsd: 0 },
+  );
 
   const handleExport = () => {
     const csv = toCsv(
@@ -86,7 +89,11 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
         <div className="flex items-center gap-2 flex-wrap">
           <div
             className="inline-flex items-center gap-1.5 px-2 h-8 rounded-[8px] text-[12px] mono"
-            style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)", color: "var(--text-dim)" }}
+            style={{
+              background: "var(--bg-elev)",
+              border: "1px solid var(--border-mid)",
+              color: "var(--text-dim)",
+            }}
           >
             <Icon name="filter" />
             <select
@@ -97,7 +104,9 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
             >
               <option value="all">All endpoints</option>
               {perEndpoint.map((e) => (
-                <option key={e.endpoint} value={e.endpoint}>{e.endpoint}</option>
+                <option key={e.endpoint} value={e.endpoint}>
+                  {e.endpoint}
+                </option>
               ))}
             </select>
           </div>
@@ -111,8 +120,16 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Stat label="Fetches" value={formatInt(totalFetches)} sub={`${range} window`} />
         <Stat label="Cost" value={formatUsd(totalCost)} sub={`${range} window`} />
-        <Stat label="Peak day" value={formatInt(peakDay.fetches)} sub={new Date(peakDay.day).toLocaleDateString()} />
-        <Stat label="Avg / day" value={formatInt(Math.round(totalFetches / Math.max(1, filtered.length)))} sub={`${filtered.length} days`} />
+        <Stat
+          label="Peak day"
+          value={formatInt(peakDay.fetches)}
+          sub={new Date(peakDay.day).toLocaleDateString()}
+        />
+        <Stat
+          label="Avg / day"
+          value={formatInt(Math.round(totalFetches / Math.max(1, filtered.length)))}
+          sub={`${filtered.length} days`}
+        />
       </div>
 
       {/* Daily chart */}
@@ -154,7 +171,12 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
             USD · cents per bar
           </span>
         </div>
-        <BarChart data={costBars} height={160} accent="var(--warn)" format={(v) => `$${(v / 100).toFixed(2)}`} />
+        <BarChart
+          data={costBars}
+          height={160}
+          accent="var(--warn)"
+          format={(v) => `$${(v / 100).toFixed(2)}`}
+        />
       </section>
     </div>
   );
@@ -165,7 +187,11 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
     <div className="surface p-3.5 flex flex-col gap-1">
       <div className="eyebrow">{label}</div>
       <div className="num-md">{value}</div>
-      {sub && <div className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>{sub}</div>}
+      {sub && (
+        <div className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }

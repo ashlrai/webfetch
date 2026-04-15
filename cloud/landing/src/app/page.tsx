@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { Hero } from "@/components/Hero";
-import { Features } from "@/components/Features";
-import { ProviderMatrix } from "@/components/ProviderMatrix";
-import { ComparisonTable } from "@/components/ComparisonTable";
 import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
+import { ComparisonTable } from "@/components/ComparisonTable";
 import { FadeUp } from "@/components/FadeUp";
+import { Features } from "@/components/Features";
+import { Hero } from "@/components/Hero";
+import { ProviderMatrix } from "@/components/ProviderMatrix";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -42,8 +42,8 @@ export default function Home() {
             </span>
           </h2>
           <p className="mt-5 text-[var(--color-fg-dim)] max-w-xl mx-auto leading-relaxed">
-            OSS unlimited on your machine. Managed browser, pooled keys, and
-            audit logs in the cloud.
+            OSS unlimited on your machine. Managed browser, pooled keys, and audit logs in the
+            cloud.
           </p>
           <div className="mt-8 flex gap-3 justify-center">
             <a href="https://app.getwebfetch.com/signup" className="wf-btn-primary">

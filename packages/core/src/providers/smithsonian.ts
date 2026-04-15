@@ -19,13 +19,11 @@ export const smithsonian: Provider = {
       (globalThis as any).process?.env?.SMITHSONIAN_API_KEY ??
       "DEMO_KEY";
 
-    const url =
-      "https://api.si.edu/openaccess/api/v1.0/search?" +
-      new URLSearchParams({
-        q: `${query} AND online_media_type:"Images"`,
-        rows: String(opts.maxPerProvider ?? 10),
-        api_key: key,
-      });
+    const url = `https://api.si.edu/openaccess/api/v1.0/search?${new URLSearchParams({
+      q: `${query} AND online_media_type:"Images"`,
+      rows: String(opts.maxPerProvider ?? 10),
+      api_key: key,
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`smithsonian http ${resp.status}`);
     const json = (await resp.json()) as any;
@@ -38,8 +36,7 @@ export const smithsonian: Provider = {
       if (!img) continue;
       const imgUrl = img.content ?? img.thumbnail;
       const author =
-        r?.content?.freetext?.name?.[0]?.content ??
-        r?.content?.indexedStructured?.name?.[0];
+        r?.content?.freetext?.name?.[0]?.content ?? r?.content?.indexedStructured?.name?.[0];
       out.push({
         url: imgUrl,
         thumbnailUrl: img.thumbnail,

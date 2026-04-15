@@ -7,8 +7,8 @@
  */
 
 import { mkdirSync } from "node:fs";
-import { deflateSync, crc32 } from "node:zlib";
 import { join } from "node:path";
+import { crc32, deflateSync } from "node:zlib";
 
 const COLOR = { r: 0x1d, g: 0x4e, b: 0xd8, a: 0xff }; // indigo-600
 
@@ -27,12 +27,20 @@ function makePng(size: number): Uint8Array {
   const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
   const ihdr = new Uint8Array(13);
   const dv = new DataView(ihdr.buffer);
-  dv.setUint32(0, size); dv.setUint32(4, size);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // RGBA
-  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  dv.setUint32(0, size);
+  dv.setUint32(4, size);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
 
-  const chunks: Uint8Array[] = [sig, chunk("IHDR", ihdr), chunk("IDAT", idat), chunk("IEND", new Uint8Array())];
+  const chunks: Uint8Array[] = [
+    sig,
+    chunk("IHDR", ihdr),
+    chunk("IDAT", idat),
+    chunk("IEND", new Uint8Array()),
+  ];
   return concat(chunks);
 }
 
@@ -51,7 +59,10 @@ function concat(parts: Uint8Array[]): Uint8Array {
   const n = parts.reduce((s, p) => s + p.length, 0);
   const out = new Uint8Array(n);
   let o = 0;
-  for (const p of parts) { out.set(p, o); o += p.length; }
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
   return out;
 }
 

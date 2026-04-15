@@ -28,10 +28,7 @@
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": [
-    "Other",
-    "AI"
-  ],
+  "categories": ["Other", "AI"],
   "activationEvents": [
     "onView:webfetch.sidePanel",
     "onCommand:webfetch.search",
@@ -121,11 +118,7 @@
         },
         "webfetch.defaultLicense": {
           "type": "string",
-          "enum": [
-            "safe-only",
-            "prefer-safe",
-            "any"
-          ],
+          "enum": ["safe-only", "prefer-safe", "any"],
           "default": "safe-only",
           "markdownEnumDescriptions": [
             "Only return images with a clearly-safe license (CC0, CC_BY, CC_BY_SA, PUBLIC_DOMAIN).",
@@ -175,11 +168,7 @@
         },
         "webfetch.attributionStyle": {
           "type": "string",
-          "enum": [
-            "html-comment",
-            "markdown-caption",
-            "none"
-          ],
+          "enum": ["html-comment", "markdown-caption", "none"],
           "default": "html-comment",
           "description": "How to emit attribution alongside the inserted image."
         }

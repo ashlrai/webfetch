@@ -40,13 +40,23 @@ export default function Modal({
     first?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); return; }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
       if (e.key !== "Tab") return;
       const els = focusable();
       if (els.length === 0) return;
-      const f = els[0], l = els[els.length - 1];
-      if (e.shiftKey && document.activeElement === f) { e.preventDefault(); l.focus(); }
-      else if (!e.shiftKey && document.activeElement === l) { e.preventDefault(); f.focus(); }
+      const f = els[0];
+      const l = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === f) {
+        e.preventDefault();
+        l.focus();
+      } else if (!e.shiftKey && document.activeElement === l) {
+        e.preventDefault();
+        f.focus();
+      }
     };
     node.addEventListener("keydown", onKey);
     const prevBody = document.body.style.overflow;
@@ -61,7 +71,9 @@ export default function Modal({
   return (
     <div
       className="modal-backdrop"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={title}

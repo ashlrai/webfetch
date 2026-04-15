@@ -21,9 +21,28 @@ const BASE: Cmd[] = [
   { id: "go-billing", label: "Billing", section: "Go to", icon: "card", href: "/billing" },
   { id: "go-audit", label: "Audit log", section: "Go to", icon: "shield", href: "/audit" },
   { id: "go-settings", label: "Settings", section: "Go to", icon: "cog", href: "/settings" },
-  { id: "act-key-new", label: "Create API key", hint: "Open the new-key modal", section: "Actions", icon: "plus", href: "/keys?new=1" },
-  { id: "act-invite", label: "Invite teammate", section: "Actions", icon: "users", href: "/team?new=1" },
-  { id: "act-upgrade", label: "Upgrade plan", section: "Actions", icon: "arrow-up", href: "/billing" },
+  {
+    id: "act-key-new",
+    label: "Create API key",
+    hint: "Open the new-key modal",
+    section: "Actions",
+    icon: "plus",
+    href: "/keys?new=1",
+  },
+  {
+    id: "act-invite",
+    label: "Invite teammate",
+    section: "Actions",
+    icon: "users",
+    href: "/team?new=1",
+  },
+  {
+    id: "act-upgrade",
+    label: "Upgrade plan",
+    section: "Actions",
+    icon: "arrow-up",
+    href: "/billing",
+  },
   { id: "act-2fa", label: "Set up 2FA", section: "Actions", icon: "shield", href: "/settings#2fa" },
 ];
 
@@ -63,10 +82,14 @@ export default function CommandPalette({
     // trap focus minimally
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
-  useEffect(() => { setCursor(0); }, [q]);
+  useEffect(() => {
+    setCursor(0);
+  }, [q]);
 
   const grouped = useMemo(() => {
     const map = new Map<Cmd["section"], Cmd[]>();
@@ -99,7 +122,9 @@ export default function CommandPalette({
       ref={backdropRef}
       className="modal-backdrop"
       style={{ alignItems: "flex-start", paddingTop: "12vh" }}
-      onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
+      onClick={(e) => {
+        if (e.target === backdropRef.current) onClose();
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -157,10 +182,20 @@ export default function CommandPalette({
             ))
           )}
         </div>
-        <div className="px-4 py-2 border-t flex items-center gap-3 text-[11px]" style={{ borderColor: "var(--border)", color: "var(--text-mute)" }}>
-          <span><span className="kbd">↑</span><span className="kbd ml-1">↓</span> navigate</span>
-          <span><span className="kbd">↵</span> open</span>
-          <span><span className="kbd">ESC</span> close</span>
+        <div
+          className="px-4 py-2 border-t flex items-center gap-3 text-[11px]"
+          style={{ borderColor: "var(--border)", color: "var(--text-mute)" }}
+        >
+          <span>
+            <span className="kbd">↑</span>
+            <span className="kbd ml-1">↓</span> navigate
+          </span>
+          <span>
+            <span className="kbd">↵</span> open
+          </span>
+          <span>
+            <span className="kbd">ESC</span> close
+          </span>
         </div>
       </div>
     </div>

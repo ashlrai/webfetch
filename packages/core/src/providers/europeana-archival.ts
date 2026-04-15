@@ -18,22 +18,19 @@ export const europeanaArchival: Provider = {
   requiresAuth: true,
   optIn: true,
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
-    const key =
-      opts.auth?.europeanaApiKey ?? (globalThis as any).process?.env?.EUROPEANA_API_KEY;
+    const key = opts.auth?.europeanaApiKey ?? (globalThis as any).process?.env?.EUROPEANA_API_KEY;
     if (!key) throw new Error("europeana-archival missing EUROPEANA_API_KEY");
 
     await getBucket("europeana-archival").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.europeana.eu/record/v2/search.json?" +
-      new URLSearchParams({
-        wskey: key,
-        query,
-        qf: "TYPE:TEXT",
-        reusability: "open",
-        thumbnail: "true",
-        rows: String(opts.maxPerProvider ?? 10),
-      });
+    const url = `https://api.europeana.eu/record/v2/search.json?${new URLSearchParams({
+      wskey: key,
+      query,
+      qf: "TYPE:TEXT",
+      reusability: "open",
+      thumbnail: "true",
+      rows: String(opts.maxPerProvider ?? 10),
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`europeana-archival http ${resp.status}`);
     const json = (await resp.json()) as any;

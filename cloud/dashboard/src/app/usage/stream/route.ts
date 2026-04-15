@@ -22,9 +22,7 @@ export async function GET(req: Request) {
       const send = (data: unknown, event: string) => {
         if (closed) return;
         try {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
         } catch {
           // controller closed between checks
         }
@@ -42,7 +40,7 @@ export async function GET(req: Request) {
       const heartbeat = setInterval(() => {
         if (closed) return;
         try {
-          controller.enqueue(encoder.encode(`: ping\n\n`));
+          controller.enqueue(encoder.encode(": ping\n\n"));
         } catch {
           // ignore
         }

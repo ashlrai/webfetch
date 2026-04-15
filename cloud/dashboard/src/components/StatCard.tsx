@@ -1,5 +1,5 @@
-import Sparkline from "./Sparkline";
 import { Icon, type IconName } from "./Icon";
+import Sparkline from "./Sparkline";
 
 export default function StatCard({
   label,
@@ -31,16 +31,27 @@ export default function StatCard({
           {label}
         </div>
         {delta && (
-          <span className="mono text-[11px] inline-flex items-center gap-1" style={{ color: deltaColor }}>
+          <span
+            className="mono text-[11px] inline-flex items-center gap-1"
+            style={{ color: deltaColor }}
+          >
             <Icon name={deltaUp ? "arrow-up" : "arrow-down"} size={10} />
             {Math.abs(delta.value).toFixed(1)}%
           </span>
         )}
       </div>
       <div className="flex items-end justify-between gap-3">
-        <div className="num-lg" style={{ color: accent ?? "var(--text)" }}>{value}</div>
+        <div className="num-lg" style={{ color: accent ?? "var(--text)" }}>
+          {value}
+        </div>
         {spark && spark.length > 0 && (
-          <Sparkline values={spark} width={80} height={24} stroke={accent ?? "var(--accent)"} fill="rgba(255,90,31,0.10)" />
+          <Sparkline
+            values={spark}
+            width={80}
+            height={24}
+            stroke={accent ?? "var(--accent)"}
+            fill="rgba(255,90,31,0.10)"
+          />
         )}
       </div>
       {sub && (

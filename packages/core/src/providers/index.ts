@@ -1,9 +1,10 @@
+import type { Provider, ProviderId } from "../types.ts";
 import { bing } from "./bing.ts";
 import { brave } from "./brave.ts";
 import { browser } from "./browser.ts";
 import { burst } from "./burst.ts";
-import { europeana } from "./europeana.ts";
 import { europeanaArchival } from "./europeana-archival.ts";
+import { europeana } from "./europeana.ts";
 import { flickr } from "./flickr.ts";
 import { internetArchive } from "./internet-archive.ts";
 import { itunes } from "./itunes.ts";
@@ -22,7 +23,6 @@ import { unsplash } from "./unsplash.ts";
 import { wellcomeCollection } from "./wellcome-collection.ts";
 import { wikimedia } from "./wikimedia.ts";
 import { youtubeThumb } from "./youtube-thumb.ts";
-import type { Provider, ProviderId } from "../types.ts";
 
 export const ALL_PROVIDERS: Record<ProviderId, Provider> = {
   wikimedia,

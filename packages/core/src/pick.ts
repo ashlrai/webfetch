@@ -34,11 +34,19 @@ export function rankAll(
   candidates: readonly ImageCandidate[],
   c: PickConstraints = {},
 ): ImageCandidate[] {
-  const policy: LicensePolicy = c.licensePolicy ?? (c.requireSafeLicense === false ? "any" : "safe-only");
+  const policy: LicensePolicy =
+    c.licensePolicy ?? (c.requireSafeLicense === false ? "any" : "safe-only");
   const minW = c.minWidth ?? 0;
   const minH = c.minHeight ?? 0;
 
-  type Scored = { cand: ImageCandidate; rank: number; pixels: number; complete: number; conf: number; idx: number };
+  type Scored = {
+    cand: ImageCandidate;
+    rank: number;
+    pixels: number;
+    complete: number;
+    conf: number;
+    idx: number;
+  };
   const scored: Scored[] = [];
 
   candidates.forEach((cand, idx) => {
@@ -53,8 +61,7 @@ export function rankAll(
       cand,
       rank: LICENSE_RANK[cand.license],
       pixels: w * h,
-      complete:
-        (cand.author ? 1 : 0) + (cand.sourcePageUrl ? 1 : 0) + (cand.title ? 1 : 0),
+      complete: (cand.author ? 1 : 0) + (cand.sourcePageUrl ? 1 : 0) + (cand.title ? 1 : 0),
       conf: cand.confidence ?? (safe ? 0.5 : 0),
       idx,
     });

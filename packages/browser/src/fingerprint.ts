@@ -33,7 +33,7 @@ const TIMEZONES = [
 
 function pick<T>(arr: readonly T[], rand: () => number = Math.random): T {
   const idx = Math.floor(rand() * arr.length);
-  return arr[idx] ?? arr[0] as T;
+  return arr[idx] ?? (arr[0] as T);
 }
 
 export interface Fingerprint {

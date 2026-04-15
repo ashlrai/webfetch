@@ -74,9 +74,9 @@ export function PricingTable() {
         <span className="relative group cursor-help border-b border-dotted border-[var(--color-fg-dim)]">
           What&apos;s a fetch?
           <span className="invisible group-hover:visible absolute left-0 top-full mt-2 w-72 bg-[var(--color-bg-elev-2)] border border-[var(--color-border)] rounded-md p-3 text-[11px] text-[var(--color-fg-muted)] leading-relaxed shadow-xl z-10">
-            One <span className="text-[var(--color-accent)]">fetch</span> = one license-resolved image
-            (either a successful download or a cached hit). Searches and rejected
-            UNKNOWN candidates don&apos;t count.
+            One <span className="text-[var(--color-accent)]">fetch</span> = one license-resolved
+            image (either a successful download or a cached hit). Searches and rejected UNKNOWN
+            candidates don&apos;t count.
           </span>
         </span>
       </div>
@@ -99,10 +99,16 @@ export function PricingTable() {
                 <div className="font-mono text-[18px] font-semibold">{t.name}</div>
               </div>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="font-mono text-[30px] font-semibold tracking-tight">{t.price}</span>
-                <span className="text-[12px] font-mono text-[var(--color-fg-dim)]">{t.cadence}</span>
+                <span className="font-mono text-[30px] font-semibold tracking-tight">
+                  {t.price}
+                </span>
+                <span className="text-[12px] font-mono text-[var(--color-fg-dim)]">
+                  {t.cadence}
+                </span>
               </div>
-              <p className="mt-2 text-[13px] text-[var(--color-fg-dim)] leading-relaxed">{t.blurb}</p>
+              <p className="mt-2 text-[13px] text-[var(--color-fg-dim)] leading-relaxed">
+                {t.blurb}
+              </p>
               <ul className="mt-5 space-y-2 text-[13px] flex-1">
                 {t.features.map((f) => (
                   <li key={f} className="flex gap-2">

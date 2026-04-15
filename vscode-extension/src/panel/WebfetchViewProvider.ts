@@ -7,21 +7,16 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { fetchImageBytes, getProviders, search } from "../lib/client";
 import {
   buildMarkdownInsertion,
   buildXmpSidecar,
   mimeToExt,
   slugForFilename,
 } from "../lib/attribution";
+import { fetchImageBytes, getProviders, search } from "../lib/client";
 import { loadSettings } from "../lib/settings";
 import { StatusBar } from "../lib/status";
-import type {
-  ImageCandidate,
-  InitialConfig,
-  WebviewInbound,
-  WebviewOutbound,
-} from "../types";
+import type { ImageCandidate, InitialConfig, WebviewInbound, WebviewOutbound } from "../types";
 
 export class WebfetchViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "webfetch.sidePanel";
@@ -166,7 +161,10 @@ export class WebfetchViewProvider implements vscode.WebviewViewProvider {
     await fs.mkdir(outDir, { recursive: true });
 
     const { bytes, mime } = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: `webfetch: downloading ${candidate.source}…` },
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `webfetch: downloading ${candidate.source}…`,
+      },
       async () => fetchImageBytes(candidate.url),
     );
     const ext = mimeToExt(candidate.mime ?? mime, candidate.url);
@@ -177,12 +175,10 @@ export class WebfetchViewProvider implements vscode.WebviewViewProvider {
     await fs.writeFile(filePath, bytes);
 
     if (s.writeXmpSidecar) {
-      await fs.writeFile(filePath + ".xmp", buildXmpSidecar(candidate), "utf8");
+      await fs.writeFile(`${filePath}.xmp`, buildXmpSidecar(candidate), "utf8");
     }
 
-    const relativePath = path
-      .relative(folder.uri.fsPath, filePath)
-      .replace(/\\/g, "/");
+    const relativePath = path.relative(folder.uri.fsPath, filePath).replace(/\\/g, "/");
 
     if (insertAtCursor) {
       const editor = vscode.window.activeTextEditor;
@@ -271,4 +267,5 @@ function relativeToEditor(editor: vscode.TextEditor, absPath: string): string | 
   return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
-const FALLBACK_HTML = `<!doctype html><html><body><p>webfetch panel failed to load.</p></body></html>`;
+const FALLBACK_HTML =
+  "<!doctype html><html><body><p>webfetch panel failed to load.</p></body></html>";

@@ -1,15 +1,15 @@
-import { redirect } from "next/navigation";
-import StatCard from "@/components/StatCard";
 import { AreaChart, HBarList } from "@/components/Chart";
-import LiveUsage from "@/components/LiveUsage";
-import UpgradePrompt from "@/components/UpgradePrompt";
-import PageHeader from "@/components/PageHeader";
 import { Icon } from "@/components/Icon";
+import LiveUsage from "@/components/LiveUsage";
+import PageHeader from "@/components/PageHeader";
+import StatCard from "@/components/StatCard";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { getOverview } from "@/lib/api";
 import { getServerSession } from "@/lib/auth";
-import { formatDate, formatInt, formatPct, formatUsd, formatRelative } from "@/lib/format";
+import { formatDate, formatInt, formatPct, formatRelative, formatUsd } from "@/lib/format";
 import { PLANS } from "@shared/pricing";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,11 @@ export default async function OverviewPage() {
     { t: "14m ago", label: "Pro plan renewed", sub: formatUsd(plan.baseMonthlyUsd) },
     { t: "1h ago", label: "Member invited", sub: "editor@ashlr.ai" },
     { t: "3h ago", label: "Provider key added", sub: "unsplash · BYOK" },
-    { t: "yesterday", label: "Quota 80% warning sent", sub: `${formatInt(used)} of ${formatInt(usage.included)}` },
+    {
+      t: "yesterday",
+      label: "Quota 80% warning sent",
+      sub: `${formatInt(used)} of ${formatInt(usage.included)}`,
+    },
   ];
 
   return (
@@ -80,7 +84,11 @@ export default async function OverviewPage() {
           icon="card"
           label="MRR"
           value={workspace.plan === "free" ? "$0" : formatUsd(mrr)}
-          sub={workspace.plan === "free" ? "free tier" : `renews ${formatDate(billing.currentPeriodEnd)}`}
+          sub={
+            workspace.plan === "free"
+              ? "free tier"
+              : `renews ${formatDate(billing.currentPeriodEnd)}`
+          }
           dim={workspace.plan === "free"}
         />
         <StatCard
@@ -128,7 +136,10 @@ export default async function OverviewPage() {
         <div className="lg:col-span-2 flex flex-col gap-3">
           <div className="flex items-baseline justify-between">
             <h2 className="h2">Fetches · 30 days</h2>
-            <div className="flex items-center gap-3 text-[11.5px] mono" style={{ color: "var(--text-mute)" }}>
+            <div
+              className="flex items-center gap-3 text-[11.5px] mono"
+              style={{ color: "var(--text-mute)" }}
+            >
               <span>{formatInt(dailySeries.reduce((a, b) => a + b.fetches, 0))} total</span>
               <span>peak {formatInt(Math.max(...dailySeries.map((d) => d.fetches)))}</span>
             </div>
@@ -188,10 +199,14 @@ export default async function OverviewPage() {
           <div className="flex items-center gap-2">
             <span className="eyebrow">Quota</span>
             <span className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
-              {formatInt(used)} / {formatInt(usage.included)} · resets {formatRelative(workspace.quotaResetsAt)}
+              {formatInt(used)} / {formatInt(usage.included)} · resets{" "}
+              {formatRelative(workspace.quotaResetsAt)}
             </span>
           </div>
-          <span className="mono text-[12px]" style={{ color: quotaPct >= 0.8 ? "var(--warn)" : "var(--text-dim)" }}>
+          <span
+            className="mono text-[12px]"
+            style={{ color: quotaPct >= 0.8 ? "var(--warn)" : "var(--text-dim)" }}
+          >
             {formatPct(quotaPct, 1)}
           </span>
         </div>
@@ -199,7 +214,8 @@ export default async function OverviewPage() {
           <span
             style={{
               width: `${Math.min(100, quotaPct * 100)}%`,
-              background: quotaPct >= 1 ? "var(--danger)" : quotaPct >= 0.8 ? "var(--warn)" : "var(--accent)",
+              background:
+                quotaPct >= 1 ? "var(--danger)" : quotaPct >= 0.8 ? "var(--warn)" : "var(--accent)",
             }}
           />
         </div>

@@ -32,7 +32,13 @@ export type EmailResult =
  * to a stub before invoking `sendInviteEmail`.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ResendLike = { emails: { send: (payload: any) => Promise<{ data?: { id: string } | null; error?: { message: string } | null }> } };
+type ResendLike = {
+  emails: {
+    send: (
+      payload: any,
+    ) => Promise<{ data?: { id: string } | null; error?: { message: string } | null }>;
+  };
+};
 
 declare global {
   // eslint-disable-next-line no-var

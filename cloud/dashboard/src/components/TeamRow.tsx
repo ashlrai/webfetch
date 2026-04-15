@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { WorkspaceRole, User } from "@shared/types";
-import { formatRelative } from "@/lib/format";
 import { removeMember } from "@/lib/api";
+import { formatRelative } from "@/lib/format";
+import type { User, WorkspaceRole } from "@shared/types";
+import { useState } from "react";
 import { Icon } from "./Icon";
 
 interface RowMember {
@@ -53,7 +53,11 @@ export default function TeamRow({
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="size-7 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0"
-            style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)", color: "var(--text-dim)" }}
+            style={{
+              background: "var(--bg-elev)",
+              border: "1px solid var(--border-mid)",
+              color: "var(--text-dim)",
+            }}
           >
             {initial}
           </div>
@@ -72,7 +76,10 @@ export default function TeamRow({
         {pending ? (
           <span className="badge badge-warn">invite pending</span>
         ) : (
-          <span className="badge badge-ok"><span className="dot" />active</span>
+          <span className="badge badge-ok">
+            <span className="dot" />
+            active
+          </span>
         )}
       </td>
       <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>

@@ -1,9 +1,9 @@
+import PageHeader from "@/components/PageHeader";
+import { getOverview, listMembers } from "@/lib/api";
+import { getServerSession } from "@/lib/auth";
+import { PLANS } from "@shared/pricing";
 import { redirect } from "next/navigation";
 import TeamClient from "./TeamClient";
-import PageHeader from "@/components/PageHeader";
-import { getServerSession } from "@/lib/auth";
-import { getOverview, listMembers } from "@/lib/api";
-import { PLANS } from "@shared/pricing";
 
 export const dynamic = "force-dynamic";
 

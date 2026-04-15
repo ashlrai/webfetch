@@ -4,8 +4,8 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { run } from "../src/commands.ts";
-import { __setCoreForTests, core } from "../src/core.ts";
 import { parseBatchLine } from "../src/commands.ts";
+import { __setCoreForTests, core } from "../src/core.ts";
 
 const originalCore = { ...core() };
 let searched: string[] = [];

@@ -3,10 +3,10 @@
  * running the CLI side-effects (arg parsing, console logging, browser open).
  */
 
+import { renderAuthDisplay } from "./auth-display.ts";
 import { checkBearer } from "./auth.ts";
 import { evaluateCors, preflight } from "./cors.ts";
 import { dispatchPost, getProviders } from "./routes.ts";
-import { renderAuthDisplay } from "./auth-display.ts";
 
 export interface ServerOptions {
   port: number;
@@ -30,9 +30,13 @@ export function startServer(opts: ServerOptions) {
       // Auth-display is public (same-origin 127.0.0.1 only, exposes only the
       // token value that was already written to disk).
       if (req.method === "GET" && url.pathname === "/auth/display") {
-        return withHeaders(new Response(renderAuthDisplay(token, port), {
-          status: 200, headers: { "content-type": "text/html; charset=utf-8" },
-        }), cors);
+        return withHeaders(
+          new Response(renderAuthDisplay(token, port), {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          }),
+          cors,
+        );
       }
 
       if (!checkBearer(req, token)) {
@@ -56,7 +60,8 @@ export function startServer(opts: ServerOptions) {
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
-    status, headers: { "content-type": "application/json; charset=utf-8" },
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
 

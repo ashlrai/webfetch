@@ -92,7 +92,9 @@ let initialized = false;
 
 async function loadPostHog(): Promise<PostHogLike | null> {
   try {
-    const mod = (await import(/* @vite-ignore */ "posthog-js" as string)) as unknown as { default?: PostHogLike } & PostHogLike;
+    const mod = (await import(/* @vite-ignore */ "posthog-js" as string)) as unknown as {
+      default?: PostHogLike;
+    } & PostHogLike;
     return mod.default ?? mod;
   } catch {
     return null;
@@ -127,7 +129,11 @@ function isAllowed(name: string): name is AnalyticsEvent {
   return (ANALYTICS_EVENTS as readonly string[]).includes(name);
 }
 
-export function track(event: AnalyticsEvent, props: AnalyticsProps = {}, env: AnalyticsEnv = {}): void {
+export function track(
+  event: AnalyticsEvent,
+  props: AnalyticsProps = {},
+  env: AnalyticsEnv = {},
+): void {
   if (!readConsent(env)) return;
   if (!isAllowed(event)) return;
   const c = env.client ?? client;
@@ -135,7 +141,11 @@ export function track(event: AnalyticsEvent, props: AnalyticsProps = {}, env: An
   c.capture(event, props);
 }
 
-export function identify(distinctId: string, props: AnalyticsProps = {}, env: AnalyticsEnv = {}): void {
+export function identify(
+  distinctId: string,
+  props: AnalyticsProps = {},
+  env: AnalyticsEnv = {},
+): void {
   if (!readConsent(env)) return;
   const c = env.client ?? client;
   if (!c) return;

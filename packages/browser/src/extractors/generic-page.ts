@@ -26,7 +26,7 @@ function match(re: RegExp, html: string): string[] {
   const out: string[] = [];
   let m: RegExpExecArray | null;
   // Fresh regex each call: callers may pass non-global patterns.
-  const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   while ((m = g.exec(html)) !== null) {
     const captured = m[1];
     if (captured) out.push(captured);
@@ -37,10 +37,7 @@ function match(re: RegExp, html: string): string[] {
 export function extractGenericPage(ctx: ExtractContext): ExtractResult {
   const { html, sourcePageUrl } = ctx;
   const seen = new Set<string>();
-  const add = (
-    url: string,
-    extra: Partial<ImageCandidate> = {},
-  ): ImageCandidate | null => {
+  const add = (url: string, extra: Partial<ImageCandidate> = {}): ImageCandidate | null => {
     const abs = toAbsolute(url, sourcePageUrl);
     if (!abs) return null;
     if (seen.has(abs)) return null;
@@ -61,14 +58,8 @@ export function extractGenericPage(ctx: ExtractContext): ExtractResult {
 
   // og:image (any attribute order)
   for (const og of [
-    ...match(
-      /<meta[^>]+property=["']og:image(?::url)?["'][^>]+content=["']([^"']+)["']/i,
-      html,
-    ),
-    ...match(
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::url)?["']/i,
-      html,
-    ),
+    ...match(/<meta[^>]+property=["']og:image(?::url)?["'][^>]+content=["']([^"']+)["']/i, html),
+    ...match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::url)?["']/i, html),
   ]) {
     const c = add(og, { title: "og:image", confidence: 0.2 });
     if (c) results.push(c);
@@ -76,24 +67,15 @@ export function extractGenericPage(ctx: ExtractContext): ExtractResult {
 
   // twitter:image
   for (const tw of [
-    ...match(
-      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
-      html,
-    ),
-    ...match(
-      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
-      html,
-    ),
+    ...match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i, html),
+    ...match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i, html),
   ]) {
     const c = add(tw, { title: "twitter:image", confidence: 0.15 });
     if (c) results.push(c);
   }
 
   // link rel=image_src
-  for (const ls of match(
-    /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i,
-    html,
-  )) {
+  for (const ls of match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i, html)) {
     const c = add(ls, { title: "image_src" });
     if (c) results.push(c);
   }

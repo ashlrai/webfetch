@@ -1,6 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import {
+  createKey,
+  generateKey,
+  listKeys,
+  parseBearer,
+  resolveKey,
+  revokeKey,
+} from "../src/keys.ts";
 import { makeEnv, seedWorkspaceWithKey } from "./harness.ts";
-import { generateKey, resolveKey, createKey, listKeys, revokeKey, parseBearer } from "../src/keys.ts";
 
 describe("api keys", () => {
   test("generateKey returns a wf_live_* secret with 44 chars and sha256 hash", async () => {
@@ -12,7 +19,7 @@ describe("api keys", () => {
   });
 
   test("parseBearer accepts valid wf_live tokens and rejects otherwise", () => {
-    expect(parseBearer("Bearer wf_live_" + "a".repeat(32))).toBe("wf_live_" + "a".repeat(32));
+    expect(parseBearer(`Bearer wf_live_${"a".repeat(32)}`)).toBe(`wf_live_${"a".repeat(32)}`);
     expect(parseBearer("Bearer junk")).toBeNull();
     expect(parseBearer("")).toBeNull();
     expect(parseBearer(null)).toBeNull();
@@ -63,12 +70,16 @@ async function seedHelpers(env: ReturnType<typeof makeEnv>["env"]) {
   await env.DB.prepare(
     `INSERT INTO users (id, email, email_verified, created_at, updated_at)
      VALUES (?1, ?2, 1, ?3, ?3)`,
-  ).bind(userId, `${userId}@t.dev`, now).run();
+  )
+    .bind(userId, `${userId}@t.dev`, now)
+    .run();
   const { end } = monthlyWindow(now);
   await env.DB.prepare(
     `INSERT INTO workspaces (id, slug, name, owner_id, plan, subscription_status,
        quota_resets_at, created_at, updated_at)
      VALUES (?1, ?2, ?3, ?4, 'free', 'none', ?5, ?6, ?6)`,
-  ).bind(workspaceId, `ws-${workspaceId.slice(0, 6).toLowerCase()}`, "Test", userId, end, now).run();
+  )
+    .bind(workspaceId, `ws-${workspaceId.slice(0, 6).toLowerCase()}`, "Test", userId, end, now)
+    .run();
   return { userId, workspaceId };
 }

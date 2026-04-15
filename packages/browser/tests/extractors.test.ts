@@ -40,9 +40,7 @@ describe("generic-page extractor", () => {
 
   it("captures linked high-res images", () => {
     const urls = result.candidates.map((c) => c.url);
-    expect(urls).toContain(
-      "https://cdn.example.com/downloads/press-kit-hires.jpg",
-    );
+    expect(urls).toContain("https://cdn.example.com/downloads/press-kit-hires.jpg");
   });
 
   it("tags every candidate as browser-fallback with UNKNOWN license", () => {
@@ -111,9 +109,7 @@ describe("pinterest extractor", () => {
     const upgraded = result.candidates.find(
       (c) => c.url === "https://i.pinimg.com/originals/44/55/66/pin-b.jpg",
     );
-    expect(upgraded?.thumbnailUrl).toBe(
-      "https://i.pinimg.com/564x/44/55/66/pin-b.jpg",
-    );
+    expect(upgraded?.thumbnailUrl).toBe("https://i.pinimg.com/564x/44/55/66/pin-b.jpg");
   });
 });
 

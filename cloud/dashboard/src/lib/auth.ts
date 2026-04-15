@@ -8,9 +8,9 @@
  * client bundle.
  */
 
-import type { User } from "@shared/types";
 import { USE_FIXTURES } from "@/env";
 import { fixtureUser } from "@/lib/fixtures";
+import type { User } from "@shared/types";
 
 export interface Session {
   user: User;

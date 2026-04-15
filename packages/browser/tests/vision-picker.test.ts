@@ -50,11 +50,9 @@ describe("pickHeroImage", () => {
         }),
       },
     }));
-    const hero = await pickHeroImage(
-      new Uint8Array([1, 2, 3]),
-      candidates,
-      { anthropicKey: "test" },
-    );
+    const hero = await pickHeroImage(new Uint8Array([1, 2, 3]), candidates, {
+      anthropicKey: "test",
+    });
     expect(hero?.url).toBe("https://x/3.jpg");
   });
 
@@ -66,11 +64,9 @@ describe("pickHeroImage", () => {
         }),
       },
     }));
-    const hero = await pickHeroImage(
-      new Uint8Array([1, 2, 3]),
-      candidates,
-      { anthropicKey: "test" },
-    );
+    const hero = await pickHeroImage(new Uint8Array([1, 2, 3]), candidates, {
+      anthropicKey: "test",
+    });
     expect(hero).toBeNull();
   });
 
@@ -79,11 +75,7 @@ describe("pickHeroImage", () => {
     _setVisionClientFactory(() => {
       throw new Error("should not be called");
     });
-    const hero = await pickHeroImage(
-      new Uint8Array([1]),
-      [],
-      { anthropicKey: "test" },
-    );
+    const hero = await pickHeroImage(new Uint8Array([1]), [], { anthropicKey: "test" });
     expect(hero).toBeNull();
   });
 });

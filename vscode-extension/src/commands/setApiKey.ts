@@ -6,10 +6,7 @@ import * as vscode from "vscode";
 import { setApiKey } from "../lib/settings";
 import type { StatusBar } from "../lib/status";
 
-export function registerSetApiKey(
-  context: vscode.ExtensionContext,
-  status: StatusBar,
-): void {
+export function registerSetApiKey(context: vscode.ExtensionContext, status: StatusBar): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("webfetch.setApiKey", async () => {
       const key = await vscode.window.showInputBox({

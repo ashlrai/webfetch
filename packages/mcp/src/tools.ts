@@ -15,6 +15,7 @@ import {
   searchImages,
 } from "@webfetch/core";
 import { z } from "zod";
+import { renderJson, renderSearch } from "./render.ts";
 import {
   downloadImageSchema,
   fetchWithLicenseSchema,
@@ -24,13 +25,14 @@ import {
   searchArtistImagesSchema,
   searchImagesSchema,
 } from "./schema.ts";
-import { renderJson, renderSearch } from "./render.ts";
 
 export interface ToolDef {
   name: string;
   description: string;
   inputSchema: z.ZodObject<any>;
-  handler: (args: any) => Promise<{ content: unknown[]; structuredContent: unknown; isError?: boolean }>;
+  handler: (
+    args: any,
+  ) => Promise<{ content: unknown[]; structuredContent: unknown; isError?: boolean }>;
 }
 
 export const TOOLS: ToolDef[] = [

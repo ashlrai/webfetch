@@ -15,15 +15,13 @@ export const internetArchive: Provider = {
     await getBucket("internet-archive").take();
     const fetcher = opts.fetcher ?? fetch;
     const q = `(${query}) AND mediatype:image AND (licenseurl:*creativecommons* OR rights:*public\\ domain*)`;
-    const url =
-      "https://archive.org/advancedsearch.php?" +
-      new URLSearchParams({
-        q,
-        "fl[]": "identifier,title,creator,licenseurl,rights,mediatype",
-        rows: String(opts.maxPerProvider ?? 10),
-        page: "1",
-        output: "json",
-      });
+    const url = `https://archive.org/advancedsearch.php?${new URLSearchParams({
+      q,
+      "fl[]": "identifier,title,creator,licenseurl,rights,mediatype",
+      rows: String(opts.maxPerProvider ?? 10),
+      page: "1",
+      output: "json",
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`internet-archive http ${resp.status}`);
     const json = (await resp.json()) as any;

@@ -19,20 +19,18 @@ export const wikimedia: Provider = {
     const fetcher = opts.fetcher ?? fetch;
     await getBucket("wikimedia").take();
 
-    const url =
-      "https://commons.wikimedia.org/w/api.php?" +
-      new URLSearchParams({
-        action: "query",
-        format: "json",
-        generator: "search",
-        gsrsearch: `${query} filetype:bitmap|drawing`,
-        gsrlimit: String(limit),
-        gsrnamespace: "6",
-        prop: "imageinfo",
-        iiprop: "url|size|mime|extmetadata",
-        iiurlwidth: "1600",
-        origin: "*",
-      });
+    const url = `https://commons.wikimedia.org/w/api.php?${new URLSearchParams({
+      action: "query",
+      format: "json",
+      generator: "search",
+      gsrsearch: `${query} filetype:bitmap|drawing`,
+      gsrlimit: String(limit),
+      gsrnamespace: "6",
+      prop: "imageinfo",
+      iiprop: "url|size|mime|extmetadata",
+      iiurlwidth: "1600",
+      origin: "*",
+    })}`;
 
     const resp = await fetcher(url, {
       headers: { "User-Agent": opts.auth?.userAgent ?? "webfetch-mcp/0.1" },

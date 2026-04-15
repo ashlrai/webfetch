@@ -14,11 +14,11 @@
  */
 
 import { Hono } from "hono";
-import type { Env, RequestCtx } from "../env.ts";
-import { downloadImageSchema } from "../schemas.ts";
-import { ok, err, parseJson } from "../responses.ts";
-import { recordUsage } from "../metering.ts";
 import { unitsFor } from "../../../shared/pricing.ts";
+import type { Env, RequestCtx } from "../env.ts";
+import { recordUsage } from "../metering.ts";
+import { err, ok, parseJson } from "../responses.ts";
+import { downloadImageSchema } from "../schemas.ts";
 import { assertPublicHttpUrl } from "../ssrf.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
@@ -46,10 +46,13 @@ downloadRouter.post("/", async (c) => {
       headers: { "user-agent": "webfetch-cloud/1.0 (+https://getwebfetch.com)" },
     });
     if (!res.ok) {
-      c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), res.status));
+      c.executionCtx.waitUntil(
+        recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), res.status),
+      );
       return err(c, `upstream ${res.status}`, 502);
     }
-    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "application/octet-stream";
+    const mime =
+      res.headers.get("content-type")?.split(";")[0]?.trim() ?? "application/octet-stream";
     if (!ALLOWED_MIME.test(mime)) {
       return err(c, `disallowed content-type: ${mime}`, 415);
     }
@@ -62,8 +65,7 @@ downloadRouter.post("/", async (c) => {
       return err(c, `payload too large: ${buf.byteLength} > ${maxBytes}`, 413);
     }
     const digest = await crypto.subtle.digest("SHA-256", buf);
-    const sha256 = [...new Uint8Array(digest)]
-      .map((b) => b.toString(16).padStart(2, "0")).join("");
+    const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
     // Idempotent write; HEAD first to avoid re-uploading.
     const head = await c.env.CACHE.head(sha256);
@@ -78,9 +80,13 @@ downloadRouter.post("/", async (c) => {
       `INSERT INTO cache_index (sha256, mime, bytes, source_url, first_seen, last_hit, hit_count)
        VALUES (?1, ?2, ?3, ?4, ?5, ?5, 1)
        ON CONFLICT(sha256) DO UPDATE SET last_hit = excluded.last_hit, hit_count = cache_index.hit_count + 1`,
-    ).bind(sha256, mime, buf.byteLength, parsed.data.url, now).run();
+    )
+      .bind(sha256, mime, buf.byteLength, parsed.data.url, now)
+      .run();
 
-    c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), 200));
+    c.executionCtx.waitUntil(
+      recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), 200),
+    );
     return ok(c, {
       url: parsed.data.url,
       sha256,
@@ -89,7 +95,9 @@ downloadRouter.post("/", async (c) => {
       cacheKey: sha256,
     });
   } catch (e) {
-    c.executionCtx.waitUntil(recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), 500));
+    c.executionCtx.waitUntil(
+      recordUsage(c.env, ctx, "/v1/download", unitsFor("/v1/download"), 500),
+    );
     return err(c, (e as Error).message ?? "download failed", 500);
   }
 });

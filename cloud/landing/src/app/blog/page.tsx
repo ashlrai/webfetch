@@ -1,6 +1,6 @@
-import Link from "next/link";
-import type { Metadata } from "next";
 import { getAllPosts } from "@/lib/blog";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -17,11 +17,7 @@ export default function BlogIndex() {
       </p>
       <div className="mt-10 divide-y divide-[var(--border)]">
         {posts.map((p) => (
-          <Link
-            key={p.slug}
-            href={`/blog/${p.slug}`}
-            className="block py-6 group"
-          >
+          <Link key={p.slug} href={`/blog/${p.slug}`} className="block py-6 group">
             <div className="flex items-baseline gap-4 text-xs text-[var(--fg-dim)] font-mono">
               <time>{p.date}</time>
               <span>·</span>

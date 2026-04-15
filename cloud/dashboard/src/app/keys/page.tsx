@@ -1,8 +1,8 @@
+import PageHeader from "@/components/PageHeader";
+import { listKeys } from "@/lib/api";
+import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import KeysClient from "./KeysClient";
-import PageHeader from "@/components/PageHeader";
-import { getServerSession } from "@/lib/auth";
-import { listKeys } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 

@@ -12,10 +12,7 @@ import type { ExtractContext, ExtractResult } from "./types.ts";
 
 /** Upgrade `https://i.pinimg.com/236x/ab/cd/ef/<id>.jpg` → `/originals/` form. */
 function upgradePinimg(url: string): string {
-  return url.replace(
-    /(https?:\/\/i\.pinimg\.com\/)(\d+x|\dx|[0-9]+x[0-9]+)(\/)/,
-    "$1originals$3",
-  );
+  return url.replace(/(https?:\/\/i\.pinimg\.com\/)(\d+x|\dx|[0-9]+x[0-9]+)(\/)/, "$1originals$3");
 }
 
 export function extractPinterest(ctx: ExtractContext): ExtractResult {
@@ -41,18 +38,15 @@ export function extractPinterest(ctx: ExtractContext): ExtractResult {
   };
 
   // pinimg URLs anywhere in the HTML (JSON payloads or <img> tags).
-  const pinimgRe =
-    /https?:\/\/i\.pinimg\.com\/[^"'\s)<>]+?\.(?:jpe?g|png|webp|gif)/gi;
+  const pinimgRe = /https?:\/\/i\.pinimg\.com\/[^"'\s)<>]+?\.(?:jpe?g|png|webp|gif)/gi;
   let m: RegExpExecArray | null;
   while ((m = pinimgRe.exec(html)) !== null) {
     if (m[0]) push(m[0]);
   }
 
   // og:image fallback (pin pages).
-  const og = html.match(
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-  );
-  if (og && og[1]) push(og[1], { title: "og:image" });
+  const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+  if (og?.[1]) push(og[1], { title: "og:image" });
 
   if (out.length === 0) warnings.push("no pinterest candidates parsed");
   return { extractor: "pinterest", candidates: out, warnings };

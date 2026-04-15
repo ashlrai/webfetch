@@ -12,15 +12,7 @@
     "./hints": "./src/hints/index.ts"
   },
   "files": ["dist", "src", "README.md", "LICENSE"],
-  "keywords": [
-    "image-search",
-    "licensing",
-    "mcp",
-    "agent",
-    "federated",
-    "creative-commons",
-    "ai"
-  ],
+  "keywords": ["image-search", "licensing", "mcp", "agent", "federated", "creative-commons", "ai"],
   "homepage": "https://getwebfetch.com",
   "bugs": {
     "url": "https://github.com/ashlrai/webfetch/issues"

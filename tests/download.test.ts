@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { downloadImage, DownloadError } from "../packages/core/src/download.ts";
+import { DownloadError, downloadImage } from "../packages/core/src/download.ts";
 import { bytesResponse, stubFetcher } from "./stub-fetcher.ts";
 
 const cacheDir = mkdtempSync(join(tmpdir(), "wf-"));
@@ -25,7 +25,9 @@ test("rejects non-image content-type", async () => {
         new Response("nope", { status: 200, headers: { "content-type": "text/html" } }),
     },
   ]);
-  await expect(downloadImage("https://x/y", { fetcher, cacheDir })).rejects.toBeInstanceOf(DownloadError);
+  await expect(downloadImage("https://x/y", { fetcher, cacheDir })).rejects.toBeInstanceOf(
+    DownloadError,
+  );
 });
 
 test("enforces byte cap", async () => {

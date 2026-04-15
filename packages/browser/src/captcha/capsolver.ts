@@ -67,8 +67,7 @@ export async function solveCaptcha(
   const pollIntervalMs = deps.pollIntervalMs ?? 1500;
   const maxWaitMs = deps.maxWaitMs ?? 120_000;
   const now = deps.now ?? (() => Date.now());
-  const sleep =
-    deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
 
   const startedAt = now();
 
@@ -81,10 +80,7 @@ export async function solveCaptcha(
     }),
   });
   if (!createRes.ok) {
-    throw new CaptchaError(
-      "create_task_http",
-      `capsolver createTask HTTP ${createRes.status}`,
-    );
+    throw new CaptchaError("create_task_http", `capsolver createTask HTTP ${createRes.status}`);
   }
   const createJson = (await createRes.json()) as {
     errorId?: number;
@@ -116,10 +112,7 @@ export async function solveCaptcha(
       }),
     });
     if (!pollRes.ok) {
-      throw new CaptchaError(
-        "poll_http",
-        `capsolver getTaskResult HTTP ${pollRes.status}`,
-      );
+      throw new CaptchaError("poll_http", `capsolver getTaskResult HTTP ${pollRes.status}`);
     }
     const pj = (await pollRes.json()) as {
       errorId?: number;
@@ -137,10 +130,7 @@ export async function solveCaptcha(
     if (pj.status === "ready") {
       const token = pj.solution?.gRecaptchaResponse ?? pj.solution?.token;
       if (!token) {
-        throw new CaptchaError(
-          "no_token",
-          "capsolver reported ready but returned no token",
-        );
+        throw new CaptchaError("no_token", "capsolver reported ready but returned no token");
       }
       return { token, solvedInMs: now() - startedAt };
     }
@@ -151,36 +141,31 @@ export async function solveCaptcha(
  * Heuristic: scan a DOM snapshot / HTML for captcha markers. Returns the
  * first challenge found, or null.
  */
-export function detectCaptcha(
-  html: string,
-  pageUrl: string,
-): CaptchaChallenge | null {
+export function detectCaptcha(html: string, pageUrl: string): CaptchaChallenge | null {
   // Turnstile
   const ts = html.match(
     /<[^>]+class=["'][^"']*cf-turnstile[^"']*["'][^>]*data-sitekey=["']([^"']+)["']/i,
   );
-  if (ts && ts[1]) {
+  if (ts?.[1]) {
     return { type: "turnstile", siteKey: ts[1], pageUrl };
   }
   // reCAPTCHA v2
   const rc2 = html.match(
     /<[^>]+class=["'][^"']*g-recaptcha[^"']*["'][^>]*data-sitekey=["']([^"']+)["']/i,
   );
-  if (rc2 && rc2[1]) {
+  if (rc2?.[1]) {
     return { type: "recaptcha-v2", siteKey: rc2[1], pageUrl };
   }
   // reCAPTCHA v3 script
-  const rc3 = html.match(
-    /recaptcha\/api\.js\?render=([a-zA-Z0-9_-]+)/,
-  );
-  if (rc3 && rc3[1]) {
+  const rc3 = html.match(/recaptcha\/api\.js\?render=([a-zA-Z0-9_-]+)/);
+  if (rc3?.[1]) {
     return { type: "recaptcha-v3", siteKey: rc3[1], pageUrl };
   }
   // hCaptcha
   const hc = html.match(
     /<[^>]+class=["'][^"']*h-captcha[^"']*["'][^>]*data-sitekey=["']([^"']+)["']/i,
   );
-  if (hc && hc[1]) {
+  if (hc?.[1]) {
     return { type: "hcaptcha", siteKey: hc[1], pageUrl };
   }
   return null;

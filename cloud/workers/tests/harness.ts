@@ -7,16 +7,16 @@
  * silently pass.
  */
 
+import { Database } from "bun:sqlite";
 import type {
   D1Database,
   D1PreparedStatement,
   D1Result,
-  KVNamespace,
-  R2Bucket,
-  Queue,
   DurableObjectNamespace,
+  KVNamespace,
+  Queue,
+  R2Bucket,
 } from "@cloudflare/workers-types";
-import { Database } from "bun:sqlite";
 import type { Env, UsageMessage } from "../src/env.ts";
 
 // ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ export function makeD1(): D1Database {
     async batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
       const out: D1Result<T>[] = [];
       for (const s of statements) {
-        out.push(await s.run() as D1Result<T>);
+        out.push((await s.run()) as D1Result<T>);
       }
       return out;
     },
@@ -120,7 +120,11 @@ export function makeKV(): KVNamespace {
       store.delete(key);
     },
     async list() {
-      return { keys: [...store.keys()].map((name) => ({ name })), list_complete: true, cursor: "" } as never;
+      return {
+        keys: [...store.keys()].map((name) => ({ name })),
+        list_complete: true,
+        cursor: "",
+      } as never;
     },
   } as unknown as KVNamespace;
 }
@@ -191,9 +195,9 @@ export function makeQueue(): QueueSpy {
 
 export function makeDO(): DurableObjectNamespace {
   return {
-    idFromName: (n: string) => ({ toString: () => `do_${n}` } as never),
-    newUniqueId: () => ({ toString: () => `do_${Math.random()}` } as never),
-    get: (_id: never) => ({ fetch: async () => new Response("{}") } as never),
+    idFromName: (n: string) => ({ toString: () => `do_${n}` }) as never,
+    newUniqueId: () => ({ toString: () => `do_${Math.random()}` }) as never,
+    get: (_id: never) => ({ fetch: async () => new Response("{}") }) as never,
   } as unknown as DurableObjectNamespace;
 }
 
@@ -245,7 +249,10 @@ export function makeExecCtx(): ExecutionContext & { pending: Promise<unknown>[] 
 }
 
 /** Seed: insert a user, workspace, membership, and return an api key + session. */
-export async function seedWorkspaceWithKey(env: Env, opts: { plan?: import("../../shared/pricing.ts").PlanId } = {}) {
+export async function seedWorkspaceWithKey(
+  env: Env,
+  opts: { plan?: import("../../shared/pricing.ts").PlanId } = {},
+) {
   const { createKey } = await import("../src/keys.ts");
   const { monthlyWindow } = await import("../src/quota.ts");
   const { ulid, sha256Hex } = await import("../src/ids.ts");
@@ -257,17 +264,31 @@ export async function seedWorkspaceWithKey(env: Env, opts: { plan?: import("../.
   await env.DB.prepare(
     `INSERT INTO users (id, email, email_verified, created_at, updated_at)
      VALUES (?1, ?2, 1, ?3, ?3)`,
-  ).bind(userId, `${userId}@test.dev`, now).run();
+  )
+    .bind(userId, `${userId}@test.dev`, now)
+    .run();
   const { end } = monthlyWindow(now);
   await env.DB.prepare(
     `INSERT INTO workspaces (id, slug, name, owner_id, plan, subscription_status,
        quota_resets_at, created_at, updated_at)
      VALUES (?1, ?2, ?3, ?4, ?5, 'none', ?6, ?7, ?7)`,
-  ).bind(workspaceId, `ws-${workspaceId.slice(0, 8).toLowerCase()}`, "Test", userId, plan, end, now).run();
+  )
+    .bind(
+      workspaceId,
+      `ws-${workspaceId.slice(0, 8).toLowerCase()}`,
+      "Test",
+      userId,
+      plan,
+      end,
+      now,
+    )
+    .run();
   await env.DB.prepare(
     `INSERT INTO members (workspace_id, user_id, role, invited_at, accepted_at)
      VALUES (?1, ?2, 'owner', ?3, ?3)`,
-  ).bind(workspaceId, userId, now).run();
+  )
+    .bind(workspaceId, userId, now)
+    .run();
   const key = await createKey(env, { workspaceId, userId, name: "seed", plan });
   const sessionToken = await issueSessionForTest(env, userId);
   return { userId, workspaceId, apiKey: key.secret, apiKeyId: key.id, sessionToken };

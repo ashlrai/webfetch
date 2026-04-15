@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { ulid, sha256Hex, constantTimeEq, requestId } from "../src/ids.ts";
+import { describe, expect, test } from "bun:test";
+import { constantTimeEq, requestId, sha256Hex, ulid } from "../src/ids.ts";
 
 describe("ids", () => {
   test("ulid is 26 chars, base32, monotonic-ish by time", () => {

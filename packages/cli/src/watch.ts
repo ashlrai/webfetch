@@ -24,11 +24,16 @@ export function parseInterval(s: string): number {
   const n = Number.parseInt(m[1]!, 10);
   const unit = m[2];
   switch (unit) {
-    case "s": return n * 1000;
-    case "m": return n * 60_000;
-    case "h": return n * 3_600_000;
-    case "d": return n * 86_400_000;
-    default: throw new Error(`bad interval unit: ${unit}`);
+    case "s":
+      return n * 1000;
+    case "m":
+      return n * 60_000;
+    case "h":
+      return n * 3_600_000;
+    case "d":
+      return n * 86_400_000;
+    default:
+      throw new Error(`bad interval unit: ${unit}`);
   }
 }
 
@@ -49,7 +54,10 @@ export async function writeState(path: string, state: WatchState): Promise<void>
   await writeFile(path, JSON.stringify(state, null, 2), "utf8");
 }
 
-export function diffNew(state: WatchState | undefined, candidates: ImageCandidate[]): ImageCandidate[] {
+export function diffNew(
+  state: WatchState | undefined,
+  candidates: ImageCandidate[],
+): ImageCandidate[] {
   const seen = new Set(state?.urls ?? []);
   return candidates.filter((c) => !seen.has(c.url));
 }

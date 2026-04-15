@@ -12,7 +12,13 @@ export { downloadImage, DownloadError } from "./download.ts";
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";
 export { findSimilar } from "./find-similar.ts";
-export { perceptualHash, dedupeByHash, dedupeByUrl, hammingDistance, findDuplicates } from "./dedupe.ts";
+export {
+  perceptualHash,
+  dedupeByHash,
+  dedupeByUrl,
+  hammingDistance,
+  findDuplicates,
+} from "./dedupe.ts";
 export { readImageMetadata, parseXmp, parseIptc, parseExifBuffer } from "./metadata-reader.ts";
 export type { EmbeddedMetadata } from "./metadata-reader.ts";
 export {

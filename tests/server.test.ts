@@ -6,9 +6,9 @@
  * with no network.
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { startServer } from "../packages/server/src/server.ts";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { isOriginAllowed } from "../packages/server/src/cors.ts";
+import { startServer } from "../packages/server/src/server.ts";
 
 const TOKEN = "t".repeat(64);
 let server: ReturnType<typeof startServer>;
@@ -19,13 +19,17 @@ beforeAll(() => {
   server = startServer({ port: 0, token: TOKEN });
   base = `http://127.0.0.1:${server.port}`;
 });
-afterAll(() => { try { server.stop(true); } catch {} });
+afterAll(() => {
+  try {
+    server.stop(true);
+  } catch {}
+});
 
 describe("auth", () => {
   test("401 when no Authorization header", async () => {
     const r = await fetch(`${base}/providers`);
     expect(r.status).toBe(401);
-    const j = await r.json() as any;
+    const j = (await r.json()) as any;
     expect(j.ok).toBe(false);
   });
 
@@ -41,7 +45,7 @@ describe("auth", () => {
       headers: { authorization: `Bearer ${TOKEN}` },
     });
     expect(r.status).toBe(200);
-    const j = await r.json() as any;
+    const j = (await r.json()) as any;
     expect(j.ok).toBe(true);
     expect(Array.isArray(j.data.all)).toBe(true);
     expect(j.data.all).toContain("wikimedia");

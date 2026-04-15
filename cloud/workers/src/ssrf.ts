@@ -69,7 +69,7 @@ export function assertPublicHttpUrl(raw: string): SsrfCheck {
   }
   if (!u.hostname) return { ok: false, error: "missing host" };
   if (isBlockedHostname(u.hostname)) {
-    return { ok: false, error: `host blocked by policy` };
+    return { ok: false, error: "host blocked by policy" };
   }
   return { ok: true, error: "" };
 }

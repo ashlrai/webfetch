@@ -1,8 +1,8 @@
-import { describe, test, expect } from "bun:test";
-import { app } from "../src/index.ts";
-import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
+import { describe, expect, test } from "bun:test";
 import { planFor } from "../../shared/pricing.ts";
+import { app } from "../src/index.ts";
 import { incrementUsage } from "../src/quota.ts";
+import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
 
 const hdrs = (auth?: string) => ({
   "content-type": "application/json",
@@ -25,7 +25,7 @@ describe("middleware chain (via /v1/search)", () => {
     const res = await app.fetch(
       new Request("http://x/v1/search", {
         method: "POST",
-        headers: hdrs("wf_live_" + "x".repeat(32)),
+        headers: hdrs(`wf_live_${"x".repeat(32)}`),
         body: JSON.stringify({ query: "hi" }),
       }),
       env,
@@ -98,7 +98,7 @@ describe("middleware chain (via /v1/search)", () => {
     const { env } = makeEnv();
     const res = await app.fetch(new Request("http://x/health"), env, makeExecCtx());
     expect(res.status).toBe(200);
-    const body = await res.json() as { ok: boolean };
+    const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
   });
 

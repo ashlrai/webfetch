@@ -19,32 +19,32 @@ export const serpapi: Provider = {
     if (!key) throw new Error("SERPAPI_KEY missing");
     await getBucket("serpapi").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://serpapi.com/search.json?" +
-      new URLSearchParams({
-        engine: "google_images",
-        q: query,
-        api_key: key,
-        safe: opts.safeSearch === "off" ? "off" : "active",
-        num: String(opts.maxPerProvider ?? 10),
-      });
+    const url = `https://serpapi.com/search.json?${new URLSearchParams({
+      engine: "google_images",
+      q: query,
+      api_key: key,
+      safe: opts.safeSearch === "off" ? "off" : "active",
+      num: String(opts.maxPerProvider ?? 10),
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`serpapi http ${resp.status}`);
     const json = (await resp.json()) as any;
-    return (json.images_results ?? []).slice(0, opts.maxPerProvider ?? 10).map((r: any): ImageCandidate => {
-      const heur = heuristicLicenseFromUrl(r.original ?? r.thumbnail);
-      return {
-        url: r.original ?? r.thumbnail,
-        thumbnailUrl: r.thumbnail,
-        width: r.original_width,
-        height: r.original_height,
-        source: "serpapi",
-        sourcePageUrl: r.link,
-        title: r.title,
-        author: r.source,
-        license: heur.license,
-        confidence: heur.confidence,
-      };
-    });
+    return (json.images_results ?? [])
+      .slice(0, opts.maxPerProvider ?? 10)
+      .map((r: any): ImageCandidate => {
+        const heur = heuristicLicenseFromUrl(r.original ?? r.thumbnail);
+        return {
+          url: r.original ?? r.thumbnail,
+          thumbnailUrl: r.thumbnail,
+          width: r.original_width,
+          height: r.original_height,
+          source: "serpapi",
+          sourcePageUrl: r.link,
+          title: r.title,
+          author: r.source,
+          license: heur.license,
+          confidence: heur.confidence,
+        };
+      });
   },
 };

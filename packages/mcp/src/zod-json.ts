@@ -3,7 +3,7 @@
  * primitives, enums, arrays). Keeps us off the `zod-to-json-schema` dep.
  */
 
-import { z, type ZodTypeAny } from "zod";
+import { type ZodTypeAny, z } from "zod";
 
 export function zodToJsonSchema(schema: ZodTypeAny): any {
   if (schema instanceof z.ZodObject) {
@@ -36,7 +36,8 @@ export function zodToJsonSchema(schema: ZodTypeAny): any {
     return out;
   }
   if (schema instanceof z.ZodBoolean) return { type: "boolean" };
-  if (schema instanceof z.ZodArray) return { type: "array", items: zodToJsonSchema((schema as any)._def.type) };
+  if (schema instanceof z.ZodArray)
+    return { type: "array", items: zodToJsonSchema((schema as any)._def.type) };
   if (schema instanceof z.ZodEnum) return { type: "string", enum: (schema as any)._def.values };
   if (schema instanceof z.ZodOptional) return zodToJsonSchema((schema as any)._def.innerType);
   if (schema instanceof z.ZodDefault) {

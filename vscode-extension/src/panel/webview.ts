@@ -50,17 +50,25 @@ function $(id: string): HTMLElement {
 
 function licenseColor(license: ImageCandidate["license"]): string {
   switch (license) {
-    case "CC0": case "PUBLIC_DOMAIN": return "#16a34a";
-    case "CC_BY": case "CC_BY_SA": return "#2563eb";
-    case "PRESS_KIT_ALLOWLIST": return "#7c3aed";
-    case "EDITORIAL_LICENSED": return "#d97706";
-    default: return "#6b7280";
+    case "CC0":
+    case "PUBLIC_DOMAIN":
+      return "#16a34a";
+    case "CC_BY":
+    case "CC_BY_SA":
+      return "#2563eb";
+    case "PRESS_KIT_ALLOWLIST":
+      return "#7c3aed";
+    case "EDITORIAL_LICENSED":
+      return "#d97706";
+    default:
+      return "#6b7280";
   }
 }
 
 function escapeHtml(s: string): string {
-  return String(s).replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 }
 

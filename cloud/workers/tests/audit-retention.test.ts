@@ -1,9 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { audit } from "../src/audit.ts";
+import { SESSION_COOKIE } from "../src/auth.ts";
+import {
+  RETENTION_BY_PLAN,
+  retentionDaysFor,
+  runAuditRetention,
+} from "../src/cron/audit-retention.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
-import { audit } from "../src/audit.ts";
-import { runAuditRetention, retentionDaysFor, RETENTION_BY_PLAN } from "../src/cron/audit-retention.ts";
-import { SESSION_COOKIE } from "../src/auth.ts";
 
 const cookie = (t: string) => `${SESSION_COOKIE}=${encodeURIComponent(t)}`;
 const DAY = 24 * 60 * 60 * 1000;
@@ -32,26 +36,34 @@ describe("audit retention — cron sweep", () => {
     const now = Date.now();
     // free retention = 90d. Insert 2 old rows, 1 fresh.
     await env.DB.prepare(
-      `INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)`,
-    ).bind("a-old-1", workspaceId, "test.old", now - 200 * DAY).run();
+      "INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)",
+    )
+      .bind("a-old-1", workspaceId, "test.old", now - 200 * DAY)
+      .run();
     await env.DB.prepare(
-      `INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)`,
-    ).bind("a-old-2", workspaceId, "test.old", now - 100 * DAY).run();
+      "INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)",
+    )
+      .bind("a-old-2", workspaceId, "test.old", now - 100 * DAY)
+      .run();
     await env.DB.prepare(
-      `INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)`,
-    ).bind("a-fresh", workspaceId, "test.fresh", now - 1 * DAY).run();
+      "INSERT INTO audit_log (id, workspace_id, action, ts) VALUES (?1, ?2, ?3, ?4)",
+    )
+      .bind("a-fresh", workspaceId, "test.fresh", now - 1 * DAY)
+      .run();
 
     const results = await runAuditRetention(env, now);
     const r = results.find((x) => x.workspaceId === workspaceId);
     expect(r).toBeDefined();
     expect(r!.archived).toBe(2);
     expect(r!.deleted).toBe(2);
-    expect(r!.archiveKey).toContain(`audit-archive/`);
+    expect(r!.archiveKey).toContain("audit-archive/");
     expect(r!.archiveKey).toContain(workspaceId);
 
     const remaining = await env.DB.prepare(
-      `SELECT COUNT(*) as n FROM audit_log WHERE workspace_id = ?1`,
-    ).bind(workspaceId).first<{ n: number }>();
+      "SELECT COUNT(*) as n FROM audit_log WHERE workspace_id = ?1",
+    )
+      .bind(workspaceId)
+      .first<{ n: number }>();
     expect(remaining?.n).toBe(1);
   });
 
@@ -74,7 +86,14 @@ describe("audit CSV export endpoint", () => {
       workspaceId,
       actorUserId: userId,
       action: "key.create",
-      meta: { endpoint: "/v1/keys", method: "POST", status: 201, duration_ms: 12, provider: "dashboard", ip: "1.2.3.4" },
+      meta: {
+        endpoint: "/v1/keys",
+        method: "POST",
+        status: 201,
+        duration_ms: 12,
+        provider: "dashboard",
+        ip: "1.2.3.4",
+      },
     });
     const res = await app.fetch(
       new Request(`http://x/v1/workspaces/${workspaceId}/audit/export`, {
@@ -105,7 +124,9 @@ describe("audit CSV export endpoint", () => {
     // Demote the seed owner to member (single-user workspace, just for RBAC test).
     await env.DB.prepare(
       `UPDATE members SET role = 'member' WHERE workspace_id = ?1 AND user_id = ?2`,
-    ).bind(workspaceId, userId).run();
+    )
+      .bind(workspaceId, userId)
+      .run();
     const res = await app.fetch(
       new Request(`http://x/v1/workspaces/${workspaceId}/audit/export`, {
         headers: { cookie: cookie(sessionToken) },
@@ -121,7 +142,9 @@ describe("audit CSV export endpoint", () => {
     const { sessionToken, workspaceId, userId } = await seedWorkspaceWithKey(env);
     await env.DB.prepare(
       `UPDATE members SET role = 'readonly' WHERE workspace_id = ?1 AND user_id = ?2`,
-    ).bind(workspaceId, userId).run();
+    )
+      .bind(workspaceId, userId)
+      .run();
     const res = await app.fetch(
       new Request(`http://x/v1/workspaces/${workspaceId}/audit/export`, {
         headers: { cookie: cookie(sessionToken) },
@@ -139,7 +162,9 @@ describe("audit CSV export endpoint", () => {
     await env.DB.prepare(
       `INSERT INTO audit_log (id, workspace_id, actor_user_id, action, ts)
        VALUES (?1, ?2, ?3, ?4, ?5)`,
-    ).bind("old-row", workspaceId, userId, "ancient.event", now - 365 * DAY).run();
+    )
+      .bind("old-row", workspaceId, userId, "ancient.event", now - 365 * DAY)
+      .run();
     const from = new Date(now - DAY).toISOString();
     const to = new Date(now + DAY).toISOString();
     const res = await app.fetch(

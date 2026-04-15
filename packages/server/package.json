@@ -9,15 +9,7 @@
     "webfetch-server": "./dist/index.js"
   },
   "files": ["dist", "src", "README.md", "LICENSE"],
-  "keywords": [
-    "webfetch",
-    "http",
-    "server",
-    "rest",
-    "image-search",
-    "licensing",
-    "api"
-  ],
+  "keywords": ["webfetch", "http", "server", "rest", "image-search", "licensing", "api"],
   "homepage": "https://getwebfetch.com",
   "bugs": {
     "url": "https://github.com/ashlrai/webfetch/issues"

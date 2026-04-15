@@ -11,25 +11,20 @@
 
 import * as vscode from "vscode";
 import { registerInsertImage } from "./commands/insertImage";
-import {
-  registerOpenDashboard,
-  registerProvidersCommand,
-} from "./commands/openDashboard";
+import { registerOpenDashboard, registerProvidersCommand } from "./commands/openDashboard";
 import { registerSearch } from "./commands/search";
 import { registerSetApiKey } from "./commands/setApiKey";
-import { WebfetchViewProvider } from "./panel/WebfetchViewProvider";
 import { StatusBar } from "./lib/status";
+import { WebfetchViewProvider } from "./panel/WebfetchViewProvider";
 
 export function activate(context: vscode.ExtensionContext): void {
   const status = new StatusBar(context);
   const panel = new WebfetchViewProvider(context, status);
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      WebfetchViewProvider.viewType,
-      panel,
-      { webviewOptions: { retainContextWhenHidden: true } },
-    ),
+    vscode.window.registerWebviewViewProvider(WebfetchViewProvider.viewType, panel, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
   );
 
   registerSearch(context, panel);

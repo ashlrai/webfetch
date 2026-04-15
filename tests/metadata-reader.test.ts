@@ -28,7 +28,7 @@ function jpegWithXmp(xmpXml: string): Uint8Array {
 
 // Build a minimal JPEG with an EXIF APP1 segment (TIFF header little-endian, IFD0 with Copyright tag).
 function jpegWithExifCopyright(copyright: string): Uint8Array {
-  const str = new TextEncoder().encode(copyright + "\0");
+  const str = new TextEncoder().encode(`${copyright}\0`);
   // TIFF: "II*\0" + IFD offset=8
   // IFD0: 1 entry: tag=0x8298 (Copyright) type=2 count=str.length valueOffset=(str inline if <=4 else points after IFD)
   // Next IFD offset = 0.

@@ -99,7 +99,10 @@ export async function readImageMetadata(bytes: Uint8Array): Promise<EmbeddedMeta
   return result;
 }
 
-function applyExif(out: EmbeddedMetadata, e: { artist?: string; copyright?: string; description?: string }) {
+function applyExif(
+  out: EmbeddedMetadata,
+  e: { artist?: string; copyright?: string; description?: string },
+) {
   if (e.artist && !out.artist) {
     out.artist = e.artist;
     out.confidence.artist = Math.max(out.confidence.artist, 0.7);
@@ -111,7 +114,10 @@ function applyExif(out: EmbeddedMetadata, e: { artist?: string; copyright?: stri
   if (e.description && !out.description) out.description = e.description;
 }
 
-function applyIptc(out: EmbeddedMetadata, e: { creator?: string; copyright?: string; usageTerms?: string }) {
+function applyIptc(
+  out: EmbeddedMetadata,
+  e: { creator?: string; copyright?: string; usageTerms?: string },
+) {
   if (e.creator && !out.artist) {
     out.artist = e.creator;
     out.confidence.artist = Math.max(out.confidence.artist, 0.8);
@@ -149,15 +155,14 @@ function applyXmp(out: EmbeddedMetadata, e: XmpFields) {
   if (e.webStatement) out.sourceWebStatement = e.webStatement;
 
   // License — cc:license wins, then xmpRights:UsageTerms, then rights string.
-  const licCandidates = [e.ccLicense, e.usageTerms, e.webStatement, e.rights].filter(Boolean) as string[];
+  const licCandidates = [e.ccLicense, e.usageTerms, e.webStatement, e.rights].filter(
+    Boolean,
+  ) as string[];
   for (const c of licCandidates) {
     const coerced = coerceLicense(c);
     if (coerced !== "UNKNOWN") {
       out.license = coerced;
-      out.confidence.license = Math.max(
-        out.confidence.license,
-        c === e.ccLicense ? 0.95 : 0.8,
-      );
+      out.confidence.license = Math.max(out.confidence.license, c === e.ccLicense ? 0.95 : 0.8);
       if (!out.licenseUrl && /^https?:\/\//.test(c)) out.licenseUrl = c;
       break;
     }
@@ -178,12 +183,17 @@ export function parseXmp(xml: string): XmpFields {
   // dc:creator — often inside <rdf:Seq><rdf:li>...
   out.creator = firstInnerText(xml, /<dc:creator[\s>][\s\S]*?<\/dc:creator>/i);
   out.rights = firstInnerText(xml, /<dc:rights[\s>][\s\S]*?<\/dc:rights>/i);
-  out.usageTerms = firstInnerText(xml, /<xmpRights:UsageTerms[\s>][\s\S]*?<\/xmpRights:UsageTerms>/i);
-  out.webStatement = attrOrText(xml, /<xmpRights:WebStatement\b[^>]*>/i, "rdf:resource") ??
+  out.usageTerms = firstInnerText(
+    xml,
+    /<xmpRights:UsageTerms[\s>][\s\S]*?<\/xmpRights:UsageTerms>/i,
+  );
+  out.webStatement =
+    attrOrText(xml, /<xmpRights:WebStatement\b[^>]*>/i, "rdf:resource") ??
     firstInnerText(xml, /<xmpRights:WebStatement[\s>][\s\S]*?<\/xmpRights:WebStatement>/i);
 
   // cc:license - usually a rdf:resource attribute.
-  out.ccLicense = attrOrText(xml, /<cc:license\b[^>]*>/i, "rdf:resource") ??
+  out.ccLicense =
+    attrOrText(xml, /<cc:license\b[^>]*>/i, "rdf:resource") ??
     firstInnerText(xml, /<cc:license[\s>][\s\S]*?<\/cc:license>/i);
 
   return out;
@@ -194,7 +204,10 @@ function firstInnerText(xml: string, re: RegExp): string | undefined {
   if (!m) return undefined;
   // Strip nested tags; collapse whitespace.
   const inner = m[0].replace(/^<[^>]+>/, "").replace(/<\/[^>]+>$/, "");
-  const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const text = inner
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return text || undefined;
 }
 
@@ -275,21 +288,14 @@ function extractIptcFromIrb(irb: Uint8Array): Uint8Array | null {
   // IRB records: "8BIM" + 2-byte ID + Pascal name (padded even) + 4-byte size + data (padded even).
   let i = 0;
   while (i + 12 <= irb.length) {
-    if (
-      irb[i] !== 0x38 ||
-      irb[i + 1] !== 0x42 ||
-      irb[i + 2] !== 0x49 ||
-      irb[i + 3] !== 0x4d
-    )
-      break;
+    if (irb[i] !== 0x38 || irb[i + 1] !== 0x42 || irb[i + 2] !== 0x49 || irb[i + 3] !== 0x4d) break;
     const id = (irb[i + 4]! << 8) | irb[i + 5]!;
     i += 6;
     const nameLen = irb[i]!;
     const nameTot = nameLen + 1;
     i += nameTot + (nameTot % 2);
     if (i + 4 > irb.length) break;
-    const size =
-      (irb[i]! << 24) | (irb[i + 1]! << 16) | (irb[i + 2]! << 8) | irb[i + 3]!;
+    const size = (irb[i]! << 24) | (irb[i + 1]! << 16) | (irb[i + 2]! << 8) | irb[i + 3]!;
     i += 4;
     const data = irb.subarray(i, i + size);
     i += size + (size % 2);
@@ -364,8 +370,7 @@ export function parseExifBuffer(buf: Uint8Array): {
   else if (b[0] === 0x4d && b[1] === 0x4d) little = false;
   else return out;
 
-  const read16 = (o: number) =>
-    little ? b[o]! | (b[o + 1]! << 8) : (b[o]! << 8) | b[o + 1]!;
+  const read16 = (o: number) => (little ? b[o]! | (b[o + 1]! << 8) : (b[o]! << 8) | b[o + 1]!);
   const read32 = (o: number) =>
     little
       ? b[o]! | (b[o + 1]! << 8) | (b[o + 2]! << 16) | (b[o + 3]! << 24)
@@ -385,7 +390,7 @@ export function parseExifBuffer(buf: Uint8Array): {
     const cnt = read32(entry + 4);
     if (type !== 2) continue; // ASCII only
     let valOff: number;
-    let byteLen = cnt;
+    const byteLen = cnt;
     if (byteLen <= 4) valOff = entry + 8;
     else valOff = read32(entry + 8);
     if (valOff + byteLen > b.length) continue;

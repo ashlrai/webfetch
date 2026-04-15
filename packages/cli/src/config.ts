@@ -73,7 +73,10 @@ export function defaultConfigPath(env: NodeJS.ProcessEnv = process.env): string 
   return resolve(home, ".webfetchrc");
 }
 
-export function expandHome(p: string | undefined, env: NodeJS.ProcessEnv = process.env): string | undefined {
+export function expandHome(
+  p: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
   if (!p) return p;
   if (p.startsWith("~/") || p === "~") {
     const home = env.HOME ?? env.USERPROFILE ?? homedir();
@@ -125,7 +128,10 @@ export function stripJsonComments(src: string): string {
   return out;
 }
 
-export async function loadConfigFile(path?: string, env: NodeJS.ProcessEnv = process.env): Promise<ConfigFile | undefined> {
+export async function loadConfigFile(
+  path?: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<ConfigFile | undefined> {
   const p = path ?? defaultConfigPath(env);
   if (!existsSync(p)) return undefined;
   const raw = await readFile(p, "utf8");
@@ -151,7 +157,9 @@ export function resolveConfig(file: ConfigFile | undefined, profile?: string): R
   return merged;
 }
 
-export async function loadResolved(opts: { profile?: string; path?: string; env?: NodeJS.ProcessEnv } = {}): Promise<ResolvedConfig> {
+export async function loadResolved(
+  opts: { profile?: string; path?: string; env?: NodeJS.ProcessEnv } = {},
+): Promise<ResolvedConfig> {
   const env = opts.env ?? process.env;
   const p = opts.path ?? defaultConfigPath(env);
   const file = await loadConfigFile(p, env);

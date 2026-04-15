@@ -5,13 +5,15 @@
  * Run: `bun run demo` from repo root.
  */
 
-import { searchArtistImages, pickBest } from "./index.ts";
+import { pickBest, searchArtistImages } from "./index.ts";
 import type { ImageCandidate } from "./types.ts";
 
 async function main() {
   const name = process.argv[2] ?? "Drake";
   const kind = (process.argv[3] as any) ?? "portrait";
-  console.log(`webfetch-mcp demo: searchArtistImages(${JSON.stringify(name)}, ${JSON.stringify(kind)})\n`);
+  console.log(
+    `webfetch-mcp demo: searchArtistImages(${JSON.stringify(name)}, ${JSON.stringify(kind)})\n`,
+  );
 
   const dry = await searchArtistImages(name, kind, { dryRun: true });
   console.log("providers that would be hit:");
@@ -22,7 +24,8 @@ async function main() {
   const synthetic: ImageCandidate[] = [
     {
       url: "https://upload.wikimedia.org/wikipedia/commons/thumb/example.jpg/1600px-example.jpg",
-      thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/example.jpg/320px-example.jpg",
+      thumbnailUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/example.jpg/320px-example.jpg",
       width: 1600,
       height: 2000,
       source: "wikimedia",

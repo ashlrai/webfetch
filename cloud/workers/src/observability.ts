@@ -33,10 +33,14 @@ interface SentryLike {
 let sentry: SentryLike | null = null;
 let initPromise: Promise<SentryLike | null> | null = null;
 
-const SENSITIVE_HEADER_RE = /^(authorization|cookie|set-cookie|x-api-key|x-auth-token|proxy-authorization)$/i;
-const SENSITIVE_KEY_RE = /(api[_-]?key|secret|token|password|passwd|pwd|bearer|authorization|session|cookie|ssn)/i;
+const SENSITIVE_HEADER_RE =
+  /^(authorization|cookie|set-cookie|x-api-key|x-auth-token|proxy-authorization)$/i;
+const SENSITIVE_KEY_RE =
+  /(api[_-]?key|secret|token|password|passwd|pwd|bearer|authorization|session|cookie|ssn)/i;
 
-export function scrubHeaders(headers: Record<string, string | string[] | undefined> | Headers | undefined): Record<string, string> {
+export function scrubHeaders(
+  headers: Record<string, string | string[] | undefined> | Headers | undefined,
+): Record<string, string> {
   const out: Record<string, string> = {};
   if (!headers) return out;
   const entries: [string, string][] = [];
@@ -81,7 +85,9 @@ async function loadSentry(): Promise<SentryLike | null> {
     try {
       // Lazy import; in tests this path is never taken because init() is skipped
       // without SENTRY_DSN.
-      const mod = (await import(/* @vite-ignore */ "@sentry/cloudflare" as string)) as unknown as SentryLike;
+      const mod = (await import(
+        /* @vite-ignore */ "@sentry/cloudflare" as string
+      )) as unknown as SentryLike;
       sentry = mod;
       return mod;
     } catch {
@@ -127,19 +133,22 @@ export async function initObservability(opts: InitOptions = {}): Promise<SentryL
   return client;
 }
 
-function sanitizeEvent(event: Record<string, unknown>, env: ObservabilityEnv): Record<string, unknown> {
+function sanitizeEvent(
+  event: Record<string, unknown>,
+  env: ObservabilityEnv,
+): Record<string, unknown> {
   const request = event.request as Record<string, unknown> | undefined;
   if (request) {
     request.headers = scrubHeaders(request.headers as Record<string, string>);
-    delete request.cookies;
+    request.cookies = undefined;
     if (env.SENTRY_CAPTURE_BODIES !== "1") {
-      delete request.data;
+      request.data = undefined;
     } else {
       request.data = scrubValue(request.data);
     }
   }
-  delete (event as Record<string, unknown>).user;
-  delete (event as Record<string, unknown>).server_name;
+  (event as Record<string, unknown>).user = undefined;
+  (event as Record<string, unknown>).server_name = undefined;
   if (event.extra) event.extra = scrubValue(event.extra);
   if (event.contexts) event.contexts = scrubValue(event.contexts);
   return event;
@@ -190,7 +199,10 @@ export function wrapStripeWebhook<T extends (...args: unknown[]) => Promise<unkn
 }
 
 /** Wraps a queue consumer; swallows nothing, reports all. */
-export function wrapQueueConsumer<T extends (...args: unknown[]) => Promise<unknown>>(fn: T, queue: string): T {
+export function wrapQueueConsumer<T extends (...args: unknown[]) => Promise<unknown>>(
+  fn: T,
+  queue: string,
+): T {
   return (async (...args: unknown[]) => {
     try {
       return await fn(...args);

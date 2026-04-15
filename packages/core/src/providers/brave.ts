@@ -18,13 +18,11 @@ export const brave: Provider = {
     if (!key) throw new Error("BRAVE_API_KEY missing");
     await getBucket("brave").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.search.brave.com/res/v1/images/search?" +
-      new URLSearchParams({
-        q: query,
-        count: String(opts.maxPerProvider ?? 10),
-        safesearch: opts.safeSearch === "off" ? "off" : opts.safeSearch ?? "strict",
-      });
+    const url = `https://api.search.brave.com/res/v1/images/search?${new URLSearchParams({
+      q: query,
+      count: String(opts.maxPerProvider ?? 10),
+      safesearch: opts.safeSearch === "off" ? "off" : (opts.safeSearch ?? "strict"),
+    })}`;
     const resp = await fetcher(url, {
       headers: { "X-Subscription-Token": key, Accept: "application/json" },
       signal: opts.signal,

@@ -16,13 +16,13 @@
  */
 
 import { Hono } from "hono";
-import type { Env } from "./env.ts";
 import type { PlanId, SubscriptionStatus } from "../../shared/types.ts";
-import { getSessionUser } from "./auth.ts";
-import { roleFor, canManageBilling } from "./teams.ts";
-import { ok, err, parseJson } from "./responses.ts";
-import { createCheckoutSchema } from "./schemas.ts";
 import { audit } from "./audit.ts";
+import { getSessionUser } from "./auth.ts";
+import type { Env } from "./env.ts";
+import { err, ok, parseJson } from "./responses.ts";
+import { createCheckoutSchema } from "./schemas.ts";
+import { canManageBilling, roleFor } from "./teams.ts";
 
 export const billingRouter = new Hono<{ Bindings: Env }>();
 
@@ -38,9 +38,9 @@ billingRouter.post("/workspaces/:id/checkout", async (c) => {
   const parsed = await parseJson(c, createCheckoutSchema);
   if (!parsed.ok) return parsed.response;
 
-  const ws = await c.env.DB.prepare(
-    `SELECT id, stripe_customer_id FROM workspaces WHERE id = ?1`,
-  ).bind(workspaceId).first<{ id: string; stripe_customer_id: string | null }>();
+  const ws = await c.env.DB.prepare("SELECT id, stripe_customer_id FROM workspaces WHERE id = ?1")
+    .bind(workspaceId)
+    .first<{ id: string; stripe_customer_id: string | null }>();
   if (!ws) return err(c, "workspace not found", 404);
 
   const stripe = getStripe(c.env);
@@ -52,18 +52,17 @@ billingRouter.post("/workspaces/:id/checkout", async (c) => {
     });
     customerId = customer.id;
     await c.env.DB.prepare(
-      `UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3`,
-    ).bind(customerId, Date.now(), workspaceId).run();
+      "UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3",
+    )
+      .bind(customerId, Date.now(), workspaceId)
+      .run();
   }
 
   const priceId = parsed.data.plan === "pro" ? c.env.STRIPE_PRICE_PRO : c.env.STRIPE_PRICE_TEAM;
-  const overagePriceId = parsed.data.plan === "pro"
-    ? c.env.STRIPE_PRICE_OVERAGE_PRO
-    : c.env.STRIPE_PRICE_OVERAGE_TEAM;
+  const overagePriceId =
+    parsed.data.plan === "pro" ? c.env.STRIPE_PRICE_OVERAGE_PRO : c.env.STRIPE_PRICE_OVERAGE_TEAM;
 
-  const lineItems: Array<{ price: string; quantity?: number }> = [
-    { price: priceId, quantity: 1 },
-  ];
+  const lineItems: Array<{ price: string; quantity?: number }> = [{ price: priceId, quantity: 1 }];
   if (parsed.data.plan === "team" && parsed.data.seats && parsed.data.seats > 5) {
     lineItems.push({ price: c.env.STRIPE_PRICE_TEAM_SEAT, quantity: parsed.data.seats - 5 });
   }
@@ -94,9 +93,9 @@ billingRouter.post("/workspaces/:id/portal", async (c) => {
   const workspaceId = c.req.param("id");
   const role = await roleFor(c.env, workspaceId, user.userId);
   if (!role || !canManageBilling(role)) return err(c, "forbidden", 403);
-  const ws = await c.env.DB.prepare(
-    `SELECT stripe_customer_id FROM workspaces WHERE id = ?1`,
-  ).bind(workspaceId).first<{ stripe_customer_id: string | null }>();
+  const ws = await c.env.DB.prepare("SELECT stripe_customer_id FROM workspaces WHERE id = ?1")
+    .bind(workspaceId)
+    .first<{ stripe_customer_id: string | null }>();
   if (!ws?.stripe_customer_id) return err(c, "no billing account", 400);
 
   const stripe = getStripe(c.env);
@@ -168,8 +167,10 @@ export async function handleStripeEvent(
       if (!workspaceId) return;
       const customerId = s.customer as string;
       await env.DB.prepare(
-        `UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3`,
-      ).bind(customerId, Date.now(), workspaceId).run();
+        "UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3",
+      )
+        .bind(customerId, Date.now(), workspaceId)
+        .run();
       return;
     }
     case "customer.subscription.created":
@@ -237,7 +238,9 @@ export async function handleStripeEvent(
       await env.DB.prepare(
         `UPDATE workspaces SET subscription_status = 'past_due', updated_at = ?1
           WHERE stripe_customer_id = ?2`,
-      ).bind(Date.now(), customerId).run();
+      )
+        .bind(Date.now(), customerId)
+        .run();
       return;
     }
     default:

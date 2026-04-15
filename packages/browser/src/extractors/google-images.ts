@@ -35,8 +35,7 @@ export function extractGoogleImages(ctx: ExtractContext): ExtractResult {
   const warnings: string[] = [];
 
   // Strategy 1: pairs of ["https://full.example.com/a.jpg",W,H] embedded in scripts.
-  const jsonPairRe =
-    /\["(https?:\/\/[^"\s]+?\.(?:jpe?g|png|webp|gif|avif))",(\d+),(\d+)\]/gi;
+  const jsonPairRe = /\["(https?:\/\/[^"\s]+?\.(?:jpe?g|png|webp|gif|avif))",(\d+),(\d+)\]/gi;
   let jm: RegExpExecArray | null;
   while ((jm = jsonPairRe.exec(html)) !== null) {
     const url = jm[1];

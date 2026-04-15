@@ -6,13 +6,19 @@ export default function PrivacyPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 prose-wf">
       <h1>Privacy Policy</h1>
-      <p><em>Last updated: April 13, 2026.</em></p>
+      <p>
+        <em>Last updated: April 13, 2026.</em>
+      </p>
 
       <h2>What we collect</h2>
       <ul>
         <li>Account info: email, OAuth identifier (if you sign in with Google/GitHub).</li>
-        <li>Usage metadata: API calls, timestamps, query strings, chosen providers, billing counters.</li>
-        <li>Billing info: handled by Stripe; we store the customer ID and last four digits only.</li>
+        <li>
+          Usage metadata: API calls, timestamps, query strings, chosen providers, billing counters.
+        </li>
+        <li>
+          Billing info: handled by Stripe; we store the customer ID and last four digits only.
+        </li>
       </ul>
 
       <h2>What we do not collect</h2>

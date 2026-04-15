@@ -6,11 +6,7 @@ import type { ImageCandidate } from "@webfetch/core";
 
 export type StackId = "vanilla" | "rebrowser" | "camoufox" | "brightdata";
 
-export type ExtractorId =
-  | "google-images"
-  | "pinterest"
-  | "twitter"
-  | "generic-page";
+export type ExtractorId = "google-images" | "pinterest" | "twitter" | "generic-page";
 
 export interface ProxyConfig {
   kind: "smartproxy" | "brightdata" | "custom";
@@ -82,18 +78,9 @@ export interface ExtractPageOptions {
 }
 
 export interface BrowserProvider {
-  searchGoogleImages(
-    query: string,
-    opts?: SearchImagesOptions,
-  ): Promise<ImageCandidate[]>;
-  searchPinterest(
-    query: string,
-    opts?: SearchImagesOptions,
-  ): Promise<ImageCandidate[]>;
-  extractFromPage(
-    url: string,
-    opts?: ExtractPageOptions,
-  ): Promise<ImageCandidate[]>;
+  searchGoogleImages(query: string, opts?: SearchImagesOptions): Promise<ImageCandidate[]>;
+  searchPinterest(query: string, opts?: SearchImagesOptions): Promise<ImageCandidate[]>;
+  extractFromPage(url: string, opts?: ExtractPageOptions): Promise<ImageCandidate[]>;
   close(): Promise<void>;
 }
 

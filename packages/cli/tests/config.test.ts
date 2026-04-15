@@ -8,8 +8,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { run } from "../src/commands.ts";
-import { __setCoreForTests, core } from "../src/core.ts";
 import { loadResolved, stripJsonComments, writeStarterConfig } from "../src/config.ts";
+import { __setCoreForTests, core } from "../src/core.ts";
 
 let tmp: string;
 let cfgPath: string;
@@ -81,7 +81,10 @@ describe("loadResolved precedence", () => {
         profiles: { editorial: { minWidth: 1600 } },
       }),
     );
-    const r = await loadResolved({ env: { WEBFETCH_CONFIG: cfgPath } as any, profile: "editorial" });
+    const r = await loadResolved({
+      env: { WEBFETCH_CONFIG: cfgPath } as any,
+      profile: "editorial",
+    });
     expect(r.minWidth).toBe(1600);
     expect(r.limit).toBe(5);
     expect(r.profile).toBe("editorial");
@@ -89,7 +92,9 @@ describe("loadResolved precedence", () => {
 
   test("unknown profile throws", async () => {
     await writeFile(cfgPath, JSON.stringify({ profiles: {} }));
-    await expect(loadResolved({ env: { WEBFETCH_CONFIG: cfgPath } as any, profile: "ghost" })).rejects.toThrow(/unknown profile/);
+    await expect(
+      loadResolved({ env: { WEBFETCH_CONFIG: cfgPath } as any, profile: "ghost" }),
+    ).rejects.toThrow(/unknown profile/);
   });
 });
 
@@ -105,10 +110,7 @@ describe("CLI flag > env > profile > defaults", () => {
     const cap = captureIO();
     // profile sets 7, env sets 11, CLI sets 3 → CLI wins → JSON array length ≤ 3.
     cap.io.env!.WEBFETCH_LIMIT = "11";
-    const code = await run(
-      ["search", "drake", "--profile", "m", "--limit", "3", "--json"],
-      cap.io,
-    );
+    const code = await run(["search", "drake", "--profile", "m", "--limit", "3", "--json"], cap.io);
     expect(code).toBe(0);
     // We only have 1 candidate from the stub; still verify precedence doesn't crash.
     expect(JSON.parse(cap.stdout()).length).toBeLessThanOrEqual(3);

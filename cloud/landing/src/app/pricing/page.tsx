@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
-import { PricingTable } from "@/components/PricingTable";
 import { FAQ } from "@/components/FAQ";
+import { PricingTable } from "@/components/PricingTable";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Free, Pro ($19), Team ($79 + seats), Enterprise. Usage-based metering on top of every tier.",
+  description:
+    "Free, Pro ($19), Team ($79 + seats), Enterprise. Usage-based metering on top of every tier.",
 };
 
 export default function PricingPage() {

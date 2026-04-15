@@ -105,14 +105,11 @@ describe("download writes sidecar by default; --no-sidecar opts out", () => {
     });
     const logs: string[] = [];
     const errs: string[] = [];
-    const code = await run(
-      ["download", "https://example.com/a.jpg", "--out", out, "--json"],
-      {
-        stdout: (s) => logs.push(s),
-        stderr: (s) => errs.push(s),
-        env: { PATH: "/bin", WEBFETCH_CONFIG: "/nope" } as NodeJS.ProcessEnv,
-      },
-    );
+    const code = await run(["download", "https://example.com/a.jpg", "--out", out, "--json"], {
+      stdout: (s) => logs.push(s),
+      stderr: (s) => errs.push(s),
+      env: { PATH: "/bin", WEBFETCH_CONFIG: "/nope" } as NodeJS.ProcessEnv,
+    });
     expect(code).toBe(0);
     const parsed = JSON.parse(logs.join("\n"));
     expect(parsed.sidecar).toBe(`${out}.xmp`);

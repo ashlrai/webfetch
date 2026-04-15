@@ -14,16 +14,13 @@ export const rawpixel: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("rawpixel").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://www.rawpixel.com/api/v1/search?" +
-      new URLSearchParams({
-        freecc0: "1",
-        q: query,
-        page: "1",
-        pagination: "1",
-      });
-    const key =
-      opts.auth?.rawpixelApiKey ?? (globalThis as any).process?.env?.RAWPIXEL_API_KEY;
+    const url = `https://www.rawpixel.com/api/v1/search?${new URLSearchParams({
+      freecc0: "1",
+      q: query,
+      page: "1",
+      pagination: "1",
+    })}`;
+    const key = opts.auth?.rawpixelApiKey ?? (globalThis as any).process?.env?.RAWPIXEL_API_KEY;
     const headers: Record<string, string> = { accept: "application/json" };
     if (key) headers.authorization = `Bearer ${key}`;
 

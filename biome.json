@@ -1,6 +1,29 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "organizeImports": { "enabled": true },
+  "files": {
+    "ignore": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/dist-release/**",
+      "**/.next/**",
+      "**/out/**",
+      "**/build/**",
+      "**/.cache/**",
+      "**/.venv/**",
+      "**/.wrangler/**",
+      "**/__pycache__/**",
+      "**/coverage/**",
+      "**/*.min.js",
+      "**/*.bundle.js",
+      "**/tests/fixtures/**",
+      "extension/dist/**",
+      "vscode-extension/out/**",
+      "vscode-extension/*.vsix",
+      "packages/sdk-python/**",
+      "cloud/landing/public/**"
+    ]
+  },
   "linter": {
     "enabled": true,
     "rules": {

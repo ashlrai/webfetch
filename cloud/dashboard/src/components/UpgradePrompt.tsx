@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { PlanId } from "@shared/types";
+import Link from "next/link";
 import { Icon } from "./Icon";
 
 export default function UpgradePrompt({
@@ -12,9 +12,11 @@ export default function UpgradePrompt({
   if (plan === "enterprise") return null;
 
   const headline =
-    reason === "quota" ? "You've hit your plan quota." :
-    reason === "seats" ? "You're out of seats on this plan." :
-    "You're on the Free tier.";
+    reason === "quota"
+      ? "You've hit your plan quota."
+      : reason === "seats"
+        ? "You're out of seats on this plan."
+        : "You're on the Free tier.";
 
   const body =
     reason === "quota"
@@ -27,7 +29,8 @@ export default function UpgradePrompt({
     <div
       className="surface flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4"
       style={{
-        background: "linear-gradient(180deg, rgba(255,90,31,0.08), transparent 120%), var(--bg-card)",
+        background:
+          "linear-gradient(180deg, rgba(255,90,31,0.08), transparent 120%), var(--bg-card)",
         borderColor: "rgba(255,90,31,0.3)",
       }}
     >

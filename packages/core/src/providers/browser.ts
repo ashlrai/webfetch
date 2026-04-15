@@ -33,7 +33,9 @@ export const browser: Provider = {
       // @ts-expect-error optional peer; not bundled
       ({ chromium } = (await import("playwright")) as any);
     } catch {
-      throw new Error("playwright not installed; run `bun add -d playwright` to enable browser provider");
+      throw new Error(
+        "playwright not installed; run `bun add -d playwright` to enable browser provider",
+      );
     }
 
     const browserInstance = await chromium.launch({ headless: true });
@@ -47,16 +49,19 @@ export const browser: Provider = {
       const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}&safe=${opts.safeSearch === "off" ? "off" : "active"}`;
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: opts.timeoutMs ?? 15000 });
       // Collect <img src> elements that have reasonable dimensions.
-      const hits: { src: string; title?: string; pageUrl?: string }[] = await page.evaluate((limit: number) => {
-        const imgs = Array.from(document.querySelectorAll("img"))
-          .filter((i: any) => (i.naturalWidth ?? 0) > 120 && i.src?.startsWith("http"))
-          .slice(0, limit);
-        return imgs.map((i: any) => ({
-          src: i.src,
-          title: i.alt,
-          pageUrl: i.closest("a")?.href,
-        }));
-      }, opts.maxPerProvider ?? 10);
+      const hits: { src: string; title?: string; pageUrl?: string }[] = await page.evaluate(
+        (limit: number) => {
+          const imgs = Array.from(document.querySelectorAll("img"))
+            .filter((i: any) => (i.naturalWidth ?? 0) > 120 && i.src?.startsWith("http"))
+            .slice(0, limit);
+          return imgs.map((i: any) => ({
+            src: i.src,
+            title: i.alt,
+            pageUrl: i.closest("a")?.href,
+          }));
+        },
+        opts.maxPerProvider ?? 10,
+      );
 
       return hits.map((h) => {
         const heur = heuristicLicenseFromUrl(h.src);

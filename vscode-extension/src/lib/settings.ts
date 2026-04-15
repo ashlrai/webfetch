@@ -32,7 +32,10 @@ export async function loadSettings(context: vscode.ExtensionContext): Promise<We
     defaultProviders: cfg.get<ProviderId[]>("defaultProviders", []),
     outputDir: cfg.get<string>("outputDir", "./assets"),
     writeXmpSidecar: cfg.get<boolean>("writeXmpSidecar", true),
-    attributionStyle: cfg.get<"html-comment" | "markdown-caption" | "none">("attributionStyle", "html-comment"),
+    attributionStyle: cfg.get<"html-comment" | "markdown-caption" | "none">(
+      "attributionStyle",
+      "html-comment",
+    ),
   };
 }
 

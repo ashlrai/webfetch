@@ -11,7 +11,8 @@ export function ArchitectureDiagram() {
           One core. One cache. Every surface.
         </h2>
         <p className="mt-4 text-[var(--color-fg-dim)] max-w-2xl leading-relaxed">
-          Every surface shares <code className="font-mono text-[var(--color-accent)]">@webfetch/core</code>. The cloud
+          Every surface shares{" "}
+          <code className="font-mono text-[var(--color-accent)]">@webfetch/core</code>. The cloud
           router adds metering, pooled keys, and a managed browser you never have to operate.
         </p>
       </FadeUp>
@@ -25,7 +26,15 @@ export function ArchitectureDiagram() {
             aria-label="webfetch architecture: surfaces on top, @webfetch/core + browser + cloud in the middle, 24 providers at the bottom"
           >
             <defs>
-              <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <marker
+                id="arr"
+                viewBox="0 0 8 8"
+                refX="7"
+                refY="4"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto"
+              >
                 <path d="M 0 0 L 8 4 L 0 8 Z" fill="#ff5a1f" />
               </marker>
               <pattern id="dots" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
@@ -46,22 +55,30 @@ export function ArchitectureDiagram() {
             `}</style>
 
             {/* Row labels */}
-            <text x="20" y="32" className="tag">surfaces</text>
-            <text x="20" y="208" className="tag">core</text>
-            <text x="20" y="408" className="tag">providers</text>
+            <text x="20" y="32" className="tag">
+              surfaces
+            </text>
+            <text x="20" y="208" className="tag">
+              core
+            </text>
+            <text x="20" y="408" className="tag">
+              providers
+            </text>
 
             {/* Surfaces row */}
             {[
-              { x: 30,  l: "CLI"        },
-              { x: 170, l: "MCP"        },
-              { x: 310, l: "HTTP"       },
+              { x: 30, l: "CLI" },
+              { x: 170, l: "MCP" },
+              { x: 310, l: "HTTP" },
               { x: 450, l: "Chrome ext" },
-              { x: 590, l: "VS Code"    },
+              { x: 590, l: "VS Code" },
               { x: 730, l: "Python SDK" },
             ].map((n) => (
               <g key={n.l}>
                 <rect x={n.x} y={50} width={120} height={44} rx={6} className="n" />
-                <text x={n.x + 60} y={77} textAnchor="middle" className="lbl-sm">{n.l}</text>
+                <text x={n.x + 60} y={77} textAnchor="middle" className="lbl-sm">
+                  {n.l}
+                </text>
               </g>
             ))}
 
@@ -72,9 +89,15 @@ export function ArchitectureDiagram() {
 
             {/* Core + browser + cloud row */}
             <rect x="140" y="200" width="600" height="70" rx={8} className="n-core" />
-            <text x="440" y="226" textAnchor="middle" className="lbl">@webfetch/core</text>
-            <text x="440" y="244" textAnchor="middle" className="sub-core">federation · license rank · dedupe · pHash · cache</text>
-            <text x="440" y="260" textAnchor="middle" className="sub">typescript · MIT · 241 tests</text>
+            <text x="440" y="226" textAnchor="middle" className="lbl">
+              @webfetch/core
+            </text>
+            <text x="440" y="244" textAnchor="middle" className="sub-core">
+              federation · license rank · dedupe · pHash · cache
+            </text>
+            <text x="440" y="260" textAnchor="middle" className="sub">
+              typescript · MIT · 241 tests
+            </text>
 
             {/* branches */}
             <path d="M 240 270 L 240 310" className="wire-flow" markerEnd="url(#arr)" />
@@ -82,24 +105,41 @@ export function ArchitectureDiagram() {
             <path d="M 640 270 L 640 310" className="wire-flow" markerEnd="url(#arr)" />
 
             {[
-              { x: 140, l: "browser layer",      s: "Rebrowser · Camoufox" },
-              { x: 340, l: "provider adapters",  s: "24 sources · normalized" },
-              { x: 540, l: "cloud router",       s: "auth · quota · meter" },
+              { x: 140, l: "browser layer", s: "Rebrowser · Camoufox" },
+              { x: 340, l: "provider adapters", s: "24 sources · normalized" },
+              { x: 540, l: "cloud router", s: "auth · quota · meter" },
             ].map((n) => (
               <g key={n.l}>
                 <rect x={n.x} y={316} width={200} height={50} rx={8} className="n-sub" />
-                <text x={n.x + 100} y={338} textAnchor="middle" className="lbl-sm">{n.l}</text>
-                <text x={n.x + 100} y={354} textAnchor="middle" className="sub">{n.s}</text>
+                <text x={n.x + 100} y={338} textAnchor="middle" className="lbl-sm">
+                  {n.l}
+                </text>
+                <text x={n.x + 100} y={354} textAnchor="middle" className="sub">
+                  {n.s}
+                </text>
               </g>
             ))}
 
             {/* provider endpoints row */}
-            <rect x="30" y="400" width="820" height="70" rx={8} fill="url(#dots)" stroke="#2a2a30" />
-            <text x="440" y="424" textAnchor="middle" className="lbl-sm">24 provider endpoints</text>
-            <text x="440" y="442" textAnchor="middle" className="sub">
-              wikimedia · openverse · unsplash · pexels · nasa · smithsonian · met · loc · spotify · musicbrainz · brave · bing · serpapi · ...
+            <rect
+              x="30"
+              y="400"
+              width="820"
+              height="70"
+              rx={8}
+              fill="url(#dots)"
+              stroke="#2a2a30"
+            />
+            <text x="440" y="424" textAnchor="middle" className="lbl-sm">
+              24 provider endpoints
             </text>
-            <text x="440" y="460" textAnchor="middle" className="sub">api.getwebfetch.com · app.getwebfetch.com</text>
+            <text x="440" y="442" textAnchor="middle" className="sub">
+              wikimedia · openverse · unsplash · pexels · nasa · smithsonian · met · loc · spotify ·
+              musicbrainz · brave · bing · serpapi · ...
+            </text>
+            <text x="440" y="460" textAnchor="middle" className="sub">
+              api.getwebfetch.com · app.getwebfetch.com
+            </text>
           </svg>
         </div>
       </FadeUp>

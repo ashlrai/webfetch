@@ -22,9 +22,9 @@ export function Hero() {
             </h1>
 
             <p className="text-[18px] md:text-[20px] text-[var(--color-fg-muted)] max-w-xl leading-[1.55] -mt-1">
-              The license-first image layer for AI agents and humans. One API,
-              CLI, and MCP that federates 24 licensed sources, falls through to
-              a human-like browser, and always ships attribution.
+              The license-first image layer for AI agents and humans. One API, CLI, and MCP that
+              federates 24 licensed sources, falls through to a human-like browser, and always ships
+              attribution.
             </p>
 
             <div className="pt-1">

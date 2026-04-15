@@ -9,13 +9,20 @@ import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
-async function getToken(clientId: string, clientSecret: string, fetcher: typeof fetch): Promise<string> {
+async function getToken(
+  clientId: string,
+  clientSecret: string,
+  fetcher: typeof fetch,
+): Promise<string> {
   if (tokenCache && tokenCache.expiresAt > Date.now() + 30_000) return tokenCache.token;
   const body = new URLSearchParams({ grant_type: "client_credentials" });
   const auth = btoa(`${clientId}:${clientSecret}`);
   const resp = await fetcher("https://accounts.spotify.com/api/token", {
     method: "POST",
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body,
   });
   if (!resp.ok) throw new Error(`spotify token http ${resp.status}`);
@@ -35,13 +42,11 @@ export const spotify: Provider = {
     const fetcher = opts.fetcher ?? fetch;
     await getBucket("spotify").take();
     const token = await getToken(id, secret, fetcher);
-    const url =
-      "https://api.spotify.com/v1/search?" +
-      new URLSearchParams({
-        q: query,
-        type: "artist,album",
-        limit: String(Math.min(opts.maxPerProvider ?? 10, 20)),
-      });
+    const url = `https://api.spotify.com/v1/search?${new URLSearchParams({
+      q: query,
+      type: "artist,album",
+      limit: String(Math.min(opts.maxPerProvider ?? 10, 20)),
+    })}`;
     const resp = await fetcher(url, {
       headers: { Authorization: `Bearer ${token}` },
       signal: opts.signal,

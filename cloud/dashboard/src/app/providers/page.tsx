@@ -1,9 +1,9 @@
-import { redirect } from "next/navigation";
-import ProviderRow from "@/components/ProviderRow";
-import PageHeader from "@/components/PageHeader";
 import { Icon } from "@/components/Icon";
-import { getServerSession } from "@/lib/auth";
+import PageHeader from "@/components/PageHeader";
+import ProviderRow from "@/components/ProviderRow";
 import { getProviders } from "@/lib/api";
+import { getServerSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 

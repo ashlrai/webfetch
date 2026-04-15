@@ -1,7 +1,7 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { SESSION_COOKIE } from "../src/auth.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
-import { SESSION_COOKIE } from "../src/auth.ts";
 
 const cookie = (t: string) => `${SESSION_COOKIE}=${encodeURIComponent(t)}`;
 
@@ -30,7 +30,7 @@ describe("dashboard (cookie auth) routes", () => {
       makeExecCtx(),
     );
     expect(r1.status).toBe(201);
-    const body = await r1.json() as { data: { secret: string; prefix: string } };
+    const body = (await r1.json()) as { data: { secret: string; prefix: string } };
     expect(body.data.secret.startsWith("wf_live_")).toBe(true);
 
     const r2 = await app.fetch(
@@ -40,7 +40,7 @@ describe("dashboard (cookie auth) routes", () => {
       env,
       makeExecCtx(),
     );
-    const list = await r2.json() as { data: { keys: Array<{ prefix: string }> } };
+    const list = (await r2.json()) as { data: { keys: Array<{ prefix: string }> } };
     expect(list.data.keys.length).toBeGreaterThanOrEqual(1);
     // No raw secret in list responses.
     expect(JSON.stringify(list)).not.toContain(body.data.secret);
@@ -57,7 +57,7 @@ describe("dashboard (cookie auth) routes", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(200);
-    const body = await res.json() as { data: { snapshot: { plan: string; included: number } } };
+    const body = (await res.json()) as { data: { snapshot: { plan: string; included: number } } };
     expect(body.data.snapshot.plan).toBe("pro");
     expect(body.data.snapshot.included).toBe(10_000);
   });
@@ -76,7 +76,7 @@ describe("dashboard (cookie auth) routes", () => {
     const { env } = makeEnv();
     const res = await app.fetch(new Request("http://x/providers"), env, makeExecCtx());
     expect(res.status).toBe(200);
-    const body = await res.json() as { data: { endpoints: string[] } };
+    const body = (await res.json()) as { data: { endpoints: string[] } };
     expect(body.data.endpoints).toContain("/v1/search");
   });
 });

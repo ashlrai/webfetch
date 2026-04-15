@@ -100,7 +100,17 @@ function ensureRoot(): ShadowRoot {
   return root;
 }
 
-const PROVIDERS = ["wikimedia", "openverse", "unsplash", "pexels", "pixabay", "itunes", "musicbrainz-caa", "spotify", "brave"];
+const PROVIDERS = [
+  "wikimedia",
+  "openverse",
+  "unsplash",
+  "pexels",
+  "pixabay",
+  "itunes",
+  "musicbrainz-caa",
+  "spotify",
+  "brave",
+];
 const selected = new Set<string>();
 
 function wire(root: ShadowRoot) {
@@ -111,8 +121,13 @@ function wire(root: ShadowRoot) {
     c.className = "chip";
     c.textContent = p;
     c.addEventListener("click", () => {
-      if (selected.has(p)) { selected.delete(p); c.classList.remove("on"); }
-      else { selected.add(p); c.classList.add("on"); }
+      if (selected.has(p)) {
+        selected.delete(p);
+        c.classList.remove("on");
+      } else {
+        selected.add(p);
+        c.classList.add("on");
+      }
     });
     chips.appendChild(c);
   }
@@ -128,13 +143,19 @@ async function doSearch(root: ShadowRoot) {
   const policy = (root.querySelector("#policy") as HTMLSelectElement).value;
   const status = root.querySelector("#status") as HTMLElement;
   const grid = root.querySelector("#grid") as HTMLElement;
-  if (!q) { status.textContent = "type a query"; return; }
+  if (!q) {
+    status.textContent = "type a query";
+    return;
+  }
   status.textContent = "searching...";
   grid.innerHTML = "";
   const body: any = { query: q, licensePolicy: policy };
   if (selected.size) body.providers = [...selected];
   const res = await chrome.runtime.sendMessage({ type: "webfetch:search", body });
-  if (!res?.ok) { status.textContent = `error: ${res?.error ?? "unknown"}`; return; }
+  if (!res?.ok) {
+    status.textContent = `error: ${res?.error ?? "unknown"}`;
+    return;
+  }
   const cands: Candidate[] = res.data?.candidates ?? [];
   status.textContent = `${cands.length} results`;
   for (const c of cands) {
@@ -171,7 +192,9 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === "webfetch:toggle-sidebar") toggle();
 });
 
-function escapeAttr(s: string): string { return s.replace(/"/g, "&quot;"); }
+function escapeAttr(s: string): string {
+  return s.replace(/"/g, "&quot;");
+}
 function escapeText(s: string): string {
   return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
 }

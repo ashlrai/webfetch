@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 /**
  * Signature motion for webfetch: 12px translate + 200ms opacity on scroll-in.
@@ -41,11 +41,7 @@ export function FadeUp({
   }, [delay]);
 
   return (
-    <div
-      ref={ref}
-      data-visible={visible ? "true" : "false"}
-      className={`wf-fade-up ${className}`}
-    >
+    <div ref={ref} data-visible={visible ? "true" : "false"} className={`wf-fade-up ${className}`}>
       {children}
     </div>
   );

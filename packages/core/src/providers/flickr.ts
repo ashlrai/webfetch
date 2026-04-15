@@ -12,16 +12,48 @@ import type { ImageCandidate, License, Provider, SearchOptions } from "../types.
 
 // See https://www.flickr.com/services/api/flickr.photos.licenses.getInfo.html
 const FLICKR_LICENSES: Record<string, { license: License; url: string; name: string }> = {
-  "1": { license: "CC_BY_SA", url: "https://creativecommons.org/licenses/by-nc-sa/2.0/", name: "CC BY-NC-SA 2.0" },
-  "2": { license: "UNKNOWN", url: "https://creativecommons.org/licenses/by-nc/2.0/", name: "CC BY-NC 2.0" },
-  "3": { license: "UNKNOWN", url: "https://creativecommons.org/licenses/by-nc-nd/2.0/", name: "CC BY-NC-ND 2.0" },
+  "1": {
+    license: "CC_BY_SA",
+    url: "https://creativecommons.org/licenses/by-nc-sa/2.0/",
+    name: "CC BY-NC-SA 2.0",
+  },
+  "2": {
+    license: "UNKNOWN",
+    url: "https://creativecommons.org/licenses/by-nc/2.0/",
+    name: "CC BY-NC 2.0",
+  },
+  "3": {
+    license: "UNKNOWN",
+    url: "https://creativecommons.org/licenses/by-nc-nd/2.0/",
+    name: "CC BY-NC-ND 2.0",
+  },
   "4": { license: "CC_BY", url: "https://creativecommons.org/licenses/by/2.0/", name: "CC BY 2.0" },
-  "5": { license: "CC_BY_SA", url: "https://creativecommons.org/licenses/by-sa/2.0/", name: "CC BY-SA 2.0" },
-  "6": { license: "UNKNOWN", url: "https://creativecommons.org/licenses/by-nd/2.0/", name: "CC BY-ND 2.0" },
-  "7": { license: "PUBLIC_DOMAIN", url: "https://www.flickr.com/commons/usage/", name: "No known copyright restrictions" },
-  "8": { license: "PUBLIC_DOMAIN", url: "https://www.usa.gov/government-works", name: "United States Government Work" },
+  "5": {
+    license: "CC_BY_SA",
+    url: "https://creativecommons.org/licenses/by-sa/2.0/",
+    name: "CC BY-SA 2.0",
+  },
+  "6": {
+    license: "UNKNOWN",
+    url: "https://creativecommons.org/licenses/by-nd/2.0/",
+    name: "CC BY-ND 2.0",
+  },
+  "7": {
+    license: "PUBLIC_DOMAIN",
+    url: "https://www.flickr.com/commons/usage/",
+    name: "No known copyright restrictions",
+  },
+  "8": {
+    license: "PUBLIC_DOMAIN",
+    url: "https://www.usa.gov/government-works",
+    name: "United States Government Work",
+  },
   "9": { license: "CC0", url: "https://creativecommons.org/publicdomain/zero/1.0/", name: "CC0" },
-  "10": { license: "PUBLIC_DOMAIN", url: "https://creativecommons.org/publicdomain/mark/1.0/", name: "Public Domain Mark" },
+  "10": {
+    license: "PUBLIC_DOMAIN",
+    url: "https://creativecommons.org/publicdomain/mark/1.0/",
+    name: "Public Domain Mark",
+  },
 };
 
 // Only safe (no NC/ND) license ids.
@@ -37,20 +69,18 @@ export const flickr: Provider = {
 
     await getBucket("flickr").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.flickr.com/services/rest/?" +
-      new URLSearchParams({
-        method: "flickr.photos.search",
-        api_key: key,
-        text: query,
-        license: SAFE_LICENSE_IDS,
-        content_type: "1", // photos
-        safe_search: opts.safeSearch === "off" ? "3" : opts.safeSearch === "moderate" ? "2" : "1",
-        extras: "license,owner_name,url_l,url_o,url_c,url_z",
-        per_page: String(opts.maxPerProvider ?? 10),
-        format: "json",
-        nojsoncallback: "1",
-      });
+    const url = `https://api.flickr.com/services/rest/?${new URLSearchParams({
+      method: "flickr.photos.search",
+      api_key: key,
+      text: query,
+      license: SAFE_LICENSE_IDS,
+      content_type: "1", // photos
+      safe_search: opts.safeSearch === "off" ? "3" : opts.safeSearch === "moderate" ? "2" : "1",
+      extras: "license,owner_name,url_l,url_o,url_c,url_z",
+      per_page: String(opts.maxPerProvider ?? 10),
+      format: "json",
+      nojsoncallback: "1",
+    })}`;
 
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`flickr http ${resp.status}`);
@@ -62,7 +92,11 @@ export const flickr: Provider = {
     for (const p of photos) {
       const best = p.url_o ?? p.url_l ?? p.url_c ?? p.url_z;
       if (!best) continue;
-      const licInfo = FLICKR_LICENSES[String(p.license)] ?? { license: "UNKNOWN", url: undefined, name: "unknown" };
+      const licInfo = FLICKR_LICENSES[String(p.license)] ?? {
+        license: "UNKNOWN",
+        url: undefined,
+        name: "unknown",
+      };
       if (licInfo.license === "UNKNOWN") continue; // safety: skip ambiguous
       const sourcePageUrl = `https://www.flickr.com/photos/${p.owner}/${p.id}`;
       out.push({

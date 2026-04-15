@@ -4,15 +4,15 @@
  */
 
 import { Hono } from "hono";
-import type { Env } from "../env.ts";
-import { getSessionUser } from "../auth.ts";
-import { roleFor, canCreateKeys } from "../teams.ts";
-import { createKey, listKeys, revokeKey } from "../keys.ts";
-import { ok, err, parseJson } from "../responses.ts";
-import { createKeySchema } from "../schemas.ts";
-import { audit } from "../audit.ts";
-import { usageSnapshot } from "../quota.ts";
 import type { PlanId } from "../../../shared/pricing.ts";
+import { audit } from "../audit.ts";
+import { getSessionUser } from "../auth.ts";
+import type { Env } from "../env.ts";
+import { createKey, listKeys, revokeKey } from "../keys.ts";
+import { usageSnapshot } from "../quota.ts";
+import { err, ok, parseJson } from "../responses.ts";
+import { createKeySchema } from "../schemas.ts";
+import { canCreateKeys, roleFor } from "../teams.ts";
 
 export const keysRouter = new Hono<{ Bindings: Env }>();
 
@@ -30,8 +30,9 @@ keysRouter.post("/keys", async (c) => {
   const parsed = await parseJson(c, createKeySchema);
   if (!parsed.ok) return parsed.response;
 
-  const ws = await c.env.DB.prepare(`SELECT plan FROM workspaces WHERE id = ?1`)
-    .bind(workspaceId).first<{ plan: PlanId }>();
+  const ws = await c.env.DB.prepare("SELECT plan FROM workspaces WHERE id = ?1")
+    .bind(workspaceId)
+    .first<{ plan: PlanId }>();
   if (!ws) return err(c, "workspace not found", 404);
 
   const created = await createKey(c.env, {
@@ -90,8 +91,9 @@ keysRouter.get("/usage", async (c) => {
   const role = await roleFor(c.env, workspaceId, user.userId);
   if (!role) return err(c, "forbidden", 403);
 
-  const ws = await c.env.DB.prepare(`SELECT plan FROM workspaces WHERE id = ?1`)
-    .bind(workspaceId).first<{ plan: PlanId }>();
+  const ws = await c.env.DB.prepare("SELECT plan FROM workspaces WHERE id = ?1")
+    .bind(workspaceId)
+    .first<{ plan: PlanId }>();
   if (!ws) return err(c, "workspace not found", 404);
 
   const snapshot = await usageSnapshot(c.env, workspaceId, ws.plan);
@@ -101,7 +103,9 @@ keysRouter.get("/usage", async (c) => {
        FROM usage_rows
       WHERE workspace_id = ?1 AND ts >= ?2
       ORDER BY ts DESC LIMIT 100`,
-  ).bind(workspaceId, snapshot.windowStart).all();
+  )
+    .bind(workspaceId, snapshot.windowStart)
+    .all();
 
   return ok(c, { snapshot, recent: recent.results ?? [] });
 });

@@ -7,8 +7,8 @@
  * so Chrome can load them independently.
  */
 
-import { mkdirSync, cpSync, rmSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const root = import.meta.dir;
 const out = join(root, "dist");

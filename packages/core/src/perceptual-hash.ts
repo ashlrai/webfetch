@@ -134,7 +134,7 @@ function fallbackAHash(bytes: Uint8Array): string {
   let total = 0;
   for (let i = 0; i < bytes.length; i++) {
     const w = Math.floor((i * windows) / bytes.length);
-    sums[w]! += bytes[i]!;
+    sums[w]! += bytes[i];
     counts[w]! += 1;
     total += bytes[i]!;
   }

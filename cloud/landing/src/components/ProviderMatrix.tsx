@@ -1,14 +1,7 @@
 import { FadeUp } from "./FadeUp";
 
 type Auth = "none" | "key" | "oauth" | "cloud";
-type Stamp =
-  | "CC0"
-  | "CC-BY"
-  | "CC-BY-SA"
-  | "PUBLIC DOMAIN"
-  | "EDITORIAL"
-  | "MIXED"
-  | "UNKNOWN";
+type Stamp = "CC0" | "CC-BY" | "CC-BY-SA" | "PUBLIC DOMAIN" | "EDITORIAL" | "MIXED" | "UNKNOWN";
 
 type Provider = {
   name: string;
@@ -20,30 +13,30 @@ type Provider = {
 };
 
 const PROVIDERS: Provider[] = [
-  { name: "wikimedia",       stamp: "CC-BY-SA",     auth: "none",  rate: "generous" },
-  { name: "openverse",       stamp: "CC-BY",        auth: "none",  rate: "generous" },
-  { name: "unsplash",        stamp: "CC0",          auth: "key",   rate: "50/hr" },
-  { name: "pexels",          stamp: "CC0",          auth: "key",   rate: "200/hr" },
-  { name: "pixabay",         stamp: "CC0",          auth: "key",   rate: "100/min" },
-  { name: "nasa",            stamp: "PUBLIC DOMAIN", auth: "key",   rate: "1000/hr" },
-  { name: "smithsonian",     stamp: "CC0",          auth: "key",   rate: "generous" },
-  { name: "europeana",       stamp: "MIXED",        auth: "key",   rate: "generous" },
-  { name: "met-museum",      stamp: "CC0",          auth: "none",  rate: "80/sec" },
-  { name: "loc",             stamp: "PUBLIC DOMAIN", auth: "none",  rate: "generous" },
-  { name: "flickr-cc",       stamp: "CC-BY",        auth: "key",   rate: "3600/hr" },
-  { name: "rijksmuseum",     stamp: "PUBLIC DOMAIN", auth: "key",   rate: "10k/day" },
-  { name: "nypl",            stamp: "PUBLIC DOMAIN", auth: "key",   rate: "generous" },
-  { name: "harvard-art",     stamp: "CC0",          auth: "key",   rate: "generous" },
-  { name: "itunes",          stamp: "EDITORIAL",    auth: "none",  rate: "20/min" },
-  { name: "musicbrainz-caa", stamp: "EDITORIAL",    auth: "none",  rate: "1/sec" },
-  { name: "spotify",         stamp: "EDITORIAL",    auth: "oauth", rate: "180/min" },
-  { name: "youtube-thumb",   stamp: "EDITORIAL",    auth: "none",  rate: "generous" },
-  { name: "bandcamp",        stamp: "EDITORIAL",    auth: "none",  rate: "generous" },
-  { name: "deezer",          stamp: "EDITORIAL",    auth: "none",  rate: "50/5sec" },
-  { name: "brave",           stamp: "UNKNOWN",      auth: "key",   rate: "2k/mo", optIn: true },
-  { name: "bing",            stamp: "UNKNOWN",      auth: "key",   rate: "3/sec", optIn: true },
-  { name: "serpapi",         stamp: "UNKNOWN",      auth: "key",   rate: "100/mo", optIn: true },
-  { name: "browser",         stamp: "UNKNOWN",      auth: "cloud", rate: "paid",   optIn: true },
+  { name: "wikimedia", stamp: "CC-BY-SA", auth: "none", rate: "generous" },
+  { name: "openverse", stamp: "CC-BY", auth: "none", rate: "generous" },
+  { name: "unsplash", stamp: "CC0", auth: "key", rate: "50/hr" },
+  { name: "pexels", stamp: "CC0", auth: "key", rate: "200/hr" },
+  { name: "pixabay", stamp: "CC0", auth: "key", rate: "100/min" },
+  { name: "nasa", stamp: "PUBLIC DOMAIN", auth: "key", rate: "1000/hr" },
+  { name: "smithsonian", stamp: "CC0", auth: "key", rate: "generous" },
+  { name: "europeana", stamp: "MIXED", auth: "key", rate: "generous" },
+  { name: "met-museum", stamp: "CC0", auth: "none", rate: "80/sec" },
+  { name: "loc", stamp: "PUBLIC DOMAIN", auth: "none", rate: "generous" },
+  { name: "flickr-cc", stamp: "CC-BY", auth: "key", rate: "3600/hr" },
+  { name: "rijksmuseum", stamp: "PUBLIC DOMAIN", auth: "key", rate: "10k/day" },
+  { name: "nypl", stamp: "PUBLIC DOMAIN", auth: "key", rate: "generous" },
+  { name: "harvard-art", stamp: "CC0", auth: "key", rate: "generous" },
+  { name: "itunes", stamp: "EDITORIAL", auth: "none", rate: "20/min" },
+  { name: "musicbrainz-caa", stamp: "EDITORIAL", auth: "none", rate: "1/sec" },
+  { name: "spotify", stamp: "EDITORIAL", auth: "oauth", rate: "180/min" },
+  { name: "youtube-thumb", stamp: "EDITORIAL", auth: "none", rate: "generous" },
+  { name: "bandcamp", stamp: "EDITORIAL", auth: "none", rate: "generous" },
+  { name: "deezer", stamp: "EDITORIAL", auth: "none", rate: "50/5sec" },
+  { name: "brave", stamp: "UNKNOWN", auth: "key", rate: "2k/mo", optIn: true },
+  { name: "bing", stamp: "UNKNOWN", auth: "key", rate: "3/sec", optIn: true },
+  { name: "serpapi", stamp: "UNKNOWN", auth: "key", rate: "100/mo", optIn: true },
+  { name: "browser", stamp: "UNKNOWN", auth: "cloud", rate: "paid", optIn: true },
 ];
 
 function stampClass(s: Stamp) {
@@ -93,8 +86,8 @@ export function ProviderMatrix() {
           </div>
         </div>
         <p className="mt-4 text-[var(--color-fg-dim)] max-w-2xl leading-relaxed">
-          Licensed sources rank first. Editorial-licensed sources next. UNKNOWN
-          providers are strictly opt-in and always emit an attribution sidecar.
+          Licensed sources rank first. Editorial-licensed sources next. UNKNOWN providers are
+          strictly opt-in and always emit an attribution sidecar.
         </p>
       </FadeUp>
 
@@ -110,9 +103,7 @@ export function ProviderMatrix() {
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <AuthIcon auth={p.auth} />
-                <span className="text-[10px] font-mono text-[var(--color-fg-dim)]">
-                  {p.rate}
-                </span>
+                <span className="text-[10px] font-mono text-[var(--color-fg-dim)]">{p.rate}</span>
               </div>
               {p.optIn && (
                 <span className="absolute bottom-1.5 left-3 text-[9px] font-mono text-[var(--color-amber)] uppercase tracking-wider">
@@ -136,10 +127,7 @@ export function ProviderMatrix() {
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-2">
-      <span
-        className="inline-block w-2 h-2 rounded-sm"
-        style={{ background: color }}
-      />
+      <span className="inline-block w-2 h-2 rounded-sm" style={{ background: color }} />
       {label}
     </span>
   );

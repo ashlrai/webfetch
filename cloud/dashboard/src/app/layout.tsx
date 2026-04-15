@@ -1,8 +1,8 @@
+import Shell from "@/components/Shell";
+import { getOverview } from "@/lib/api";
+import { getServerSession } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Shell from "@/components/Shell";
-import { getServerSession } from "@/lib/auth";
-import { getOverview } from "@/lib/api";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });

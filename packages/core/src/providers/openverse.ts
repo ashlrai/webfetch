@@ -14,14 +14,12 @@ export const openverse: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("openverse").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.openverse.org/v1/images/?" +
-      new URLSearchParams({
-        q: query,
-        page_size: String(opts.maxPerProvider ?? 10),
-        license_type: "commercial,modification",
-        mature: opts.safeSearch === "off" ? "true" : "false",
-      });
+    const url = `https://api.openverse.org/v1/images/?${new URLSearchParams({
+      q: query,
+      page_size: String(opts.maxPerProvider ?? 10),
+      license_type: "commercial,modification",
+      mature: opts.safeSearch === "off" ? "true" : "false",
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`openverse http ${resp.status}`);
     const json = (await resp.json()) as any;

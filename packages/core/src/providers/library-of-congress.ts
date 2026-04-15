@@ -15,14 +15,12 @@ export const libraryOfCongress: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("library-of-congress").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://www.loc.gov/search/?" +
-      new URLSearchParams({
-        fo: "json",
-        q: query,
-        "fa": "original-format:photo, print, drawing|original-format:film, video",
-        c: String(opts.maxPerProvider ?? 25),
-      });
+    const url = `https://www.loc.gov/search/?${new URLSearchParams({
+      fo: "json",
+      q: query,
+      fa: "original-format:photo, print, drawing|original-format:film, video",
+      c: String(opts.maxPerProvider ?? 25),
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`library-of-congress http ${resp.status}`);
     const json = (await resp.json()) as any;
@@ -38,7 +36,8 @@ export const libraryOfCongress: Provider = {
         thumbnailUrl: imgUrl,
         source: "library-of-congress",
         sourcePageUrl: r.url ?? r.id,
-        title: typeof r.title === "string" ? r.title : Array.isArray(r.title) ? r.title[0] : undefined,
+        title:
+          typeof r.title === "string" ? r.title : Array.isArray(r.title) ? r.title[0] : undefined,
         author: pickAuthor(r),
         license,
         licenseUrl: typeof r.rights === "string" ? r.rights : undefined,
@@ -55,7 +54,10 @@ function pickImageUrl(r: any): string | undefined {
   if (typeof iu === "string") return iu;
   if (Array.isArray(iu) && iu.length > 0) {
     // Pick the largest-looking entry (longest string usually == biggest variant).
-    return iu.reduce((a: string, b: string) => (String(b).length > String(a).length ? b : a), iu[0]);
+    return iu.reduce(
+      (a: string, b: string) => (String(b).length > String(a).length ? b : a),
+      iu[0],
+    );
   }
   return undefined;
 }
@@ -73,7 +75,10 @@ function mapRights(raw: unknown): License {
   const s = String(Array.isArray(raw) ? raw[0] : raw).toLowerCase();
   if (s.includes("no known restrictions") || s.includes("public domain")) return "PUBLIC_DOMAIN";
   if (s.includes("cc0") || s.includes("publicdomain/zero")) return "CC0";
-  if (s.includes("rights") && (s.includes("restrict") || s.includes("may apply") || s.includes("copyright")))
+  if (
+    s.includes("rights") &&
+    (s.includes("restrict") || s.includes("may apply") || s.includes("copyright"))
+  )
     return "UNKNOWN";
   // Conservative: when the field is present but ambiguous, return UNKNOWN.
   return "UNKNOWN";

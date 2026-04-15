@@ -49,10 +49,7 @@ describe("router.pickStack", () => {
 
   it("throws when no stack is available", async () => {
     await expect(
-      pickStack(
-        { userConsent: true },
-        { env: {}, hasModule: async () => false },
-      ),
+      pickStack({ userConsent: true }, { env: {}, hasModule: async () => false }),
     ).rejects.toThrow(/playwright/);
   });
 });

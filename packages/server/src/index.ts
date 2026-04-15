@@ -12,9 +12,9 @@
  *      user's default browser so they can click "Copy token".
  */
 
+import { tryOpenBrowser } from "./auth-display.ts";
 import { ensureToken } from "./auth.ts";
 import { startServer } from "./server.ts";
-import { tryOpenBrowser } from "./auth-display.ts";
 
 interface Args {
   port: number;
@@ -32,7 +32,9 @@ function parseArgs(argv: string[]): Args {
     else if (a === "--no-open") out.open = false;
     else if (a === "--regenerate-token") out.regenerate = true;
     else if (a === "--help" || a === "-h") {
-      console.log("webfetch-server [--port 7600] [--host 127.0.0.1] [--no-open] [--regenerate-token]");
+      console.log(
+        "webfetch-server [--port 7600] [--host 127.0.0.1] [--no-open] [--regenerate-token]",
+      );
       process.exit(0);
     }
   }
@@ -56,7 +58,9 @@ console.log(`auth display: ${base}/auth/display`);
 if (args.open) tryOpenBrowser(`${base}/auth/display`);
 
 function shutdown() {
-  try { server.stop(); } catch {}
+  try {
+    server.stop();
+  } catch {}
   process.exit(0);
 }
 process.on("SIGINT", shutdown);

@@ -19,14 +19,13 @@ export const bing: Provider = {
     if (!key) throw new Error("BING_API_KEY missing");
     await getBucket("bing").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://api.bing.microsoft.com/v7.0/images/search?" +
-      new URLSearchParams({
-        q: query,
-        count: String(opts.maxPerProvider ?? 10),
-        safeSearch: opts.safeSearch === "off" ? "Off" : opts.safeSearch === "moderate" ? "Moderate" : "Strict",
-        license: "ShareCommercially",
-      });
+    const url = `https://api.bing.microsoft.com/v7.0/images/search?${new URLSearchParams({
+      q: query,
+      count: String(opts.maxPerProvider ?? 10),
+      safeSearch:
+        opts.safeSearch === "off" ? "Off" : opts.safeSearch === "moderate" ? "Moderate" : "Strict",
+      license: "ShareCommercially",
+    })}`;
     const resp = await fetcher(url, {
       headers: { "Ocp-Apim-Subscription-Key": key },
       signal: opts.signal,

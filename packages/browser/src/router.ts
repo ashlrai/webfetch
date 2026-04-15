@@ -12,16 +12,12 @@
  * fully control behavior via env vars + a stub `hasModule` probe.
  */
 
-import {
-  BrowserDependencyError,
-  type BrowserOptions,
-  type StackId,
-} from "./types.ts";
 import { brightdataStack, buildBrightdataWsEndpoint } from "./stacks/brightdata.ts";
-import { rebrowserStack } from "./stacks/rebrowser.ts";
 import { camoufoxStack } from "./stacks/camoufox.ts";
-import { vanillaStack } from "./stacks/vanilla.ts";
 import type { Stack } from "./stacks/contract.ts";
+import { rebrowserStack } from "./stacks/rebrowser.ts";
+import { vanillaStack } from "./stacks/vanilla.ts";
+import { BrowserDependencyError, type BrowserOptions, type StackId } from "./types.ts";
 
 export const STACKS: Record<StackId, Stack> = {
   vanilla: vanillaStack,
@@ -48,10 +44,7 @@ async function defaultHasModule(name: string): Promise<boolean> {
   }
 }
 
-export async function pickStack(
-  opts: BrowserOptions,
-  routerEnv: RouterEnv = {},
-): Promise<StackId> {
+export async function pickStack(opts: BrowserOptions, routerEnv: RouterEnv = {}): Promise<StackId> {
   if (opts.stack) return opts.stack;
   const env = routerEnv.env ?? process.env;
   const hasModule = routerEnv.hasModule ?? defaultHasModule;

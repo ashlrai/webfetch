@@ -1,8 +1,8 @@
-import { describe, test, expect } from "bun:test";
-import { app } from "../src/index.ts";
-import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
+import { describe, expect, test } from "bun:test";
 import { SESSION_COOKIE } from "../src/auth.ts";
-import { canManageBilling, canManageMembers, canCreateKeys } from "../src/teams.ts";
+import { app } from "../src/index.ts";
+import { canCreateKeys, canManageBilling, canManageMembers } from "../src/teams.ts";
+import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
 
 const cookie = (t: string) => `${SESSION_COOKIE}=${encodeURIComponent(t)}`;
 
@@ -35,22 +35,23 @@ describe("workspaces + teams", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(201);
-    const body = await res.json() as { ok: boolean; data: { slug: string } };
+    const body = (await res.json()) as { ok: boolean; data: { slug: string } };
     expect(body.data.slug).toBe("new-corp");
   });
 
   test("duplicate slug → 409", async () => {
     const { env } = makeEnv();
     const { sessionToken } = await seedWorkspaceWithKey(env);
-    const mk = () => app.fetch(
-      new Request("http://x/v1/workspaces", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie: cookie(sessionToken) },
-        body: JSON.stringify({ name: "Dup", slug: "dup-slug" }),
-      }),
-      env,
-      makeExecCtx(),
-    );
+    const mk = () =>
+      app.fetch(
+        new Request("http://x/v1/workspaces", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: cookie(sessionToken) },
+          body: JSON.stringify({ name: "Dup", slug: "dup-slug" }),
+        }),
+        env,
+        makeExecCtx(),
+      );
     const a = await mk();
     expect(a.status).toBe(201);
     const b = await mk();
@@ -70,11 +71,11 @@ describe("workspaces + teams", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(201);
-    const body = await res.json() as { data: { acceptUrl: string } };
+    const body = (await res.json()) as { data: { acceptUrl: string } };
     expect(body.data.acceptUrl).toContain("/invite/");
-    const row = await env.DB.prepare(
-      `SELECT email, role FROM invitations WHERE workspace_id = ?1`,
-    ).bind(workspaceId).first<{ email: string; role: string }>();
+    const row = await env.DB.prepare("SELECT email, role FROM invitations WHERE workspace_id = ?1")
+      .bind(workspaceId)
+      .first<{ email: string; role: string }>();
     expect(row?.email).toBe("pal@test.dev");
   });
 

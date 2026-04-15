@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { AuditEntry, UsageRow } from "@shared/types";
-import { formatRelative, toCsv } from "@/lib/format";
 import { Icon } from "@/components/Icon";
+import { formatRelative, toCsv } from "@/lib/format";
+import type { AuditEntry, UsageRow } from "@shared/types";
+import { useEffect, useMemo, useState } from "react";
 
 type Tab = "api" | "admin";
 
@@ -17,7 +17,9 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
   // Close drawer on escape
   useEffect(() => {
     if (!detail) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDetail(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetail(null);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [detail]);
@@ -96,11 +98,17 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text-mute)" }} />
+            <Icon
+              name="search"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--text-mute)" }}
+            />
             <input
               className="input"
               style={{ paddingLeft: 28, width: 220 }}
-              placeholder={tab === "api" ? "Search endpoint or request ID…" : "Search action or target…"}
+              placeholder={
+                tab === "api" ? "Search endpoint or request ID…" : "Search action or target…"
+              }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -127,7 +135,9 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
             >
               <option value="all">All actions</option>
               {uniqueActions.map((a) => (
-                <option key={a} value={a}>{a}</option>
+                <option key={a} value={a}>
+                  {a}
+                </option>
               ))}
             </select>
           )}
@@ -162,42 +172,60 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
             {tab === "api" ? (
               filteredUsage.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}>
+                  <td
+                    colSpan={5}
+                    style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}
+                  >
                     No rows match this filter.
                   </td>
                 </tr>
               ) : (
                 filteredUsage.map((u) => (
                   <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setDetail(u)}>
-                    <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>{formatRelative(u.ts)}</td>
+                    <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                      {formatRelative(u.ts)}
+                    </td>
                     <td className="mono">{u.endpoint}</td>
                     <td>
-                      <span className={`badge ${u.status >= 500 ? "badge-err" : u.status >= 400 ? "badge-warn" : "badge-ok"}`}>
+                      <span
+                        className={`badge ${u.status >= 500 ? "badge-err" : u.status >= 400 ? "badge-warn" : "badge-ok"}`}
+                      >
                         {u.status}
                       </span>
                     </td>
                     <td className="mono text-[12px]">{u.units}</td>
-                    <td className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>{u.requestId}</td>
+                    <td className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
+                      {u.requestId}
+                    </td>
                   </tr>
                 ))
               )
             ) : filteredAudit.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}>
+                <td
+                  colSpan={5}
+                  style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}
+                >
                   No events match this filter.
                 </td>
               </tr>
             ) : (
               filteredAudit.map((a) => (
                 <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => setDetail(a)}>
-                  <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>{formatRelative(a.ts)}</td>
+                  <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                    {formatRelative(a.ts)}
+                  </td>
                   <td className="mono text-[11.5px]">{a.actorUserId ?? "system"}</td>
-                  <td><span className="badge">{a.action}</span></td>
+                  <td>
+                    <span className="badge">{a.action}</span>
+                  </td>
                   <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
                     {a.targetType ?? "—"}
                     {a.targetId ? `:${a.targetId}` : ""}
                   </td>
-                  <td className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>{a.meta ?? "—"}</td>
+                  <td className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+                    {a.meta ?? "—"}
+                  </td>
                 </tr>
               ))
             )}
@@ -212,11 +240,13 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
             <div className="flex items-center justify-between mb-4">
               <div className="flex flex-col">
                 <span className="eyebrow">Event</span>
-                <h2 className="h2">
-                  {"endpoint" in detail ? detail.endpoint : detail.action}
-                </h2>
+                <h2 className="h2">{"endpoint" in detail ? detail.endpoint : detail.action}</h2>
               </div>
-              <button className="btn btn-sm btn-ghost" onClick={() => setDetail(null)} aria-label="Close">
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => setDetail(null)}
+                aria-label="Close"
+              >
                 <Icon name="x" />
               </button>
             </div>
@@ -224,12 +254,17 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
               <dt style={{ color: "var(--text-mute)" }}>ID</dt>
               <dd className="mono">{detail.id}</dd>
               <dt style={{ color: "var(--text-mute)" }}>When</dt>
-              <dd className="mono">{new Date(detail.ts).toLocaleString()} <span style={{ color: "var(--text-mute)" }}>· {formatRelative(detail.ts)}</span></dd>
+              <dd className="mono">
+                {new Date(detail.ts).toLocaleString()}{" "}
+                <span style={{ color: "var(--text-mute)" }}>· {formatRelative(detail.ts)}</span>
+              </dd>
               {"status" in detail && (
                 <>
                   <dt style={{ color: "var(--text-mute)" }}>Status</dt>
                   <dd>
-                    <span className={`badge ${detail.status >= 500 ? "badge-err" : detail.status >= 400 ? "badge-warn" : "badge-ok"}`}>
+                    <span
+                      className={`badge ${detail.status >= 500 ? "badge-err" : detail.status >= 400 ? "badge-warn" : "badge-ok"}`}
+                    >
                       {detail.status}
                     </span>
                   </dd>
@@ -240,7 +275,9 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
               {"action" in detail && (
                 <>
                   <dt style={{ color: "var(--text-mute)" }}>Action</dt>
-                  <dd><span className="badge">{detail.action}</span></dd>
+                  <dd>
+                    <span className="badge">{detail.action}</span>
+                  </dd>
                   <dt style={{ color: "var(--text-mute)" }}>Actor</dt>
                   <dd className="mono">{detail.actorUserId ?? "system"}</dd>
                 </>
@@ -249,7 +286,11 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
             <div className="eyebrow mb-1.5">Raw JSON</div>
             <pre
               className="mono text-[11.5px] p-3 rounded-[8px] overflow-auto"
-              style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)", maxHeight: "60vh" }}
+              style={{
+                background: "var(--bg-elev)",
+                border: "1px solid var(--border-mid)",
+                maxHeight: "60vh",
+              }}
             >
               {JSON.stringify(detail, null, 2)}
             </pre>

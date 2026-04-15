@@ -33,7 +33,7 @@ describe("perceptualHash", () => {
     const a = await perceptualHash(makeBytes(0));
     // All-1s vs gradient from 0 — maximally different windows.
     const flipped = new Uint8Array(4096);
-    for (let i = 0; i < flipped.length; i++) flipped[i] = 255 - ((i) & 0xff);
+    for (let i = 0; i < flipped.length; i++) flipped[i] = 255 - (i & 0xff);
     const b = await perceptualHash(flipped);
     expect(hammingDistance(a, b)).toBeGreaterThanOrEqual(20);
   });
@@ -46,11 +46,7 @@ describe("perceptualHash", () => {
 
   test("findDuplicates pairs near-identical phashes", () => {
     const pairs = findDuplicates(
-      [
-        { phash: "abcdef1234567890" },
-        { phash: "abcdef1234567890" },
-        { phash: "ffffffffffffffff" },
-      ],
+      [{ phash: "abcdef1234567890" }, { phash: "abcdef1234567890" }, { phash: "ffffffffffffffff" }],
       5,
     );
     expect(pairs).toEqual([[0, 1]]);

@@ -131,5 +131,8 @@ export interface Provider {
   optIn?: boolean;
   search: (query: string, opts: SearchOptions) => Promise<ImageCandidate[]>;
   /** Optional: reverse-image-search given a local image or URL. */
-  findSimilar?: (ref: { url?: string; bytes?: Uint8Array }, opts: SearchOptions) => Promise<ImageCandidate[]>;
+  findSimilar?: (
+    ref: { url?: string; bytes?: Uint8Array },
+    opts: SearchOptions,
+  ) => Promise<ImageCandidate[]>;
 }

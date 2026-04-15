@@ -8,7 +8,7 @@
  *   - respects abort signal
  */
 
-import { writeCache, readCache, defaultCacheDir } from "./cache.ts";
+import { defaultCacheDir, readCache, writeCache } from "./cache.ts";
 import type { Fetcher } from "./types.ts";
 
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
@@ -46,7 +46,10 @@ export interface DownloadResult {
   height?: number;
 }
 
-export async function downloadImage(url: string, opts: DownloadOptions = {}): Promise<DownloadResult> {
+export async function downloadImage(
+  url: string,
+  opts: DownloadOptions = {},
+): Promise<DownloadResult> {
   const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const fetcher = opts.fetcher ?? fetch;
   const cacheDir = opts.cacheDir ?? defaultCacheDir();
@@ -58,7 +61,10 @@ export async function downloadImage(url: string, opts: DownloadOptions = {}): Pr
   // metadata endpoints (e.g. 169.254.169.254). See SECURITY-AUDIT-REPORT.md.
   if (!isPublicHttpUrl(url)) throw new DownloadError(`blocked url: ${url}`, "blocked-host");
   if (HOST_BLOCKLIST.has(host)) throw new DownloadError(`host blocked: ${host}`, "blocked-host");
-  for (const extra of (process.env.WEBFETCH_BLOCKLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean)) {
+  for (const extra of (process.env.WEBFETCH_BLOCKLIST ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     if (host === extra || host.endsWith(`.${extra}`)) {
       throw new DownloadError(`host blocked by env: ${host}`, "blocked-host");
     }
@@ -78,7 +84,9 @@ export async function downloadImage(url: string, opts: DownloadOptions = {}): Pr
   }
   if (!resp.ok) throw new DownloadError(`http ${resp.status}`, "network");
 
-  const mime = (resp.headers.get("content-type") ?? "application/octet-stream").split(";")[0]!.trim();
+  const mime = (resp.headers.get("content-type") ?? "application/octet-stream")
+    .split(";")[0]!
+    .trim();
   if (!opts.allowNonImage && !mime.startsWith("image/")) {
     throw new DownloadError(`not an image: ${mime}`, "bad-type");
   }
@@ -107,7 +115,9 @@ export async function downloadImage(url: string, opts: DownloadOptions = {}): Pr
   const sha256 = await sha(bytes);
   // Cache-key by hash to coalesce same-image-different-CDN duplicates.
   const existed = await readCache(sha256, cacheDir);
-  const cachedPath = existed ? (await import("./cache.ts")).cachePath(sha256, cacheDir) : await writeCache(sha256, bytes, cacheDir);
+  const cachedPath = existed
+    ? (await import("./cache.ts")).cachePath(sha256, cacheDir)
+    : await writeCache(sha256, bytes, cacheDir);
 
   return { bytes, mime, sha256, cachedPath };
 }
@@ -144,7 +154,11 @@ function safeHost(url: string): string | null {
  */
 function isPublicHttpUrl(raw: string): boolean {
   let u: URL;
-  try { u = new URL(raw); } catch { return false; }
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
   if (u.protocol !== "http:" && u.protocol !== "https:") return false;
   const h = u.hostname.toLowerCase();
   if (!h) return false;

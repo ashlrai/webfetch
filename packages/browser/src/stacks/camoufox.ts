@@ -6,8 +6,8 @@
  * / `launch` surface we consume here.
  */
 
-import { BrowserDependencyError, type BrowserOptions, type StackId } from "../types.ts";
 import { formatProxy } from "../proxy.ts";
+import { BrowserDependencyError, type BrowserOptions, type StackId } from "../types.ts";
 import type { Stack, StackSession } from "./contract.ts";
 
 const STACK_ID: StackId = "camoufox";
@@ -39,8 +39,7 @@ export const camoufoxStack: Stack = {
       };
     }
     const browser = await launchFn(launchOpts);
-    const context =
-      (await browser.newContext?.()) ?? (await browser.defaultContext?.());
+    const context = (await browser.newContext?.()) ?? (await browser.defaultContext?.());
     return {
       stack: STACK_ID,
       async newPage() {

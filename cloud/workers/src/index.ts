@@ -14,29 +14,29 @@
  */
 
 import { Hono } from "hono";
-import type { Env, RequestCtx, UsageMessage } from "./env.ts";
-import {
-  cors,
-  requestIdMiddleware,
-  bearerAuth,
-  rateLimit,
-  quotaGate,
-  csrfGuard,
-  RateLimiterDO,
-} from "./middleware.ts";
 import { handleAuth } from "./auth.ts";
-import { searchRouter } from "./routes/search.ts";
-import { artistRouter } from "./routes/artist.ts";
-import { albumRouter } from "./routes/album.ts";
-import { downloadRouter } from "./routes/download.ts";
-import { probeRouter } from "./routes/probe.ts";
-import { licenseRouter } from "./routes/license.ts";
-import { similarRouter } from "./routes/similar.ts";
-import { keysRouter } from "./routes/keys.ts";
-import { teamsRouter } from "./teams.ts";
 import { billingRouter } from "./billing.ts";
-import { persistUsageRow } from "./metering.ts";
 import { runAuditRetention } from "./cron/audit-retention.ts";
+import type { Env, RequestCtx, UsageMessage } from "./env.ts";
+import { persistUsageRow } from "./metering.ts";
+import {
+  RateLimiterDO,
+  bearerAuth,
+  cors,
+  csrfGuard,
+  quotaGate,
+  rateLimit,
+  requestIdMiddleware,
+} from "./middleware.ts";
+import { albumRouter } from "./routes/album.ts";
+import { artistRouter } from "./routes/artist.ts";
+import { downloadRouter } from "./routes/download.ts";
+import { keysRouter } from "./routes/keys.ts";
+import { licenseRouter } from "./routes/license.ts";
+import { probeRouter } from "./routes/probe.ts";
+import { searchRouter } from "./routes/search.ts";
+import { similarRouter } from "./routes/similar.ts";
+import { teamsRouter } from "./teams.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx } };
 
@@ -56,8 +56,13 @@ app.get("/providers", async (c) => {
       all: Object.keys(ALL_PROVIDERS),
       defaults: DEFAULT_PROVIDERS,
       endpoints: [
-        "/v1/search", "/v1/artist", "/v1/album",
-        "/v1/download", "/v1/probe", "/v1/license", "/v1/similar",
+        "/v1/search",
+        "/v1/artist",
+        "/v1/album",
+        "/v1/download",
+        "/v1/probe",
+        "/v1/license",
+        "/v1/similar",
       ],
     },
   });

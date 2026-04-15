@@ -32,9 +32,7 @@ describe("brightdataRotatedUser", () => {
   });
 
   it("replaces an existing session tag", () => {
-    const u = brightdataRotatedUser(
-      "brd-customer-x-zone-residential-session-rand9",
-    );
+    const u = brightdataRotatedUser("brd-customer-x-zone-residential-session-rand9");
     expect(u).toMatch(/-session-rand\d+$/);
     expect(u).not.toContain("rand9-");
   });

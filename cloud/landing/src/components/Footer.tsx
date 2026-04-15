@@ -83,7 +83,10 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   if (external) {
     return (
       <li>
-        <a href={href} className="text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors">
+        <a
+          href={href}
+          className="text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors"
+        >
           {children}
         </a>
       </li>
@@ -91,7 +94,10 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   }
   return (
     <li>
-      <Link href={href} className="text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors">
+      <Link
+        href={href}
+        className="text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors"
+      >
         {children}
       </Link>
     </li>

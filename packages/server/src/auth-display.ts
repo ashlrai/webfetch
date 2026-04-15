@@ -58,16 +58,23 @@ export function renderAuthDisplay(token: string, port: number): string {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[c]!);
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[c]!,
+  );
 }
 
 export function tryOpenBrowser(url: string): void {
   try {
-    const cmd = process.platform === "darwin" ? "open"
-      : process.platform === "win32" ? "cmd"
-      : "xdg-open";
+    const cmd =
+      process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
     const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
     Bun.spawn([cmd, ...args], { stdout: "ignore", stderr: "ignore" });
   } catch {

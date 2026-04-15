@@ -9,14 +9,7 @@
     "webfetch": "./dist/index.js"
   },
   "files": ["dist", "src", "README.md", "LICENSE"],
-  "keywords": [
-    "webfetch",
-    "cli",
-    "image-search",
-    "licensing",
-    "mcp",
-    "agent"
-  ],
+  "keywords": ["webfetch", "cli", "image-search", "licensing", "mcp", "agent"],
   "homepage": "https://getwebfetch.com",
   "bugs": {
     "url": "https://github.com/ashlrai/webfetch/issues"

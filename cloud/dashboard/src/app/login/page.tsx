@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,11 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <form action="/api/proxy/v1/auth/signin" method="post" className="surface p-5 flex flex-col gap-3">
+      <form
+        action="/api/proxy/v1/auth/signin"
+        method="post"
+        className="surface p-5 flex flex-col gap-3"
+      >
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Email</span>
           <input type="email" name="email" className="input" required autoComplete="email" />
@@ -21,16 +25,31 @@ export default function LoginPage() {
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow flex items-center justify-between">
             <span>Password</span>
-            <Link href="/login?reset=1" className="text-[11px] normal-case tracking-normal" style={{ color: "var(--accent)", letterSpacing: 0 }}>
+            <Link
+              href="/login?reset=1"
+              className="text-[11px] normal-case tracking-normal"
+              style={{ color: "var(--accent)", letterSpacing: 0 }}
+            >
               Forgot?
             </Link>
           </span>
-          <input type="password" name="password" className="input" required autoComplete="current-password" />
+          <input
+            type="password"
+            name="password"
+            className="input"
+            required
+            autoComplete="current-password"
+          />
         </label>
-        <button type="submit" className="btn btn-primary btn-lg">Sign in</button>
+        <button type="submit" className="btn btn-primary btn-lg">
+          Sign in
+        </button>
       </form>
 
-      <div className="flex items-center gap-3 text-[11px] mono" style={{ color: "var(--text-mute)" }}>
+      <div
+        className="flex items-center gap-3 text-[11px] mono"
+        style={{ color: "var(--text-mute)" }}
+      >
         <div className="rule flex-1" /> OR <div className="rule flex-1" />
       </div>
 

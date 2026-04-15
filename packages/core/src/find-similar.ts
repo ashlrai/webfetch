@@ -5,8 +5,8 @@
  * For local bytes, the caller must host them on a public URL first.
  */
 
-import { getBucket } from "./rate-limit.ts";
 import { heuristicLicenseFromUrl } from "./license.ts";
+import { getBucket } from "./rate-limit.ts";
 import type { ImageCandidate, SearchOptions } from "./types.ts";
 
 export async function findSimilar(
@@ -20,13 +20,11 @@ export async function findSimilar(
   const serpKey = opts.auth?.serpApiKey ?? process.env.SERPAPI_KEY;
   if (serpKey && (opts.providers ?? []).includes("serpapi")) {
     await getBucket("serpapi").take();
-    const u =
-      "https://serpapi.com/search.json?" +
-      new URLSearchParams({
-        engine: "google_reverse_image",
-        image_url: ref.url,
-        api_key: serpKey,
-      });
+    const u = `https://serpapi.com/search.json?${new URLSearchParams({
+      engine: "google_reverse_image",
+      image_url: ref.url,
+      api_key: serpKey,
+    })}`;
     try {
       const resp = await fetcher(u, { signal: opts.signal });
       if (resp.ok) {
@@ -47,7 +45,9 @@ export async function findSimilar(
       warnings.push(`serpapi reverse failed: ${(e as Error).message}`);
     }
   } else {
-    warnings.push("find_similar requires SERPAPI_KEY and providers: [\"serpapi\"] (or brave with reverse support)");
+    warnings.push(
+      'find_similar requires SERPAPI_KEY and providers: ["serpapi"] (or brave with reverse support)',
+    );
   }
 
   return { candidates: out, warnings };

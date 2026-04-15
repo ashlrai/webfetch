@@ -14,10 +14,13 @@ export function renderSearch(
   warnings: string[],
 ): { content: { type: "text"; text: string }[]; structuredContent: unknown } {
   const head = `${candidates.length} candidate(s) from ${providerReports.filter((r) => r.ok).length}/${providerReports.length} providers.`;
-  const top = candidates.slice(0, 5).map((c, i) => {
-    const dim = c.width && c.height ? ` ${c.width}x${c.height}` : "";
-    return `${i + 1}. [${c.license}]${dim} ${c.url}\n   ${c.attributionLine ?? ""}`;
-  }).join("\n");
+  const top = candidates
+    .slice(0, 5)
+    .map((c, i) => {
+      const dim = c.width && c.height ? ` ${c.width}x${c.height}` : "";
+      return `${i + 1}. [${c.license}]${dim} ${c.url}\n   ${c.attributionLine ?? ""}`;
+    })
+    .join("\n");
   const warn = warnings.length ? `\nwarnings:\n- ${warnings.join("\n- ")}` : "";
   const text = `${head}\n\n${top}${warn}`;
   return {
@@ -26,7 +29,10 @@ export function renderSearch(
   };
 }
 
-export function renderJson(obj: unknown): { content: { type: "text"; text: string }[]; structuredContent: unknown } {
+export function renderJson(obj: unknown): {
+  content: { type: "text"; text: string }[];
+  structuredContent: unknown;
+} {
   return {
     content: [{ type: "text", text: JSON.stringify(obj, null, 2) }],
     structuredContent: obj,

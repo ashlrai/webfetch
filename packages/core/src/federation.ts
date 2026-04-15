@@ -10,10 +10,10 @@
  * best pick, call `pickBest()` on the returned candidates.
  */
 
-import { buildAttribution } from "./license.ts";
 import { dedupeByUrl } from "./dedupe.ts";
-import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
+import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
+import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 import type {
   ImageCandidate,
   Provider,
@@ -23,7 +23,10 @@ import type {
   SearchResultBundle,
 } from "./types.ts";
 
-export async function searchImages(query: string, opts: SearchOptions = {}): Promise<SearchResultBundle> {
+export async function searchImages(
+  query: string,
+  opts: SearchOptions = {},
+): Promise<SearchResultBundle> {
   if (!query || query.trim().length === 0) {
     return { candidates: [], providerReports: [], warnings: ["empty query"] };
   }
@@ -74,9 +77,7 @@ export async function searchImages(query: string, opts: SearchOptions = {}): Pro
 
   const warnings: string[] = [...piiWarning];
   if (enriched.some((c) => c.viaBrowserFallback)) {
-    warnings.push(
-      "Results include browser-sourced fallback items. Verify ToS/license before use.",
-    );
+    warnings.push("Results include browser-sourced fallback items. Verify ToS/license before use.");
   }
   if ((opts.licensePolicy ?? "safe-only") === "any") {
     warnings.push(

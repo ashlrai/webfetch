@@ -39,10 +39,8 @@ export function extractTwitter(ctx: ExtractContext): ExtractResult {
     });
   }
 
-  const og = html.match(
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-  );
-  if (og && og[1] && !seen.has(og[1])) {
+  const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+  if (og?.[1] && !seen.has(og[1])) {
     seen.add(og[1]);
     out.push({
       url: og[1],

@@ -14,7 +14,10 @@ function captureIO() {
     io: {
       stdout: (s: string) => out.push(s),
       stderr: (s: string) => err.push(s),
-      env: { PATH: "/usr/bin", WEBFETCH_CONFIG: "/tmp/webfetch-test-does-not-exist.json" } as NodeJS.ProcessEnv,
+      env: {
+        PATH: "/usr/bin",
+        WEBFETCH_CONFIG: "/tmp/webfetch-test-does-not-exist.json",
+      } as NodeJS.ProcessEnv,
     },
     out,
     err,

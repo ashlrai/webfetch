@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { searchImages } from "../packages/core/src/federation.ts";
 import {
   burst,
   europeanaArchival,
@@ -12,13 +13,15 @@ import {
   rawpixel,
   wellcomeCollection,
 } from "../packages/core/src/providers/index.ts";
-import { searchImages } from "../packages/core/src/federation.ts";
 import { fixture, jsonResponse, stubFetcher } from "./stub-fetcher.ts";
 
 describe("library-of-congress", () => {
   test("parses results, maps 'no known restrictions' to PUBLIC_DOMAIN", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("loc.gov/search"), handler: async () => jsonResponse(fixture("library-of-congress.json")) },
+      {
+        match: (u) => u.includes("loc.gov/search"),
+        handler: async () => jsonResponse(fixture("library-of-congress.json")),
+      },
     ]);
     const out = await libraryOfCongress.search("frederick douglass", { fetcher });
     expect(out.length).toBe(2);
@@ -33,7 +36,10 @@ describe("library-of-congress", () => {
 describe("wellcome-collection", () => {
   test("maps pdm→PUBLIC_DOMAIN, cc-by→CC_BY, drops cc-by-nc-nd", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("api.wellcomecollection.org"), handler: async () => jsonResponse(fixture("wellcome-collection.json")) },
+      {
+        match: (u) => u.includes("api.wellcomecollection.org"),
+        handler: async () => jsonResponse(fixture("wellcome-collection.json")),
+      },
     ]);
     const out = await wellcomeCollection.search("anatomy", { fetcher });
     expect(out.length).toBe(2); // nc-nd dropped
@@ -48,7 +54,10 @@ describe("wellcome-collection", () => {
 describe("rawpixel", () => {
   test("CC0 enforced via freecc0 query param", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("rawpixel.com/api/v1/search") && u.includes("freecc0=1"), handler: async () => jsonResponse(fixture("rawpixel.json")) },
+      {
+        match: (u) => u.includes("rawpixel.com/api/v1/search") && u.includes("freecc0=1"),
+        handler: async () => jsonResponse(fixture("rawpixel.json")),
+      },
     ]);
     const out = await rawpixel.search("botanical", { fetcher });
     expect(out.length).toBe(1);
@@ -61,7 +70,10 @@ describe("rawpixel", () => {
 describe("burst", () => {
   test("all images are CC0", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("burst.shopify.com/photos/search.json"), handler: async () => jsonResponse(fixture("burst.json")) },
+      {
+        match: (u) => u.includes("burst.shopify.com/photos/search.json"),
+        handler: async () => jsonResponse(fixture("burst.json")),
+      },
     ]);
     const out = await burst.search("desk", { fetcher });
     expect(out.length).toBe(1);
@@ -78,7 +90,10 @@ describe("europeana-archival", () => {
 
   test("with key, parses TEXT records via edmPreview", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("api.europeana.eu") && u.includes("TYPE%3ATEXT"), handler: async () => jsonResponse(fixture("europeana-archival.json")) },
+      {
+        match: (u) => u.includes("api.europeana.eu") && u.includes("TYPE%3ATEXT"),
+        handler: async () => jsonResponse(fixture("europeana-archival.json")),
+      },
     ]);
     const out = await europeanaArchival.search("newspaper", {
       fetcher,
@@ -93,11 +108,26 @@ describe("europeana-archival", () => {
 describe("federation integration — 5 new providers", () => {
   test("fetchAll across all 5 new providers returns results", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("loc.gov/search"), handler: async () => jsonResponse(fixture("library-of-congress.json")) },
-      { match: (u) => u.includes("api.wellcomecollection.org"), handler: async () => jsonResponse(fixture("wellcome-collection.json")) },
-      { match: (u) => u.includes("rawpixel.com/api/v1/search"), handler: async () => jsonResponse(fixture("rawpixel.json")) },
-      { match: (u) => u.includes("burst.shopify.com"), handler: async () => jsonResponse(fixture("burst.json")) },
-      { match: (u) => u.includes("api.europeana.eu"), handler: async () => jsonResponse(fixture("europeana-archival.json")) },
+      {
+        match: (u) => u.includes("loc.gov/search"),
+        handler: async () => jsonResponse(fixture("library-of-congress.json")),
+      },
+      {
+        match: (u) => u.includes("api.wellcomecollection.org"),
+        handler: async () => jsonResponse(fixture("wellcome-collection.json")),
+      },
+      {
+        match: (u) => u.includes("rawpixel.com/api/v1/search"),
+        handler: async () => jsonResponse(fixture("rawpixel.json")),
+      },
+      {
+        match: (u) => u.includes("burst.shopify.com"),
+        handler: async () => jsonResponse(fixture("burst.json")),
+      },
+      {
+        match: (u) => u.includes("api.europeana.eu"),
+        handler: async () => jsonResponse(fixture("europeana-archival.json")),
+      },
     ]);
     const out = await searchImages("test query", {
       providers: [

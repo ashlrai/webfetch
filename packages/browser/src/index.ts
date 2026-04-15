@@ -16,8 +16,14 @@
 
 import type { ImageCandidate } from "@webfetch/core";
 
+import { tagCandidate } from "./attribution.ts";
+import { detectCaptcha } from "./captcha/capsolver.ts";
 import { assertConsent } from "./consent.ts";
-import { createBrowserBucket, type BrowserBucket } from "./rate-limit.ts";
+import { extractGenericPage } from "./extractors/generic-page.ts";
+import { extractGoogleImages } from "./extractors/google-images.ts";
+import { extractPinterest } from "./extractors/pinterest.ts";
+import { extractTwitter } from "./extractors/twitter.ts";
+import { type BrowserBucket, createBrowserBucket } from "./rate-limit.ts";
 import { getStack, pickStack } from "./router.ts";
 import type { Stack, StackPage, StackSession } from "./stacks/contract.ts";
 import {
@@ -31,12 +37,6 @@ import {
   type SearchImagesOptions,
   type StackId,
 } from "./types.ts";
-import { tagCandidate } from "./attribution.ts";
-import { extractGoogleImages } from "./extractors/google-images.ts";
-import { extractPinterest } from "./extractors/pinterest.ts";
-import { extractGenericPage } from "./extractors/generic-page.ts";
-import { extractTwitter } from "./extractors/twitter.ts";
-import { detectCaptcha } from "./captcha/capsolver.ts";
 import { pickHeroImage } from "./vision-picker.ts";
 
 export {
@@ -55,7 +55,12 @@ export type {
   StackId,
   VisionConfig,
 } from "./types.ts";
-export { pickHeroImage, parseVisionReply, buildVisionPrompt, _setVisionClientFactory } from "./vision-picker.ts";
+export {
+  pickHeroImage,
+  parseVisionReply,
+  buildVisionPrompt,
+  _setVisionClientFactory,
+} from "./vision-picker.ts";
 export { detectCaptcha, solveCaptcha } from "./captcha/capsolver.ts";
 export { buildSidecar, tagCandidate } from "./attribution.ts";
 export { buildBrightdataWsEndpoint } from "./stacks/brightdata.ts";
@@ -73,10 +78,7 @@ function log(opts: BrowserOptions, ev: Omit<BrowserLogEvent, "at">): void {
   opts.logger({ ...ev, at: new Date().toISOString() });
 }
 
-async function withPage<T>(
-  session: StackSession,
-  fn: (page: StackPage) => Promise<T>,
-): Promise<T> {
+async function withPage<T>(session: StackSession, fn: (page: StackPage) => Promise<T>): Promise<T> {
   const page = await session.newPage();
   try {
     return await fn(page);
@@ -89,9 +91,7 @@ async function withPage<T>(
  * Full provider — lazily boots a browser on the first search call. Call
  * `.close()` when done (idempotent; safe if browser never booted).
  */
-export function createBrowserProvider(
-  opts: BrowserOptions,
-): BrowserProvider {
+export function createBrowserProvider(opts: BrowserOptions): BrowserProvider {
   assertConsent(opts);
 
   const bucket: BrowserBucket = createBrowserBucket(opts.rateLimitPerMin ?? 10);
@@ -148,8 +148,7 @@ export function createBrowserProvider(
       return runExtractor(
         "google-images",
         url,
-        (html) =>
-          extractGoogleImages({ html, sourcePageUrl: url }).candidates,
+        (html) => extractGoogleImages({ html, sourcePageUrl: url }).candidates,
         searchOpts,
       );
     },
@@ -158,8 +157,7 @@ export function createBrowserProvider(
       return runExtractor(
         "pinterest",
         url,
-        (html) =>
-          extractPinterest({ html, sourcePageUrl: url }).candidates,
+        (html) => extractPinterest({ html, sourcePageUrl: url }).candidates,
         searchOpts,
       );
     },
@@ -183,7 +181,10 @@ export function createBrowserProvider(
       // Take a screenshot for vision picker.
       const sess = await ensureSession();
       const shot = await withPage(sess, async (page) => {
-        await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: opts.timeoutMs ?? 30_000 });
+        await page.goto(pageUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: opts.timeoutMs ?? 30_000,
+        });
         return page.screenshot({ fullPage: false });
       });
       const hero = await pickHeroImage(shot, candidates, opts.vision);
@@ -255,7 +256,6 @@ export function extractFromHtml(
       return extractPinterest({ html, sourcePageUrl: url }).candidates;
     case "twitter":
       return extractTwitter({ html, sourcePageUrl: url }).candidates;
-    case "generic-page":
     default:
       return extractGenericPage({ html, sourcePageUrl: url }).candidates;
   }

@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
-import SettingsClient from "./SettingsClient";
 import PageHeader from "@/components/PageHeader";
 import { getServerSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import SettingsClient from "./SettingsClient";
 
 export const dynamic = "force-dynamic";
 

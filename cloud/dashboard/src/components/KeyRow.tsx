@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { ApiKey } from "@shared/types";
-import { formatDate, formatRelative } from "@/lib/format";
 import { revokeKey } from "@/lib/api";
+import { formatDate, formatRelative } from "@/lib/format";
+import type { ApiKey } from "@shared/types";
+import { useState } from "react";
 import { Icon } from "./Icon";
 
 export default function KeyRow({
@@ -25,7 +25,9 @@ export default function KeyRow({
       await navigator.clipboard.writeText(apiKey.prefix);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   };
 
   const handleRevoke = async () => {
@@ -85,7 +87,11 @@ export default function KeyRow({
             <Icon name="trash" /> {busy ? "Revoking" : "Revoke"}
           </button>
         )}
-        {error && <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>{error}</div>}
+        {error && (
+          <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>
+            {error}
+          </div>
+        )}
       </td>
     </tr>
   );

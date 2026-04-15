@@ -16,9 +16,18 @@ describe("federation", () => {
   test("merges wikimedia + openverse + itunes + musicbrainz, dedupes, ranks", async () => {
     const mb = fixture("musicbrainz.json");
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("commons.wikimedia.org"), handler: async () => jsonResponse(fixture("wikimedia.json")) },
-      { match: (u) => u.includes("api.openverse.org"), handler: async () => jsonResponse(fixture("openverse.json")) },
-      { match: (u) => u.includes("itunes.apple.com"), handler: async () => jsonResponse(fixture("itunes.json")) },
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => jsonResponse(fixture("wikimedia.json")),
+      },
+      {
+        match: (u) => u.includes("api.openverse.org"),
+        handler: async () => jsonResponse(fixture("openverse.json")),
+      },
+      {
+        match: (u) => u.includes("itunes.apple.com"),
+        handler: async () => jsonResponse(fixture("itunes.json")),
+      },
       { match: (u) => u.includes("musicbrainz.org"), handler: async () => jsonResponse(mb) },
     ]);
     const out = await searchImages("Drake", {
@@ -37,8 +46,14 @@ describe("federation", () => {
 
   test("failing provider does not fail federation", async () => {
     const fetcher = stubFetcher([
-      { match: (u) => u.includes("commons.wikimedia.org"), handler: async () => jsonResponse(fixture("wikimedia.json")) },
-      { match: (u) => u.includes("openverse"), handler: async () => new Response("boom", { status: 500 }) },
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => jsonResponse(fixture("wikimedia.json")),
+      },
+      {
+        match: (u) => u.includes("openverse"),
+        handler: async () => new Response("boom", { status: 500 }),
+      },
     ]);
     const out = await searchImages("x", { providers: ["wikimedia", "openverse"], fetcher });
     expect(out.candidates.length).toBeGreaterThan(0);

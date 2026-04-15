@@ -45,12 +45,14 @@ export interface RouteDef {
 
 function jsonOk(data: unknown, status = 200): Response {
   return new Response(JSON.stringify({ ok: true, data }), {
-    status, headers: { "content-type": "application/json; charset=utf-8" },
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
 function jsonErr(error: string, status = 400, extra?: Record<string, unknown>): Response {
   return new Response(JSON.stringify({ ok: false, error, ...(extra ?? {}) }), {
-    status, headers: { "content-type": "application/json; charset=utf-8" },
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
 
@@ -59,15 +61,29 @@ async function readJson(req: Request): Promise<unknown> {
   if (!ct.includes("json") && req.method !== "GET") {
     const text = await req.text();
     if (!text) return {};
-    try { return JSON.parse(text); } catch { throw new Error("invalid JSON body"); }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error("invalid JSON body");
+    }
   }
-  try { return await req.json(); } catch { return {}; }
+  try {
+    return await req.json();
+  } catch {
+    return {};
+  }
 }
 
-function wrap<S extends z.ZodTypeAny>(schema: S, fn: (args: z.infer<S>) => Promise<unknown>): Handler {
+function wrap<S extends z.ZodTypeAny>(
+  schema: S,
+  fn: (args: z.infer<S>) => Promise<unknown>,
+): Handler {
   return async (body) => {
     const parsed = schema.safeParse(body);
-    if (!parsed.success) throw new ValidationError(parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; "));
+    if (!parsed.success)
+      throw new ValidationError(
+        parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      );
     return fn(parsed.data);
   };
 }
@@ -77,37 +93,69 @@ class ValidationError extends Error {}
 const handlers: Record<string, Handler> = {
   "/search": wrap(searchImagesSchema, async (a) => {
     const out = await searchImages(a.query, a);
-    return { candidates: out.candidates, providerReports: out.providerReports, warnings: out.warnings };
+    return {
+      candidates: out.candidates,
+      providerReports: out.providerReports,
+      warnings: out.warnings,
+    };
   }),
   "/artist": wrap(searchArtistImagesSchema, async (a) => {
     const out = await searchArtistImages(a.artist, a.kind, a);
-    return { candidates: out.candidates, providerReports: out.providerReports, warnings: out.warnings };
+    return {
+      candidates: out.candidates,
+      providerReports: out.providerReports,
+      warnings: out.warnings,
+    };
   }),
   "/album": wrap(searchAlbumCoverSchema, async (a) => {
     const out = await searchAlbumCover(a.artist, a.album, a);
-    return { candidates: out.candidates, providerReports: out.providerReports, warnings: out.warnings };
+    return {
+      candidates: out.candidates,
+      providerReports: out.providerReports,
+      warnings: out.warnings,
+    };
   }),
   "/download": wrap(downloadImageSchema, async (a) => {
     const r = await downloadImage(a.url, { maxBytes: a.maxBytes, cacheDir: a.cacheDir });
-    return { url: a.url, sha256: r.sha256, mime: r.mime, byteSize: r.bytes.byteLength, cachedPath: r.cachedPath };
+    return {
+      url: a.url,
+      sha256: r.sha256,
+      mime: r.mime,
+      byteSize: r.bytes.byteLength,
+      cachedPath: r.cachedPath,
+    };
   }),
-  "/probe": wrap(probePageSchema, async (a) => probePage(a.url, { respectRobots: a.respectRobots })),
+  "/probe": wrap(probePageSchema, async (a) =>
+    probePage(a.url, { respectRobots: a.respectRobots }),
+  ),
   "/license": wrap(fetchWithLicenseSchema, async (a) => {
     const r = await fetchWithLicense(a.url, { probe: a.probe });
     return {
-      license: r.license, confidence: r.confidence, author: r.author,
-      attributionLine: r.attributionLine, sourcePageUrl: r.sourcePageUrl,
-      mime: r.mime, sha256: r.sha256, cachedPath: r.cachedPath, byteSize: r.bytes?.byteLength,
+      license: r.license,
+      confidence: r.confidence,
+      author: r.author,
+      attributionLine: r.attributionLine,
+      sourcePageUrl: r.sourcePageUrl,
+      mime: r.mime,
+      sha256: r.sha256,
+      cachedPath: r.cachedPath,
+      byteSize: r.bytes?.byteLength,
     };
   }),
-  "/similar": wrap(findSimilarSchema, async (a) => findSimilar({ url: a.url }, { providers: a.providers })),
+  "/similar": wrap(findSimilarSchema, async (a) =>
+    findSimilar({ url: a.url }, { providers: a.providers }),
+  ),
 };
 
 export async function dispatchPost(path: string, req: Request): Promise<Response> {
   const h = handlers[path];
   if (!h) return jsonErr("not found", 404);
   let body: unknown;
-  try { body = await readJson(req); } catch (e) { return jsonErr((e as Error).message, 400); }
+  try {
+    body = await readJson(req);
+  } catch (e) {
+    return jsonErr((e as Error).message, 400);
+  }
   try {
     const data = await h(body);
     return jsonOk(data);
@@ -119,12 +167,15 @@ export async function dispatchPost(path: string, req: Request): Promise<Response
 
 export function getProviders(): Response {
   const all = Object.keys(ALL_PROVIDERS);
-  return new Response(JSON.stringify({
-    ok: true,
-    data: {
-      all,
-      defaults: DEFAULT_PROVIDERS,
-      endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar"],
-    },
-  }), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      data: {
+        all,
+        defaults: DEFAULT_PROVIDERS,
+        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar"],
+      },
+    }),
+    { status: 200, headers: { "content-type": "application/json; charset=utf-8" } },
+  );
 }

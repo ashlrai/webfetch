@@ -19,8 +19,8 @@
  * fresh snapshot each run).
  */
 
-import type { Env } from "../env.ts";
 import type { PlanId } from "../../../shared/pricing.ts";
+import type { Env } from "../env.ts";
 
 export const RETENTION_BY_PLAN: Record<PlanId, number> = {
   free: 90,
@@ -70,9 +70,12 @@ interface AuditRow {
  * Run retention for every workspace. Exported for unit tests and for the
  * Cloudflare cron entry in `index.ts::scheduled`.
  */
-export async function runAuditRetention(env: Env, now: number = Date.now()): Promise<RetentionResult[]> {
+export async function runAuditRetention(
+  env: Env,
+  now: number = Date.now(),
+): Promise<RetentionResult[]> {
   const wsRes = await env.DB.prepare(
-    `SELECT id, plan, audit_retention_days FROM workspaces`,
+    "SELECT id, plan, audit_retention_days FROM workspaces",
   ).all<WorkspaceRow>();
   const workspaces = wsRes.results ?? [];
 
@@ -88,7 +91,9 @@ export async function runAuditRetention(env: Env, now: number = Date.now()): Pro
          FROM audit_log
         WHERE workspace_id = ?1 AND ts < ?2
         ORDER BY ts ASC`,
-    ).bind(ws.id, cutoff).all<AuditRow>();
+    )
+      .bind(ws.id, cutoff)
+      .all<AuditRow>();
     const rows = rowsRes.results ?? [];
     if (rows.length === 0) {
       out.push({ workspaceId: ws.id, archived: 0, deleted: 0, cutoff, archiveKey: null });
@@ -96,14 +101,20 @@ export async function runAuditRetention(env: Env, now: number = Date.now()): Pro
     }
 
     const archiveKey = `audit-archive/${dateStr}/${ws.id}.ndjson`;
-    const ndjson = rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
+    const ndjson = `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`;
     await env.CACHE.put(archiveKey, new TextEncoder().encode(ndjson));
 
-    await env.DB.prepare(
-      `DELETE FROM audit_log WHERE workspace_id = ?1 AND ts < ?2`,
-    ).bind(ws.id, cutoff).run();
+    await env.DB.prepare("DELETE FROM audit_log WHERE workspace_id = ?1 AND ts < ?2")
+      .bind(ws.id, cutoff)
+      .run();
 
-    out.push({ workspaceId: ws.id, archived: rows.length, deleted: rows.length, cutoff, archiveKey });
+    out.push({
+      workspaceId: ws.id,
+      archived: rows.length,
+      deleted: rows.length,
+      cutoff,
+      archiveKey,
+    });
   }
   return out;
 }

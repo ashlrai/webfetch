@@ -46,11 +46,9 @@ export class BrowserCache {
     this.mem.set(key, entry as CacheEntry<unknown>);
     if (!this.dir) return;
     await mkdir(this.dir, { recursive: true }).catch(() => undefined);
-    await writeFile(
-      join(this.dir, `${key}.json`),
-      JSON.stringify(entry, null, 2),
-      "utf8",
-    ).catch(() => undefined);
+    await writeFile(join(this.dir, `${key}.json`), JSON.stringify(entry, null, 2), "utf8").catch(
+      () => undefined,
+    );
   }
 
   /** Test helper. */

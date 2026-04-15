@@ -14,14 +14,12 @@ export const itunes: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("itunes").take();
     const fetcher = opts.fetcher ?? fetch;
-    const url =
-      "https://itunes.apple.com/search?" +
-      new URLSearchParams({
-        term: query,
-        entity: "musicArtist,album",
-        limit: String(opts.maxPerProvider ?? 10),
-        media: "music",
-      });
+    const url = `https://itunes.apple.com/search?${new URLSearchParams({
+      term: query,
+      entity: "musicArtist,album",
+      limit: String(opts.maxPerProvider ?? 10),
+      media: "music",
+    })}`;
     const resp = await fetcher(url, { signal: opts.signal });
     if (!resp.ok) throw new Error(`itunes http ${resp.status}`);
     const json = (await resp.json()) as any;

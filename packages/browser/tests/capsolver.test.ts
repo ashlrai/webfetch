@@ -30,8 +30,7 @@ describe("detectCaptcha", () => {
   });
 
   it("returns null on clean HTML", () => {
-    expect(detectCaptcha("<html><body>no captcha</body></html>", "https://x.com"))
-      .toBeNull();
+    expect(detectCaptcha("<html><body>no captcha</body></html>", "https://x.com")).toBeNull();
   });
 });
 
