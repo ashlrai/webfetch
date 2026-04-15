@@ -46,12 +46,40 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
     return c.json({ ok: false, error: "auth backend not configured" }, 503);
   }
   const { betterAuth } = mod;
+  // Cross-subdomain cookie domain. In prod, the API lives on api.getwebfetch.com
+  // and the dashboard on app.getwebfetch.com — both need to share the session
+  // cookie. Derive the parent domain from APP_URL so staging/local-dev still work.
+  const cookieDomain = (() => {
+    try {
+      const appHost = new URL(c.env.APP_URL).hostname;
+      // localhost / *.vercel.app → no cross-subdomain (host-only cookies)
+      if (appHost === "localhost" || appHost.endsWith(".vercel.app")) return undefined;
+      const parts = appHost.split(".");
+      if (parts.length < 2) return undefined;
+      // e.g. app.getwebfetch.com → .getwebfetch.com
+      return "." + parts.slice(-2).join(".");
+    } catch {
+      return undefined;
+    }
+  })();
+
   const auth = betterAuth({
     database: d1Adapter(c.env),
     baseURL: c.env.API_URL,
     secret: c.env.BETTER_AUTH_SECRET,
     trustedOrigins: [c.env.APP_URL, c.env.API_URL],
     emailAndPassword: { enabled: true, requireEmailVerification: true },
+    advanced: cookieDomain
+      ? {
+          crossSubDomainCookies: { enabled: true, domain: cookieDomain },
+          defaultCookieAttributes: {
+            sameSite: "lax" as const,
+            secure: true,
+            httpOnly: true,
+            domain: cookieDomain,
+          },
+        }
+      : undefined,
     socialProviders: {
       ...(c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET
         ? {
