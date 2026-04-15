@@ -1,5 +1,10 @@
 import { ComparisonTable } from "@/components/ComparisonTable";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 import type { Metadata } from "next";
+
+const BREADCRUMB_JSONLD = buildBreadcrumbJsonLd([
+  { name: "Compare", path: "/compare" },
+]);
 
 export const metadata: Metadata = {
   title: "Compare — webfetch vs Google, Unsplash, Serper",
@@ -25,6 +30,11 @@ export const metadata: Metadata = {
 export default function ComparePage() {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSONLD) }}
+      />
       <h1 className="text-4xl font-semibold tracking-tight">webfetch vs the alternatives</h1>
       <p className="mt-3 text-[var(--fg-dim)] max-w-2xl">
         Image sourcing has always been "pick one". webfetch picks all of them, ranks by license, and

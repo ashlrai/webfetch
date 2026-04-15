@@ -25,8 +25,8 @@ export default function SettingsClient({ user }: { user: User }) {
     setSaving("profile");
     setProfileMsg(null);
     try {
-      const res = await fetch("/api/proxy/v1/me", {
-        method: "PATCH",
+      const res = await fetch("/api/proxy/auth/update-user", {
+        method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, notifications }),
@@ -53,11 +53,11 @@ export default function SettingsClient({ user }: { user: User }) {
     setSaving("password");
     setPasswordMsg(null);
     try {
-      const res = await fetch("/api/proxy/v1/me/password", {
+      const res = await fetch("/api/proxy/auth/change-password", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ current, next }),
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
       });
       if (!res.ok && res.status !== 404) throw new Error(await res.text());
       setPasswordMsg("Password updated.");

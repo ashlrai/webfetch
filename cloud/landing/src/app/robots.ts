@@ -6,8 +6,11 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/"],
+        disallow: ["/api/", "/_next/", "/admin/"],
       },
+      // Encourage image crawlers (our main "proof" is the gallery).
+      { userAgent: "Googlebot-Image", allow: "/" },
+      { userAgent: "Bingbot", allow: "/" },
     ],
     sitemap: "https://getwebfetch.com/sitemap.xml",
     host: "https://getwebfetch.com",

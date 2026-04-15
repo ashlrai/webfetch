@@ -13,10 +13,13 @@ import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } fr
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
+  DEFAULT_BASE_URL,
   type ResolvedConfig,
+  type ResolvedDefaults,
   defaultConfigPath,
   expandHome,
   loadResolved,
+  setConfigValue,
   writeStarterConfig,
 } from "./config.ts";
 import { core } from "./core.ts";
@@ -477,12 +480,116 @@ export async function cmdConfig(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
     io.stdout(c.bold("resolved config:"));
     for (const [k, v] of Object.entries(cfg)) {
       if (v === undefined) continue;
-      io.stdout(`  ${c.dim(k)}: ${Array.isArray(v) ? v.join(",") : String(v)}`);
+      // Redact the apiKey in human output; JSON mode keeps the full value for
+      // scripts that explicitly asked for it.
+      const printV = k === "apiKey" && typeof v === "string" && v.length > 6
+        ? `${v.slice(0, 4)}\u2026${v.slice(-2)}`
+        : Array.isArray(v) ? v.join(",") : String(v);
+      io.stdout(`  ${c.dim(k)}: ${printV}`);
     }
     return 0;
   }
-  io.stderr(c.red("usage: webfetch config <init|show> [--profile name] [--force] [--json]"));
+  if (sub === "get") {
+    const key = args.positional[1];
+    if (!key) {
+      io.stderr(c.red("usage: webfetch config get <key>"));
+      return 2;
+    }
+    const profile = getString(args.flags, "profile");
+    const cfg = await loadResolved({ profile, env }) as Record<string, unknown>;
+    const v = cfg[key];
+    if (v === undefined) return 0;
+    io.stdout(Array.isArray(v) ? v.join(",") : String(v));
+    return 0;
+  }
+  if (sub === "set") {
+    const key = args.positional[1];
+    const value = args.positional[2];
+    if (!key || value === undefined) {
+      io.stderr(c.red("usage: webfetch config set <key> <value>"));
+      return 2;
+    }
+    const allowed: Array<keyof ResolvedDefaults> = [
+      "apiKey",
+      "baseUrl",
+      "license",
+      "limit",
+      "minWidth",
+      "minHeight",
+      "maxPerProvider",
+      "outDir",
+      "sidecar",
+    ];
+    if (!allowed.includes(key as keyof ResolvedDefaults)) {
+      io.stderr(c.red(`unknown key: ${key} (allowed: ${allowed.join(", ")})`));
+      return 2;
+    }
+    // Coerce numerics/bools for known numeric keys; everything else is a string.
+    let coerced: string | number | boolean = value;
+    if (["limit", "minWidth", "minHeight", "maxPerProvider"].includes(key)) {
+      const n = Number.parseInt(value, 10);
+      if (Number.isNaN(n)) {
+        io.stderr(c.red(`invalid number for ${key}: ${value}`));
+        return 2;
+      }
+      coerced = n;
+    } else if (key === "sidecar") {
+      coerced = value === "true" || value === "1";
+    }
+    const path = getString(args.flags, "path") ?? defaultConfigPath(env);
+    try {
+      await setConfigValue(path, key as keyof ResolvedDefaults, coerced);
+    } catch (e) {
+      io.stderr(c.red((e as Error).message));
+      return 2;
+    }
+    // Echo back with apiKey redacted.
+    const shown = key === "apiKey" && typeof coerced === "string" && coerced.length > 6
+      ? `${coerced.slice(0, 4)}\u2026${coerced.slice(-2)}`
+      : String(coerced);
+    io.stdout(`${c.green("set")} ${c.dim(key)}=${shown} ${c.dim(`(${path})`)}`);
+    return 0;
+  }
+  io.stderr(c.red("usage: webfetch config <init|show|get|set> [--profile name] [--force] [--json]"));
   return 2;
+}
+
+// ---------- `webfetch signup` ---------------------------------------------
+
+const SIGNUP_URL = "https://app.getwebfetch.com/signup?source=cli";
+
+/**
+ * Opens the signup page in the default browser. No network call from the CLI.
+ * `--dry-run` prints the URL and exits 0 without spawning anything — used by
+ * the smoke test + CI to avoid opening a browser unsolicited.
+ */
+export async function cmdSignup(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
+  const url = SIGNUP_URL;
+  const dry = getBool(args.flags, "dry-run") || args.positional[0] === "--dry-run";
+  io.stdout(`${c.bold("webfetch signup")}`);
+  io.stdout(`opening ${c.dim(url)} in your default browser\u2026`);
+  if (!dry) {
+    const platform = process.platform;
+    const cmd = platform === "darwin" ? "open" : platform === "win32" ? "start" : "xdg-open";
+    try {
+      // Prefer Bun.spawn when available (CLI ships on Bun); fall back to
+      // node:child_process for portability (tests, packaged builds).
+      const bunSpawn = (globalThis as unknown as { Bun?: { spawn: (cmd: string[]) => unknown } }).Bun?.spawn;
+      if (typeof bunSpawn === "function") {
+        bunSpawn([cmd, url]);
+      } else {
+        const { spawn } = await import("node:child_process");
+        spawn(cmd, [url], { stdio: "ignore", detached: true }).unref();
+      }
+    } catch (e) {
+      io.stderr(c.yellow(`could not launch browser automatically: ${(e as Error).message}`));
+      io.stderr(`open this URL manually: ${url}`);
+    }
+  }
+  io.stdout("");
+  io.stdout(c.dim("After signup, paste your API key with:"));
+  io.stdout(`  ${c.bold("webfetch config set apiKey <your-key>")}`);
+  return 0;
 }
 
 // ---------- `webfetch batch` ----------------------------------------------
@@ -704,7 +811,8 @@ ${c.bold("COMMANDS")}
   providers                             List configured providers + auth status
   batch [--file path | <stdin>]         Run many queries; one per line (query\\tproviders optional)
   watch <query> [--interval 1h]         Poll a query; emit only new candidates per tick
-  config <init|show> [--force]          Manage ~/.webfetchrc
+  config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
+  signup                                Open https://app.getwebfetch.com/signup in your browser
   help                                  Show this message
   version                               Print version
 
@@ -750,6 +858,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   batch: cmdBatch,
   watch: cmdWatch,
   config: cmdConfig,
+  signup: cmdSignup,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,

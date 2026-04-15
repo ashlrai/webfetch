@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  alternates: { canonical: "/legal/privacy" },
+};
+
+const BREADCRUMB = buildBreadcrumbJsonLd([
+  { name: "Legal", path: "/legal/privacy" },
+  { name: "Privacy Policy", path: "/legal/privacy" },
+]);
 
 export default function PrivacyPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 prose-wf">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB) }}
+      />
       <h1>Privacy Policy</h1>
       <p>
         <em>Last updated: April 13, 2026.</em>

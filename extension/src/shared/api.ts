@@ -13,7 +13,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  serverUrl: "http://127.0.0.1:7600",
+  serverUrl: "https://api.getwebfetch.com",
   token: "",
   defaultPolicy: "safe-only",
   defaultProviders: [],

@@ -8,7 +8,7 @@
  * client bundle.
  */
 
-import { USE_FIXTURES } from "@/env";
+import { API_URL, USE_FIXTURES } from "@/env";
 import { fixtureUser } from "@/lib/fixtures";
 import type { User } from "@shared/types";
 
@@ -17,16 +17,61 @@ export interface Session {
   expiresAt: number;
 }
 
+/**
+ * Resolve the current session by forwarding the incoming request's cookies
+ * to Better Auth's `/auth/get-session` endpoint on api.getwebfetch.com.
+ *
+ * The session cookie (`wf_session`) is issued with domain=.getwebfetch.com by
+ * the worker so it's visible to both app.getwebfetch.com (this dashboard) and
+ * api.getwebfetch.com (the worker). We can therefore hand-roll a session
+ * lookup here without a Better Auth React/server package.
+ */
 export async function getServerSession(): Promise<Session | null> {
   if (USE_FIXTURES) {
     return { user: fixtureUser, expiresAt: Date.now() + 86_400_000 };
   }
-  // Real impl: call Better Auth server helper. Stubbed here so the dashboard
-  // builds without the cloud backend — the Worker will own the session table.
-  return null;
+  const { headers: nextHeaders } = await import("next/headers");
+  const h = await nextHeaders();
+  const cookie = h.get("cookie");
+  if (!cookie) return null;
+  try {
+    const res = await fetch(`${API_URL}/auth/get-session`, {
+      headers: { cookie, "x-webfetch-origin": "dashboard-ssr" },
+      cache: "no-store",
+      // Never follow Set-Cookie redirects; we only want the session JSON.
+      redirect: "manual",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as {
+      user?: Partial<User> & { id?: string; email?: string };
+      session?: { expiresAt?: number | string };
+    } | null;
+    if (!data?.user?.id || !data.user.email) return null;
+    const expiresAt =
+      typeof data.session?.expiresAt === "number"
+        ? data.session.expiresAt
+        : data.session?.expiresAt
+          ? Date.parse(String(data.session.expiresAt))
+          : Date.now() + 86_400_000;
+    const u = data.user;
+    if (!u.id || !u.email) return null;
+    const user: User = {
+      id: u.id,
+      email: u.email,
+      name: u.name ?? null,
+      emailVerified: u.emailVerified ?? false,
+      image: u.image ?? null,
+      createdAt: u.createdAt ?? Date.now(),
+      updatedAt: u.updatedAt ?? Date.now(),
+    };
+    return { user, expiresAt };
+  } catch {
+    return null;
+  }
 }
 
 export async function signOut(): Promise<void> {
   if (USE_FIXTURES) return;
-  await fetch("/api/proxy/v1/auth/signout", { method: "POST", credentials: "include" });
+  // Better Auth's sign-out endpoint.
+  await fetch("/api/proxy/auth/sign-out", { method: "POST", credentials: "include" });
 }

@@ -48,7 +48,7 @@ export default async function BillingPage() {
               <Icon name="external" /> Manage subscription
             </a>
           ) : (
-            <a href="/api/proxy/v1/billing/checkout?plan=pro" className="btn btn-primary">
+            <a href="/api/proxy/workspaces/current/checkout?plan=pro" className="btn btn-primary">
               <Icon name="arrow-up" /> Start subscription
             </a>
           )
@@ -138,7 +138,7 @@ export default async function BillingPage() {
                   </a>
                 ) : (
                   <a
-                    href={`/api/proxy/v1/billing/checkout?plan=${p}`}
+                    href={`/api/proxy/workspaces/current/checkout?plan=${p}`}
                     className="btn btn-primary w-full"
                   >
                     {plan.baseMonthlyUsd > PLANS[p].baseMonthlyUsd ? "Downgrade" : "Upgrade"}

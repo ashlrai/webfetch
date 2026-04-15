@@ -46,17 +46,6 @@
   --text-64: 4rem;
   --text-96: 6rem;
 
-  /* 4pt spacing */
-  --space-0: 0;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
-  --space-16: 64px;
-  --space-24: 96px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -89,7 +78,6 @@
   --fg: var(--color-fg);
   --fg-dim: var(--color-fg-dim);
   --accent: var(--color-accent);
-  --accent-cool: #5b8cff;
   --border: var(--color-border);
   --code-bg: var(--color-code-bg);
 }
@@ -406,6 +394,11 @@ a:hover {
   .wf-live-dot {
     animation: none;
   }
+  .wf-fade-up {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 @keyframes wf-pulse-dot {
@@ -419,4 +412,23 @@ a:hover {
 }
 .wf-live-dot {
   animation: wf-pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes wf-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.wf-row-in {
+  animation: wf-row-in 200ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-row-in {
+    animation: none;
+  }
 }

@@ -14,10 +14,11 @@ export default function SignupPage() {
       </div>
 
       <form
-        action="/api/proxy/v1/auth/signup"
+        action="/api/proxy/auth/sign-up/email"
         method="post"
         className="surface p-5 flex flex-col gap-3"
       >
+        <input type="hidden" name="callbackURL" value="/" />
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Name</span>
           <input type="text" name="name" className="input" required autoComplete="name" />

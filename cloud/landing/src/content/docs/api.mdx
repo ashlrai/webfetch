@@ -6,6 +6,8 @@ section: Interfaces
 
 The HTTP API is a thin wrapper around the same core library that powers the CLI and the MCP server. Every endpoint mirrors an MCP tool. Request bodies validate via Zod; responses are JSON envelopes.
 
+> **Try it:** grab a free API key in 30 seconds at [app.getwebfetch.com/signup](https://app.getwebfetch.com/signup), then point your requests at `https://api.getwebfetch.com`.
+
 ## Base URL
 
 - **Self-hosted:** `http://localhost:7777` (default; override with `WEBFETCH_HTTP_PORT`).
@@ -220,14 +222,24 @@ All 4xx bodies include `{ ok: false, error: "..." }`. 429 responses also include
 
 Self-hosted has no rate limit — you're limited only by the upstream providers. Respect their ToS.
 
-## Example: Node.js
+## Example: curl (Cloud)
+
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/search \
+  -H "authorization: Bearer wf_live_yourkeyhere" \
+  -H "content-type: application/json" \
+  -d '{"query":"drake portrait","licensePolicy":"safe-only"}' \
+  | jq '.data.candidates[0]'
+```
+
+## Example: Node.js / TypeScript
 
 ```ts
-const r = await fetch("http://localhost:7777/search", {
+const r = await fetch("https://api.getwebfetch.com/v1/search", {
   method: "POST",
   headers: {
     "content-type": "application/json",
-    authorization: `Bearer ${process.env.WEBFETCH_TOKEN}`,
+    authorization: `Bearer ${process.env.WEBFETCH_API_KEY}`,
   },
   body: JSON.stringify({
     query: "kyoto temple",
@@ -240,15 +252,19 @@ if (!ok) throw new Error(error);
 console.log(data.candidates[0]);
 ```
 
-## Example: curl
+## Example: Python SDK
 
-```bash
-curl -sS -X POST http://localhost:7777/search \
-  -H "authorization: Bearer $WEBFETCH_TOKEN" \
-  -H "content-type: application/json" \
-  -d '{"query":"drake portrait","licensePolicy":"safe-only"}' \
-  | jq '.data.candidates[0]'
+```py
+from webfetch import AsyncWebfetchClient
+
+async def main():
+    client = AsyncWebfetchClient(api_key="wf_live_yourkeyhere")
+    results = await client.search("drake portrait", license_policy="safe-only")
+    for c in results.candidates:
+        print(c.license, c.attribution_line, c.url)
 ```
+
+The SDK mirrors every endpoint: `client.search(...)`, `client.artist(...)`, `client.album(...)`, `client.download(...)`, `client.probe(...)`, `client.license(...)`, `client.similar(...)`.
 
 ## Running the server
 

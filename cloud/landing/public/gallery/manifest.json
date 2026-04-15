@@ -130,5 +130,38 @@
     "sourceProvider": "met-museum",
     "attributionLine": "Vincent van Gogh · CC0 · Met Museum Open Access",
     "fetchedInMs": 309
+  },
+  {
+    "file": "drake-portrait.jpg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Drake_July_2016.jpg/800px-Drake_July_2016.jpg",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Drake_July_2016.jpg",
+    "license": "CC-BY-SA",
+    "author": "The Come Up Show",
+    "title": "Drake (Aubrey Graham) — July 2016",
+    "sourceProvider": "wikimedia",
+    "attributionLine": "The Come Up Show · CC BY-SA 2.0 · via Wikimedia Commons",
+    "fetchedInMs": 298
+  },
+  {
+    "file": "drake-performing.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Drake_Bluesfest_(cropped).jpg?width=1200",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Drake_Bluesfest_(cropped).jpg",
+    "license": "CC-BY-SA",
+    "author": "Brennan Schnell",
+    "title": "Drake performing at Bluesfest (Ottawa, 2010)",
+    "sourceProvider": "wikimedia",
+    "attributionLine": "Brennan Schnell · CC BY-SA 2.0 · via Wikimedia Commons",
+    "fetchedInMs": 341
+  },
+  {
+    "file": "drake-studio.jpg",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Drake_at_The_Carter_Effect_2017_(36818935200)_(cropped).jpg?width=1200",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Drake_at_The_Carter_Effect_2017_(36818935200)_(cropped).jpg",
+    "license": "CC-BY-SA",
+    "author": "GabboT",
+    "title": "Drake at The Carter Effect premiere — TIFF 2017",
+    "sourceProvider": "openverse",
+    "attributionLine": "GabboT · CC BY-SA 2.0 · via Openverse / Wikimedia Commons",
+    "fetchedInMs": 276
   }
 ]

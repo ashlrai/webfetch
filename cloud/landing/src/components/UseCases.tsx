@@ -73,13 +73,13 @@ const CASES: UseCase[] = [
         <figure className="rounded-md overflow-hidden border border-[var(--color-border)]">
           <img
             src={BLOG_IMG}
-            alt="The Starry Night by Vincent van Gogh"
+            alt="The Starry Night (1889) by Vincent van Gogh — swirling night sky over a village, Public Domain via Wikimedia Commons"
             loading="lazy"
             decoding="async"
             className="w-full aspect-[16/10] object-cover"
           />
           <figcaption className="px-3 py-2 text-[11px] font-mono text-[var(--color-fg-dim)] bg-[var(--color-bg)] border-t border-[var(--color-border)]">
-            <em>The Starry Night</em> (1889) — Vincent van Gogh · Public Domain
+            <em>The Starry Night</em> (1889) — Vincent van Gogh · Public Domain · via Wikimedia Commons
           </figcaption>
         </figure>
         <p className="mt-3 text-[12px] text-[var(--color-fg-muted)] leading-relaxed line-clamp-3">
@@ -103,7 +103,7 @@ const CASES: UseCase[] = [
       <div className="relative h-full min-h-[280px] bg-black overflow-hidden">
         <img
           src={SLIDE_IMG}
-          alt="The Earth seen from Apollo 17"
+          alt="The Blue Marble — Earth photographed by the Apollo 17 crew in 1972, Public Domain (NASA)"
           loading="lazy"
           decoding="async"
           className="absolute inset-0 w-full h-full object-cover opacity-90"
@@ -149,7 +149,7 @@ const CASES: UseCase[] = [
           <div className="rounded-md overflow-hidden border border-[var(--color-border)] bg-black aspect-square">
             <img
               src={PRODUCT_IMG}
-              alt="The Hope Diamond"
+              alt="The Hope Diamond — deep-blue 45.52-carat gemstone at the Smithsonian, Public Domain (photo by David Bjorgen, NMNH)"
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover"

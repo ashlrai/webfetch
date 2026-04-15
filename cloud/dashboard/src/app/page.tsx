@@ -4,7 +4,7 @@ import LiveUsage from "@/components/LiveUsage";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { getOverview } from "@/lib/api";
+import { getOverview, listKeys } from "@/lib/api";
 import { getServerSession } from "@/lib/auth";
 import { formatDate, formatInt, formatPct, formatRelative, formatUsd } from "@/lib/format";
 import { PLANS } from "@shared/pricing";
@@ -17,9 +17,10 @@ export default async function OverviewPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
-  const overview = await getOverview();
+  const [overview, keys] = await Promise.all([getOverview(), listKeys().catch(() => [])]);
   const { usage, billing, workspace, perProvider, dailySeries } = overview;
   const plan = PLANS[workspace.plan];
+  const isFirstRun = keys.length === 0 && usage.used === 0;
 
   const used = usage.used;
   const quotaPct = usage.included === 0 ? 0 : used / usage.included;
@@ -127,7 +128,52 @@ export default async function OverviewPage() {
         />
       </section>
 
-      {(workspace.plan === "free" || quotaPct >= 1) && (
+      {isFirstRun && (
+        <section className="surface p-5 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <span className="eyebrow">Welcome</span>
+              <h2 className="h2">Create your first API key</h2>
+              <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+                Your workspace is empty. Mint an API key to call
+                <code className="mono mx-1">api.getwebfetch.com</code>
+                from the CLI, MCP server, or your own code. Free tier includes
+                100 fetches / day — no card required.
+              </p>
+            </div>
+            <Link href="/keys" className="btn btn-primary btn-lg shrink-0">
+              <Icon name="plus" /> Create key
+            </Link>
+          </div>
+          <ol
+            className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1 text-[12.5px]"
+            style={{ color: "var(--text-dim)" }}
+          >
+            {[
+              ["1", "Create a key", "Save the secret — shown once."],
+              ["2", "Curl /v1/search", "Usage appears in /usage live."],
+              ["3", "Invite teammates", "Share the workspace from /team."],
+            ].map(([n, title, sub]) => (
+              <li key={n} className="flex items-start gap-2">
+                <span
+                  className="size-5 rounded-full flex items-center justify-center mono text-[11px] shrink-0"
+                  style={{ background: "var(--bg-elev)", color: "var(--text)" }}
+                >
+                  {n}
+                </span>
+                <div className="flex flex-col min-w-0">
+                  <span style={{ color: "var(--text)" }}>{title}</span>
+                  <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+                    {sub}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {!isFirstRun && (workspace.plan === "free" || quotaPct >= 1) && (
         <UpgradePrompt plan={workspace.plan} reason={quotaPct >= 1 ? "quota" : "free"} />
       )}
 

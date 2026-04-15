@@ -66,12 +66,6 @@ Claude will call `search_images` with `licensePolicy: "safe-only"` and `minWidth
 - **Tool not appearing at all** — restart Claude Code. Check `~/.claude/logs/*.log` for startup errors from the MCP subprocess.
 - **"Cannot find module '@webfetch/mcp'"** — first invocation downloads via npx. If your machine is offline, install globally: `npm install -g @webfetch/mcp`.
 
-## Screenshot
-
-![Claude Code webfetch tool call screenshot placeholder](/docs/img/claude-code-mcp-placeholder.png)
-
-_The tool inspector panel shows each `search_images` call with its arguments, provider reports, and returned candidates._
-
 ## Next steps
 
 - [Cookbook Recipe 5](/docs/cookbook/recipe-5) — use webfetch from Claude Code to enrich a blog post.

@@ -1,6 +1,11 @@
 import { FAQ } from "@/components/FAQ";
 import { PricingTable } from "@/components/PricingTable";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 import type { Metadata } from "next";
+
+const BREADCRUMB_JSONLD = buildBreadcrumbJsonLd([
+  { name: "Pricing", path: "/pricing" },
+]);
 
 export const metadata: Metadata = {
   title: "Pricing — Free, Pro, Team, Enterprise",
@@ -23,9 +28,88 @@ export const metadata: Metadata = {
   },
 };
 
+const PRICING_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: "webfetch",
+  description:
+    "License-first federated image search API, CLI, and MCP. Free self-host, Pro, Team, and Enterprise tiers.",
+  brand: { "@type": "Brand", name: "AshlrAI" },
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Free",
+      description: "Self-host forever. Unlimited local usage.",
+      price: "0",
+      priceCurrency: "USD",
+      url: "https://getwebfetch.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "0",
+        priceCurrency: "USD",
+        unitText: "MONTH",
+      },
+    },
+    {
+      "@type": "Offer",
+      name: "Pro",
+      description: "Managed browser, pooled keys, 20k fetches/mo, usage dashboard.",
+      price: "19",
+      priceCurrency: "USD",
+      url: "https://getwebfetch.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "19",
+        priceCurrency: "USD",
+        unitText: "MONTH",
+      },
+    },
+    {
+      "@type": "Offer",
+      name: "Team",
+      description: "Shared workspace, SSO, 100k fetches/mo, per-seat pricing.",
+      price: "79",
+      priceCurrency: "USD",
+      url: "https://getwebfetch.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "79",
+        priceCurrency: "USD",
+        unitText: "MONTH",
+      },
+    },
+    {
+      "@type": "Offer",
+      name: "Enterprise",
+      description: "Dedicated tenant, custom providers, on-prem Node+SQLite build, SLA.",
+      priceCurrency: "USD",
+      url: "https://getwebfetch.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "PriceSpecification",
+        priceCurrency: "USD",
+        description: "Custom pricing",
+      },
+    },
+  ],
+};
+
 export default function PricingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(PRICING_JSONLD) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSONLD) }}
+      />
       <section className="max-w-4xl mx-auto px-6 pt-20 pb-8 text-center">
         <h1 className="text-5xl font-semibold tracking-tight">
           Simple pricing. Transparent metering.

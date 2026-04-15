@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 
-export const metadata: Metadata = { title: "License Policy" };
+export const metadata: Metadata = {
+  title: "License Policy",
+  alternates: { canonical: "/legal/license-policy" },
+};
+
+const BREADCRUMB = buildBreadcrumbJsonLd([
+  { name: "Legal", path: "/legal/license-policy" },
+  { name: "License Policy", path: "/legal/license-policy" },
+]);
 
 export default function LicensePolicyPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 prose-wf">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB) }}
+      />
       <h1>License Policy</h1>
       <p>
         webfetch's ranker sorts candidates <strong>license-first</strong>. The rest follows.

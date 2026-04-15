@@ -23,6 +23,10 @@ export interface ResolvedDefaults {
   maxPerProvider?: number;
   outDir?: string;
   sidecar?: boolean;
+  /** Base URL for the webfetch API (prod default: https://api.getwebfetch.com). */
+  baseUrl?: string;
+  /** Bearer API key for the webfetch API. Paste via `webfetch config set apiKey <value>`. */
+  apiKey?: string;
 }
 
 export interface ConfigFile {
@@ -37,10 +41,13 @@ export interface ResolvedConfig extends ResolvedDefaults {
   path?: string;
 }
 
+export const DEFAULT_BASE_URL = "https://api.getwebfetch.com";
+
 export const BUILTIN_DEFAULTS: ResolvedDefaults = {
   license: "safe-only",
   limit: 20,
   sidecar: true,
+  baseUrl: DEFAULT_BASE_URL,
 };
 
 export const STARTER_CONFIG = `{
@@ -165,7 +172,36 @@ export async function loadResolved(
   const file = await loadConfigFile(p, env);
   const r = resolveConfig(file, opts.profile);
   if (file) r.path = p;
+  // Env vars override file + built-in defaults (but CLI flags — applied at the
+  // call site — still win over env).
+  if (env.WEBFETCH_BASE_URL) r.baseUrl = env.WEBFETCH_BASE_URL;
+  if (env.WEBFETCH_API_KEY) r.apiKey = env.WEBFETCH_API_KEY;
   return r;
+}
+
+/**
+ * Persist a single top-level `defaults.<key>` into the config file at `path`.
+ * Creates the file (with starter scaffolding) when absent. Preserves any
+ * existing defaults / profiles. Intentionally writes pretty JSON without the
+ * jsonc comments — the comments only ship with `config init`.
+ */
+export async function setConfigValue(
+  path: string,
+  key: keyof ResolvedDefaults,
+  value: string | number | boolean | string[],
+): Promise<void> {
+  let file: ConfigFile = {};
+  if (existsSync(path)) {
+    const raw = await readFile(path, "utf8");
+    try {
+      file = JSON.parse(stripJsonComments(raw)) as ConfigFile;
+    } catch (e) {
+      throw new Error(`failed to parse config at ${path}: ${(e as Error).message}`);
+    }
+  }
+  file.defaults = { ...(file.defaults ?? {}), [key]: value } as ResolvedDefaults;
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(file, null, 2)}\n`, "utf8");
 }
 
 export async function writeStarterConfig(path: string, force: boolean): Promise<void> {

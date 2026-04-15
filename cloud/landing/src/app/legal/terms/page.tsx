@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 
-export const metadata: Metadata = { title: "Terms of Service" };
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  alternates: { canonical: "/legal/terms" },
+};
+
+const BREADCRUMB = buildBreadcrumbJsonLd([
+  { name: "Legal", path: "/legal/terms" },
+  { name: "Terms of Service", path: "/legal/terms" },
+]);
 
 export default function TermsPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 prose-wf">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB) }}
+      />
       <h1>Terms of Service</h1>
       <p>
         <em>Last updated: April 13, 2026.</em>

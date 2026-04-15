@@ -35,6 +35,7 @@
     "activeTab"
   ],
   "host_permissions": [
+    "https://api.getwebfetch.com/*",
     "http://127.0.0.1:7600/*",
     "http://127.0.0.1:7610/*",
     "http://localhost:7600/*"

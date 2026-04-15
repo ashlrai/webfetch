@@ -1,6 +1,11 @@
 import { CopyButton } from "@/components/CopyButton";
 import { FadeUp } from "@/components/FadeUp";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 import type { Metadata } from "next";
+
+const BREADCRUMB_JSONLD = buildBreadcrumbJsonLd([
+  { name: "MCP Registry", path: "/mcp-registry" },
+]);
 
 export const metadata: Metadata = {
   title: "MCP Registry — Install webfetch in any agent",
@@ -106,6 +111,11 @@ const MANIFEST = `{
 export default function McpRegistryPage() {
   return (
     <section className="max-w-5xl mx-auto px-6 py-20">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSONLD) }}
+      />
       <FadeUp>
         <div className="text-[11px] font-mono text-[var(--color-accent)] uppercase tracking-[0.2em] mb-3">
           — mcp registry

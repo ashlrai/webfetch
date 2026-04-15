@@ -1,7 +1,7 @@
 {
-  "name": "webfetch",
+  "name": "webfetch — the license-first image layer",
   "short_name": "webfetch",
-  "description": "The license-first image layer for AI agents and humans.",
+  "description": "The license-first image layer for AI agents and humans. Federated, license-aware image search with attribution baked in.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,16 +9,37 @@
   "background_color": "#0a0a0c",
   "icons": [
     {
-      "src": "/og-image.png",
-      "sizes": "1200x630",
-      "type": "image/png",
-      "purpose": "any"
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
     },
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "/icon/icon-32",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon/icon-192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon/icon-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ]
 }

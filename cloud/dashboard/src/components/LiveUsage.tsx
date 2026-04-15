@@ -23,7 +23,13 @@ export default function LiveUsage() {
     let attempt = 0;
 
     const open = () => {
-      es = new EventSource("/usage/stream");
+      // In prod, stream from api.getwebfetch.com via the proxy so the SSE
+      // connection carries the session cookie. In fixtures-only dev we fall
+      // back to the local synthetic stream at /usage/stream.
+      const useFixtures =
+        typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_FIXTURES === "1";
+      const streamUrl = useFixtures ? "/usage/stream" : "/api/proxy/v1/usage/stream";
+      es = new EventSource(streamUrl, { withCredentials: true });
       // Mark as offline if first byte hasn't arrived in 4s; UI surfaces "reconnecting" instead of a stuck spinner.
       connectTimer = setTimeout(() => setConnected(false), 4000);
 

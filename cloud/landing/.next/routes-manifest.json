@@ -28,12 +28,29 @@
       "namedRegex": "^/blog/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/blog/[slug]/opengraph-image/[__metadata_id__]",
+      "regex": "^/blog/([^/]+?)/opengraph\\-image/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtP__metadata_id__": "nxtP__metadata_id__"
+      },
+      "namedRegex": "^/blog/(?<nxtPslug>[^/]+?)/opengraph\\-image/(?<nxtP__metadata_id__>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/docs/[[...slug]]",
       "regex": "^/docs(?:/(.+?))?(?:/)?$",
       "routeKeys": {
         "nxtPslug": "nxtPslug"
       },
       "namedRegex": "^/docs(?:/(?<nxtPslug>.+?))?(?:/)?$"
+    },
+    {
+      "page": "/icon/[__metadata_id__]",
+      "regex": "^/icon/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtP__metadata_id__": "nxtP__metadata_id__"
+      },
+      "namedRegex": "^/icon/(?<nxtP__metadata_id__>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [
@@ -80,10 +97,10 @@
       "namedRegex": "^/docs\\-index\\.json(?:/)?$"
     },
     {
-      "page": "/icon",
-      "regex": "^/icon(?:/)?$",
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/icon(?:/)?$"
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
     },
     {
       "page": "/legal/license-policy",
@@ -108,6 +125,12 @@
       "regex": "^/mcp\\-registry(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/mcp\\-registry(?:/)?$"
+    },
+    {
+      "page": "/opengraph-image",
+      "regex": "^/opengraph\\-image(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/opengraph\\-image(?:/)?$"
     },
     {
       "page": "/pricing",

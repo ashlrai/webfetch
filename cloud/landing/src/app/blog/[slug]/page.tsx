@@ -1,4 +1,5 @@
 import { getAllPosts, getPostSource } from "@/lib/blog";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 import { marked } from "marked";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -41,12 +42,52 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   const post = getPostSource(slug);
   if (!post) return notFound();
   const html = await marked.parse(post.content);
+  const canonical = `https://getwebfetch.com/blog/${slug}`;
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.meta.title,
+    description: post.meta.excerpt,
+    datePublished: post.meta.date,
+    dateModified: post.meta.date,
+    author: {
+      "@type": "Person",
+      name: post.meta.author,
+      url: "https://ashlr.ai",
+    },
+    image: `${canonical}/opengraph-image`,
+    mainEntityOfPage: canonical,
+    url: canonical,
+    publisher: {
+      "@type": "Organization",
+      name: "AshlrAI",
+      url: "https://ashlr.ai",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://getwebfetch.com/og-image.png",
+      },
+    },
+  };
+  const breadcrumbLd = buildBreadcrumbJsonLd([
+    { name: "Blog", path: "/blog" },
+    { name: post.meta.title, path: `/blog/${slug}` },
+  ]);
   return (
     <article className="max-w-3xl mx-auto px-6 py-16">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <div className="text-xs font-mono text-[var(--fg-dim)] flex items-center gap-3">
         <Link href="/blog">← blog</Link>
         <span>·</span>
-        <time>{post.meta.date}</time>
+        <time dateTime={post.meta.date}>{post.meta.date}</time>
         <span>·</span>
         <span>{post.meta.readTime}</span>
         <span>·</span>

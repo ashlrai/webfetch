@@ -1,6 +1,11 @@
 import { getAllPosts } from "@/lib/blog";
+import { buildBreadcrumbJsonLd } from "@/lib/breadcrumbs";
 import type { Metadata } from "next";
 import Link from "next/link";
+
+const BREADCRUMB_JSONLD = buildBreadcrumbJsonLd([
+  { name: "Blog", path: "/blog" },
+]);
 
 export const metadata: Metadata = {
   title: "Blog — Essays on licensed image sourcing and MCP",
@@ -27,6 +32,11 @@ export default function BlogIndex() {
   const posts = getAllPosts();
   return (
     <section className="max-w-3xl mx-auto px-6 py-20">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_JSONLD) }}
+      />
       <h1 className="text-4xl font-semibold tracking-tight">Blog</h1>
       <p className="mt-3 text-[var(--fg-dim)]">
         Essays on licensed image sourcing, MCP, and the engineering behind webfetch.

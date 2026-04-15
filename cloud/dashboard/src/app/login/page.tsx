@@ -14,10 +14,11 @@ export default function LoginPage() {
       </div>
 
       <form
-        action="/api/proxy/v1/auth/signin"
+        action="/api/proxy/auth/sign-in/email"
         method="post"
         className="surface p-5 flex flex-col gap-3"
       >
+        <input type="hidden" name="callbackURL" value="/" />
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Email</span>
           <input type="email" name="email" className="input" required autoComplete="email" />
@@ -54,10 +55,16 @@ export default function LoginPage() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <a href="/api/proxy/v1/auth/google" className="btn btn-lg">
+        <a
+          href="/api/proxy/auth/sign-in/social?provider=google&callbackURL=/"
+          className="btn btn-lg"
+        >
           <Icon name="external" /> Continue with Google
         </a>
-        <a href="/api/proxy/v1/auth/github" className="btn btn-lg">
+        <a
+          href="/api/proxy/auth/sign-in/social?provider=github&callbackURL=/"
+          className="btn btn-lg"
+        >
           <Icon name="external" /> Continue with GitHub
         </a>
       </div>

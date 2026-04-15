@@ -27,6 +27,7 @@ const BOOLEAN_FLAGS = new Set([
   "force",
   "no-sidecar",
   "download-best",
+  "dry-run",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {

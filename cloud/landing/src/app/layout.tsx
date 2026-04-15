@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/Footer";
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     title: "webfetch — the license-first image layer",
     description: "Federated, license-aware image search for AI agents and humans.",
     images: ["/og-image.png"],
-    creator: "@ashlr_ai",
+    creator: "@masonwyatt",
     site: "@ashlr_ai",
   },
   robots: {
@@ -55,10 +55,28 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
-  icons: { icon: "/favicon.svg" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon",
+  },
   other: {
     "theme-color": "#ff5a1f",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Do NOT lock zoom — accessibility requires user scalability.
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0c" },
+    { media: "(prefers-color-scheme: light)", color: "#0a0a0c" },
+  ],
 };
 
 const ORGANIZATION_JSONLD = {
@@ -93,25 +111,28 @@ const SOFTWARE_JSONLD = {
   },
   screenshot: "https://getwebfetch.com/og-image.png",
   offers: [
-    {
-      "@type": "Offer",
-      name: "Free",
-      price: "0",
-      priceCurrency: "USD",
-    },
-    {
-      "@type": "Offer",
-      name: "Pro",
-      price: "19",
-      priceCurrency: "USD",
-    },
-    {
-      "@type": "Offer",
-      name: "Team",
-      price: "79",
-      priceCurrency: "USD",
-    },
+    { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "19", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Team", price: "79", priceCurrency: "USD" },
   ],
+};
+
+const WEBSITE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "webfetch",
+  url: "https://getwebfetch.com",
+  description:
+    "Documentation, pricing, and writing from the team building webfetch — the license-first image layer for AI agents.",
+  publisher: { "@type": "Organization", name: "AshlrAI", url: "https://ashlr.ai" },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: "https://getwebfetch.com/docs?q={search_term_string}",
+    },
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -126,6 +147,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_JSONLD) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSONLD) }}
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </head>
       <body>
         <Nav />

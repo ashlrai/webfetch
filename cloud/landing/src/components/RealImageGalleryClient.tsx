@@ -22,14 +22,15 @@ function stampClass(license: string) {
 function Card({ item }: { item: GalleryItem }) {
   const base = `/gallery/${item.file}`;
   const webp = `/gallery/${item.file.replace(/\.jpg$/, "-600.webp")}`;
+  const descriptiveAlt = `${item.title} by ${item.author} — ${item.license} via ${item.sourceProvider}`;
   return (
-    <div className="wf-gal-card group relative shrink-0 w-[260px] md:w-[300px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] overflow-hidden">
+    <figure className="wf-gal-card group relative shrink-0 w-[260px] md:w-[300px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] overflow-hidden">
       <div className="relative aspect-[4/5] overflow-hidden bg-[var(--color-bg)]">
         <picture>
           <source srcSet={webp} type="image/webp" />
           <img
             src={base}
-            alt={item.title}
+            alt={descriptiveAlt}
             loading="lazy"
             decoding="async"
             sizes="(max-width: 768px) 260px, 300px"
@@ -88,7 +89,21 @@ function Card({ item }: { item: GalleryItem }) {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* attribution-first figcaption */}
+      <figcaption className="px-3 pb-2 pt-1 text-[9.5px] font-mono leading-snug text-[var(--color-fg-dim)] border-t border-[var(--color-border)] truncate">
+        <a
+          href={item.pageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-[var(--color-accent)] transition-colors"
+        >
+          {item.author}
+        </a>
+        <span className="mx-1 text-[var(--color-fg-faint)]">·</span>
+        <span className="uppercase tracking-wider">{item.license}</span>
+      </figcaption>
+    </figure>
   );
 }
 

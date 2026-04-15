@@ -6,6 +6,8 @@ section: Interfaces
 
 The webfetch MCP server exposes the same federated search and license logic as the CLI and HTTP API, but over the Model Context Protocol so an LLM agent can call it directly. This page explains the tool surface; per-IDE setup lives in a dedicated page per IDE.
 
+> **Try it:** grab a free API key at [app.getwebfetch.com/signup](https://app.getwebfetch.com/signup), paste it as the `WEBFETCH_API_KEY` env var in your IDE's MCP config, and you're live in 60 seconds.
+
 ## What MCP is
 
 Model Context Protocol is Anthropic's open standard for giving LLM agents access to external tools. An MCP server exposes a list of tools (name, JSON schema, handler); a compatible client (Claude Code, Cursor, Cline, Continue, Roo Code, Codex) discovers them and lets the model call them with structured arguments.

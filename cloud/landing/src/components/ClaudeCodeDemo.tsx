@@ -201,7 +201,7 @@ export function ClaudeCodeDemo() {
                   <div className="relative shrink-0 w-[120px] h-[120px] rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)]">
                     <img
                       src="/gallery/saturn.jpg"
-                      alt="Saturn during equinox (Cassini)"
+                      alt="Saturn photographed at equinox by the Cassini spacecraft — NASA/JPL, Public Domain"
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover"

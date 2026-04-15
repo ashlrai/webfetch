@@ -17,7 +17,6 @@
  */
 
 import { API_URL, USE_FIXTURES } from "@/env";
-import { getServerSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -46,24 +45,21 @@ async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> })
     );
   }
 
-  const session = await getServerSession();
-  if (!session) {
-    return new Response(JSON.stringify({ error: "unauthenticated" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   const { path } = await ctx.params;
   const joined = (path ?? []).join("/");
   const url = new URL(req.url);
   const target = `${API_URL}/${joined}${url.search}`;
 
+  // Forward original request headers — including the `wf_session` cookie
+  // (scoped to `.getwebfetch.com`) so the worker's Better Auth middleware
+  // can resolve the session, and any Bearer API key the user provides.
   const headers = new Headers();
   for (const [k, v] of req.headers) {
-    if (!HOP_BY_HOP.has(k.toLowerCase())) headers.set(k, v);
+    if (HOP_BY_HOP.has(k.toLowerCase())) continue;
+    // Strip the Next-synthesized Host; upstream sets its own.
+    if (k.toLowerCase() === "host") continue;
+    headers.set(k, v);
   }
-  headers.set("Authorization", `Bearer session:${session.user.id}`);
   headers.set("x-webfetch-origin", "dashboard");
 
   let body: BodyInit | undefined;
@@ -80,8 +76,14 @@ async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> })
 
   const outHeaders = new Headers();
   for (const [k, v] of upstream.headers) {
-    if (!HOP_BY_HOP.has(k.toLowerCase())) outHeaders.set(k, v);
+    const lk = k.toLowerCase();
+    if (HOP_BY_HOP.has(lk)) continue;
+    if (lk === "set-cookie") continue; // handled below (multi-value)
+    outHeaders.set(k, v);
   }
+  // Preserve every Set-Cookie header individually (Headers.set would flatten).
+  const setCookies = upstream.headers.getSetCookie?.() ?? [];
+  for (const c of setCookies) outHeaders.append("set-cookie", c);
 
   return new Response(upstream.body, {
     status: upstream.status,
