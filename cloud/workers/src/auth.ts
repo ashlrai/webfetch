@@ -234,7 +234,13 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
  */
 export async function getSessionUser(c: Context<{ Bindings: Env }>): Promise<SessionUser | null> {
   const cookie = c.req.header("cookie") ?? "";
-  const m = new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]+)`).exec(cookie);
+  // Better Auth issues the session cookie with the `__Secure-` prefix when the
+  // request is HTTPS (per RFC 6265 §3.2), but our hand-rolled verifier was
+  // only looking for the unprefixed name. Match both so dashboard endpoints
+  // work in production. SA-058.
+  const m =
+    new RegExp(`(?:^|; )__Secure-${SESSION_COOKIE}=([^;]+)`).exec(cookie) ??
+    new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]+)`).exec(cookie);
   if (!m) return null;
   const raw = decodeURIComponent(m[1]!);
   // Better Auth signs session cookies as `<token>.<signature>`; split off the
