@@ -312,6 +312,77 @@ function isStubKey(secret: string | undefined): boolean {
 }
 
 /**
+ * Stripe Billing Meter event ID for Pro/Team metered usage. We POST one
+ * meter event per usage row (idempotent via `identifier = requestId`) to
+ *   POST https://api.stripe.com/v1/billing/meter_events
+ * keyed on `stripe_customer_id`. Free-tier workspaces are skipped.
+ */
+export const STRIPE_USAGE_METER_ID = "mtr_test_61UW17Z4p7Vo9IT2I41IsCo7Z3L3vN8y";
+export const STRIPE_USAGE_METER_EVENT_NAME = "webfetch_request";
+
+/**
+ * Emit a Stripe Billing Meter event for one usage row. Gated on:
+ *   - STRIPE_SECRET_KEY present and not a stub/test key
+ *   - workspace plan is Pro or Team (free skipped)
+ *   - workspace has a stripe_customer_id
+ *
+ * Idempotency via `identifier = requestId` so retries from the queue don't
+ * double-bill. Never throws — billing failures must not block usage
+ * persistence. Returns `{ ok: true }` on success or skip; `{ ok: false }` on
+ * upstream Stripe error.
+ */
+export async function emitMeterEventForUsage(
+  env: Env,
+  msg: { workspaceId: string; units: number; ts: number; requestId: string },
+): Promise<{ ok: true; skipped?: string } | { ok: false; error: string }> {
+  if (isStubKey(env.STRIPE_SECRET_KEY)) {
+    return { ok: true, skipped: "stub_key" };
+  }
+  try {
+    const ws = await env.DB.prepare(
+      "SELECT plan, stripe_customer_id FROM workspaces WHERE id = ?1",
+    )
+      .bind(msg.workspaceId)
+      .first<{ plan: string | null; stripe_customer_id: string | null }>();
+    if (!ws) return { ok: true, skipped: "no_workspace" };
+    if (ws.plan !== "pro" && ws.plan !== "team") {
+      return { ok: true, skipped: "free_tier" };
+    }
+    if (!ws.stripe_customer_id) return { ok: true, skipped: "no_customer" };
+
+    // Use raw fetch — meter events live on the Billing Meters API surface
+    // that some pinned Stripe SDK versions don't expose yet.
+    const body = new URLSearchParams();
+    body.set("event_name", STRIPE_USAGE_METER_EVENT_NAME);
+    body.set("identifier", msg.requestId);
+    body.set("timestamp", String(Math.floor(msg.ts / 1000)));
+    body.set("payload[stripe_customer_id]", ws.stripe_customer_id);
+    body.set("payload[value]", String(msg.units));
+
+    const res = await fetch("https://api.stripe.com/v1/billing/meter_events", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Stripe-Version": "2024-06-20",
+      },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      // 400 with code "already_exists" on idempotent retries is a success.
+      if (res.status === 400 && text.includes("already_exists")) {
+        return { ok: true, skipped: "duplicate" };
+      }
+      return { ok: false, error: `stripe ${res.status}: ${text.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+/**
  * Push aggregated metered usage to Stripe. The metering queue (see
  * `metering.ts`) batches per-period units; this helper flushes one batch as a
  * single `subscription_items.usage_records.create` call with `action:

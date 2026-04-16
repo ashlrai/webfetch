@@ -16,7 +16,7 @@
 import { Hono } from "hono";
 import type { PlanId } from "../../shared/pricing.ts";
 import { getSessionUser, handleAuth } from "./auth.ts";
-import { billingRouter } from "./billing.ts";
+import { billingRouter, emitMeterEventForUsage } from "./billing.ts";
 import { runAuditRetention } from "./cron/audit-retention.ts";
 import type { Env, RequestCtx, UsageMessage } from "./env.ts";
 import { persistUsageRow } from "./metering.ts";
@@ -152,6 +152,10 @@ export default {
       try {
         if (msg.body.kind === "usage") {
           await persistUsageRow(env, msg.body);
+          // Emit Stripe Billing Meter event for Pro/Team. Fire-and-forget —
+          // failures are logged via return value but don't block ack, since
+          // duplicate identifier protects the next retry from double-billing.
+          await emitMeterEventForUsage(env, msg.body);
         }
         msg.ack();
       } catch (e) {
