@@ -44,7 +44,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for pkg in core cli mcp server; do
+          for pkg in core cli mcp server browser; do
             node -e "const fs=require('fs');const p='packages/'+process.argv[1]+'/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "$pkg"
           done
 
@@ -54,6 +54,7 @@ jobs:
           bun run --cwd packages/cli build
           bun run --cwd packages/mcp build
           bun run --cwd packages/server build
+          bun run --cwd packages/browser build
 
       - name: Publish @webfetch/core
         run: npm publish --access public --provenance
@@ -79,13 +80,19 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish @webfetch/browser
+        run: npm publish --access public --provenance
+        working-directory: packages/browser
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create GitHub Release + attach built artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p release-artifacts
-          for pkg in core cli mcp server; do
+          for pkg in core cli mcp server browser; do
             tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json README.md LICENSE 2>/dev/null || \
               tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json LICENSE
           done
