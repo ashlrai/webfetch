@@ -102,6 +102,9 @@ billingRouter.post("/workspaces/:id/portal", async (c) => {
   const portal = await stripe.billingPortal.sessions.create({
     customer: ws.stripe_customer_id,
     return_url: `${c.env.APP_URL}/billing`,
+    ...(c.env.STRIPE_PORTAL_CONFIG_ID
+      ? { configuration: c.env.STRIPE_PORTAL_CONFIG_ID }
+      : {}),
   });
   return ok(c, { url: portal.url });
 });

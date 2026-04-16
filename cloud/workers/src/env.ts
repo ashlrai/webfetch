@@ -40,6 +40,7 @@ export interface Env {
   STRIPE_PRICE_TEAM_SEAT: string;
   STRIPE_PRICE_OVERAGE_PRO: string;
   STRIPE_PRICE_OVERAGE_TEAM: string;
+  STRIPE_PORTAL_CONFIG_ID?: string;
 
   // Secrets (set via `wrangler secret put`)
   STRIPE_SECRET_KEY: string;
