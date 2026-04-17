@@ -49,13 +49,42 @@ const ink = {
   border: "#2c2c36",
   borderSoft: "rgba(255,255,255,0.06)",
   fg: "#f3f3f5",
-  fgMuted: "#c8c8d2",
   fgDim: "#9090a0",
   fgFaint: "#5a5a68",
   accent: "#ff5a1f",
   green: "#4ade80",
   cc: "#9cd9ff",
 };
+
+// macOS-style window controls reused for the terminal + browser chrome.
+function TrafficLights(): React.JSX.Element {
+  return (
+    <>
+      <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+      <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+      <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+    </>
+  );
+}
+
+// Shared chrome bar style — same elevated bg + border for terminal header,
+// browser header, and site footer band.
+const chromeBarStyle = { background: ink.bgElev2, borderColor: ink.border };
+
+// Polished-site copy palette (white-on-dark inside the rendered browser frame).
+const siteFg = {
+  primary: "rgba(255,255,255,0.85)",
+  body: "rgba(255,255,255,0.72)",
+  muted: "rgba(255,255,255,0.6)",
+  border: "rgba(255,255,255,0.12)",
+};
+
+const GALLERY_ITEMS = [
+  { src: DRAKE.performing, pos: "55% 25%", credit: "Brennan Schnell · CC BY-SA" },
+  { src: DRAKE.studio, pos: "50% 30%", credit: "GabboT · CC BY-SA" },
+  { src: DRAKE.portrait, pos: "40% 35%", credit: "Come Up Show · CC BY-SA" },
+  { src: DRAKE.performing, pos: "45% 40%", credit: "Brennan Schnell · CC BY-SA" },
+] as const;
 
 export function HeroScene() {
   const [phase, setPhase] = useState<Phase>(0);
@@ -64,6 +93,7 @@ export function HeroScene() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
+    let alive = true;
     if (prefersReducedMotion()) {
       setTyped(COMMAND);
       setTilesShown(TILES.length);
@@ -71,9 +101,15 @@ export function HeroScene() {
       return;
     }
     const push = (fn: () => void, ms: number) => {
-      timers.current.push(setTimeout(fn, ms));
+      timers.current.push(
+        setTimeout(() => {
+          if (!alive) return;
+          fn();
+        }, ms),
+      );
     };
     const clear = () => {
+      alive = false;
       timers.current.forEach(clearTimeout);
       timers.current = [];
     };
@@ -126,13 +162,8 @@ export function HeroScene() {
           color: ink.fg,
         }}
       >
-        <div
-          className="flex items-center gap-2 px-4 py-2 border-b"
-          style={{ background: ink.bgElev2, borderColor: ink.border }}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        <div className="flex items-center gap-2 px-4 py-2 border-b" style={chromeBarStyle}>
+          <TrafficLights />
           <span className="ml-2 text-[11px]" style={{ color: ink.fgFaint }}>
             ~ — webfetch
           </span>
@@ -191,7 +222,6 @@ export function HeroScene() {
                     alt=""
                     className="w-full h-full object-cover"
                     style={{ objectPosition: t.pos }}
-                    loading="lazy"
                     decoding="async"
                   />
                   <span
@@ -224,13 +254,8 @@ export function HeroScene() {
           }}
         >
           {/* browser chrome */}
-          <div
-            className="flex items-center gap-2 px-4 py-2 border-b"
-            style={{ background: ink.bgElev2, borderColor: ink.border }}
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+          <div className="flex items-center gap-2 px-4 py-2 border-b" style={chromeBarStyle}>
+            <TrafficLights />
             <div
               className="ml-3 flex-1 max-w-[280px] flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border"
               style={{
@@ -285,7 +310,7 @@ export function HeroScene() {
                     className={`mt-2 text-[11px] max-w-[28ch] leading-snug transition-all duration-500 ${
                       showSite ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
                     }`}
-                    style={{ color: "rgba(255,255,255,0.72)", transitionDelay: "200ms" }}
+                    style={{ color: siteFg.body, transitionDelay: "200ms" }}
                   >
                     Every photo licensed. Every credit intact. Updated automatically.
                   </div>
@@ -295,14 +320,14 @@ export function HeroScene() {
                     showSite ? "opacity-100 scale-100" : "opacity-0 scale-90"
                   }`}
                   style={{
-                    borderColor: "rgba(255,255,255,0.12)",
+                    borderColor: siteFg.border,
                     boxShadow: "0 20px 60px -20px rgba(0,0,0,0.7)",
                     transitionDelay: "150ms",
                   }}
                 >
                   <img
                     src={DRAKE.portrait}
-                    alt="Drake"
+                    alt=""
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "50% 22%" }}
                   />
@@ -311,7 +336,7 @@ export function HeroScene() {
                     style={{
                       background:
                         "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
-                      color: "rgba(255,255,255,0.85)",
+                      color: siteFg.primary,
                     }}
                   >
                     The Come Up Show · CC BY-SA 2.0
@@ -325,7 +350,7 @@ export function HeroScene() {
               <div className="flex items-center justify-between">
                 <div
                   className="text-[10px] font-mono uppercase tracking-wider"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: siteFg.muted }}
                 >
                   Latest performances
                 </div>
@@ -334,19 +359,14 @@ export function HeroScene() {
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-4 gap-2">
-                {[
-                  { src: DRAKE.performing, pos: "55% 25%", credit: "Brennan Schnell · CC BY-SA" },
-                  { src: DRAKE.studio, pos: "50% 30%", credit: "GabboT · CC BY-SA" },
-                  { src: DRAKE.portrait, pos: "40% 35%", credit: "Come Up Show · CC BY-SA" },
-                  { src: DRAKE.performing, pos: "45% 40%", credit: "Brennan Schnell · CC BY-SA" },
-                ].map((g, i) => (
+                {GALLERY_ITEMS.map((g, i) => (
                   <div
                     key={`g-${i}`}
                     className={`relative aspect-square rounded-md overflow-hidden border transition-all duration-500 ${
                       showSite ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
                     }`}
                     style={{
-                      borderColor: "rgba(255,255,255,0.12)",
+                      borderColor: siteFg.border,
                       transitionDelay: `${250 + i * 70}ms`,
                     }}
                   >
@@ -375,16 +395,12 @@ export function HeroScene() {
               className={`px-5 py-2.5 border-t flex items-center justify-between text-[10px] font-mono transition-opacity duration-500 ${
                 showSite ? "opacity-100" : "opacity-0"
               }`}
-              style={{
-                background: ink.bgElev2,
-                borderColor: ink.border,
-                transitionDelay: "550ms",
-              }}
+              style={{ ...chromeBarStyle, transitionDelay: "550ms" }}
             >
-              <span style={{ color: "rgba(255,255,255,0.6)" }}>
+              <span style={{ color: siteFg.muted }}>
                 6 images · 3 sources · 100% attributed
               </span>
-              <span className="flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.85)" }}>
+              <span className="flex items-center gap-1.5" style={{ color: siteFg.primary }}>
                 <span className="inline-block w-1.5 h-1.5 rounded-sm" style={{ background: ink.accent }} />
                 powered by webfetch
               </span>
