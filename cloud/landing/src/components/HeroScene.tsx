@@ -86,6 +86,24 @@ const GALLERY_ITEMS = [
   { src: DRAKE.performing, pos: "45% 40%", credit: "Brennan Schnell · CC BY-SA" },
 ] as const;
 
+// Reveal helper — toggles opacity + small translate based on `shown`.
+// Static class strings only (Tailwind JIT can't see interpolated names).
+const REVEAL_VARIANTS = {
+  up: "transition-all duration-500 opacity-0 -translate-y-1",
+  down: "transition-all duration-500 opacity-0 translate-y-1",
+  "down-lg": "transition-all duration-500 opacity-0 translate-y-3",
+  scale: "transition-all duration-700 opacity-0 scale-90",
+} as const;
+const REVEAL_SHOWN = {
+  up: "transition-all duration-500 opacity-100 translate-y-0",
+  down: "transition-all duration-500 opacity-100 translate-y-0",
+  "down-lg": "transition-all duration-500 opacity-100 translate-y-0",
+  scale: "transition-all duration-700 opacity-100 scale-100",
+} as const;
+function revealClass(shown: boolean, from: keyof typeof REVEAL_VARIANTS = "down"): string {
+  return shown ? REVEAL_SHOWN[from] : REVEAL_VARIANTS[from];
+}
+
 export function HeroScene() {
   const [phase, setPhase] = useState<Phase>(0);
   const [typed, setTyped] = useState("");
@@ -291,34 +309,26 @@ export function HeroScene() {
               <div className="relative px-5 pt-5 pb-4 grid grid-cols-[1.4fr_1fr] gap-4 items-end">
                 <div>
                   <div
-                    className={`text-[9px] font-mono tracking-[0.25em] uppercase transition-all duration-500 ${
-                      showSite ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
-                    }`}
+                    className={`text-[9px] font-mono tracking-[0.25em] uppercase ${revealClass(showSite, "up")}`}
                     style={{ color: ink.accent }}
                   >
                     The OVO Archive
                   </div>
                   <div
-                    className={`mt-1 font-mono font-semibold tracking-[-0.04em] text-[28px] leading-[0.95] transition-all duration-500 ${
-                      showSite ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-                    }`}
+                    className={`mt-1 font-mono font-semibold tracking-[-0.04em] text-[28px] leading-[0.95] ${revealClass(showSite)}`}
                     style={{ color: "#ffffff", transitionDelay: "100ms" }}
                   >
                     DRAKE.
                   </div>
                   <div
-                    className={`mt-2 text-[11px] max-w-[28ch] leading-snug transition-all duration-500 ${
-                      showSite ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-                    }`}
+                    className={`mt-2 text-[11px] max-w-[28ch] leading-snug ${revealClass(showSite)}`}
                     style={{ color: siteFg.body, transitionDelay: "200ms" }}
                   >
                     Every photo licensed. Every credit intact. Updated automatically.
                   </div>
                 </div>
                 <div
-                  className={`relative aspect-[4/5] rounded-lg overflow-hidden border transition-all duration-700 ${
-                    showSite ? "opacity-100 scale-100" : "opacity-0 scale-90"
-                  }`}
+                  className={`relative aspect-[4/5] rounded-lg overflow-hidden border ${revealClass(showSite, "scale")}`}
                   style={{
                     borderColor: siteFg.border,
                     boxShadow: "0 20px 60px -20px rgba(0,0,0,0.7)",
@@ -362,9 +372,7 @@ export function HeroScene() {
                 {GALLERY_ITEMS.map((g, i) => (
                   <div
                     key={`g-${i}`}
-                    className={`relative aspect-square rounded-md overflow-hidden border transition-all duration-500 ${
-                      showSite ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-                    }`}
+                    className={`relative aspect-square rounded-md overflow-hidden border ${revealClass(showSite, "down-lg")}`}
                     style={{
                       borderColor: siteFg.border,
                       transitionDelay: `${250 + i * 70}ms`,
