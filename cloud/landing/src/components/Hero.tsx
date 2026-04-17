@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FadeUp } from "./FadeUp";
 import { InstallCommand } from "./InstallCommand";
-import { TypingCli } from "./TypingCli";
+import { HeroScene } from "./HeroScene";
 
 export function Hero() {
   return (
@@ -53,7 +53,7 @@ export function Hero() {
           </div>
 
           <div className="lg:pl-4">
-            <TypingCli />
+            <HeroScene />
           </div>
         </div>
       </div>

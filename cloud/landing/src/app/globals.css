@@ -432,3 +432,46 @@ a:hover {
     animation: none;
   }
 }
+
+/* Inline spinner used in HeroScene "federating providers" line */
+@keyframes wf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.wf-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  animation: wf-spin 700ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-spinner {
+    animation: none;
+  }
+}
+
+/* Tiny pulsing arrow used during the terminal -> browser handoff */
+@keyframes wf-arrow-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateX(2px);
+    opacity: 1;
+  }
+}
+.wf-arrow-pulse {
+  display: inline-block;
+  animation: wf-arrow-nudge 900ms ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-arrow-pulse {
+    animation: none;
+  }
+}
