@@ -57,6 +57,7 @@ wrangler secret put STRIPE_WEBHOOK_SECRET
 wrangler secret put BETTER_AUTH_SECRET
 wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
+# For obtaining GOOGLE_CLIENT_ID/SECRET, see docs/GOOGLE_OAUTH_MANUAL.md (no API — console-only).
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
 
