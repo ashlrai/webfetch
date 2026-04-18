@@ -13,3 +13,4 @@ __pycache__
 bun.lockb
 dist-release
 out
+*.tsbuildinfo
