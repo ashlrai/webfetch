@@ -1,9 +1,9 @@
 /**
- * Outbound email — Resend adapter.
+ * Outbound email — SendGrid adapter (raw fetch, no SDK).
  *
- * Resend offers a free tier (100 emails/day, 3000/mo) which is plenty for
- * invite-grade traffic at launch. The SDK is imported lazily so unit tests
- * (which never set `RESEND_API_KEY`) don't pull the dependency.
+ * SendGrid offers a free tier (100 emails/day) which is plenty for invite-grade
+ * traffic at launch. We hit `POST /v3/mail/send` directly so the bundle stays
+ * small (no `@sendgrid/mail` dep) and Workers cold-starts stay fast.
  *
  * Failure policy: every send call is non-fatal. Callers must treat email
  * delivery as best-effort — the source-of-truth row (e.g. an `invitations`
@@ -26,28 +26,27 @@ export type EmailResult =
   | { ok: false; error: string }
   | { skipped: "no-email-provider" };
 
-/**
- * Optional injection seam used by tests. Production calls hit Resend via the
- * lazy import in `realResendClient`. Tests set `globalThis.__webfetchResend`
- * to a stub before invoking `sendInviteEmail`.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ResendLike = {
-  emails: {
-    send: (
-      payload: any,
-    ) => Promise<{ data?: { id: string } | null; error?: { message: string } | null }>;
-  };
-};
+export interface EmailPayload {
+  to: string;
+  from: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+export interface EmailDispatcher {
+  send(payload: EmailPayload): Promise<EmailResult>;
+}
 
 declare global {
   // eslint-disable-next-line no-var
-  var __webfetchResend: ResendLike | undefined;
+  var __webfetchEmail: EmailDispatcher | undefined;
 }
 
 export async function sendInviteEmail(env: Env, input: SendInviteEmailInput): Promise<EmailResult> {
-  if (!env.RESEND_API_KEY) {
-    console.warn("[email] RESEND_API_KEY not set; skipping invite delivery", {
+  const dispatcher = resolveDispatcher(env);
+  if (!dispatcher) {
+    console.warn("[email] SENDGRID_API_KEY not set; skipping invite delivery", {
       to: input.to,
       workspace: input.workspaceName,
     });
@@ -56,33 +55,57 @@ export async function sendInviteEmail(env: Env, input: SendInviteEmailInput): Pr
   const from = env.EMAIL_FROM || "webfetch <invites@getwebfetch.com>";
   const subject = `${input.inviterName} invited you to ${input.workspaceName} on webfetch`;
   const { html, text } = renderInviteBodies(input);
-
-  let client: ResendLike;
-  try {
-    client = await loadResend(env);
-  } catch (e) {
-    return { ok: false, error: `resend load failed: ${(e as Error).message}` };
-  }
-
-  try {
-    const res = await client.emails.send({ from, to: input.to, subject, html, text });
-    if (res.error) return { ok: false, error: res.error.message };
-    return { ok: true, id: res.data?.id ?? "unknown" };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
+  return dispatcher.send({ from, to: input.to, subject, html, text });
 }
 
-async function loadResend(env: Env): Promise<ResendLike> {
-  if (globalThis.__webfetchResend) return globalThis.__webfetchResend;
-  // Indirect specifier so TypeScript doesn't require the `resend` package at
-  // typecheck time — it's an optional peer dep, only resolved at runtime when
-  // RESEND_API_KEY is configured.
-  const specifier = "resend";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mod: any = await import(/* @vite-ignore */ specifier);
-  const Resend = mod.Resend ?? mod.default ?? mod;
-  return new Resend(env.RESEND_API_KEY) as ResendLike;
+function resolveDispatcher(env: Env): EmailDispatcher | null {
+  if (globalThis.__webfetchEmail) return globalThis.__webfetchEmail;
+  if (!env.SENDGRID_API_KEY) return null;
+  return sendgridDispatcher(env.SENDGRID_API_KEY);
+}
+
+function sendgridDispatcher(apiKey: string): EmailDispatcher {
+  return {
+    async send(payload) {
+      try {
+        const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: payload.to }] }],
+            from: parseFromAddress(payload.from),
+            subject: payload.subject,
+            content: [
+              { type: "text/plain", value: payload.text },
+              { type: "text/html", value: payload.html },
+            ],
+          }),
+        });
+        if (res.status === 202) {
+          return { ok: true, id: res.headers.get("x-message-id") ?? "sendgrid_accepted" };
+        }
+        const body = await res.text();
+        return { ok: false, error: `sendgrid_${res.status}: ${body.slice(0, 200)}` };
+      } catch (e) {
+        return { ok: false, error: (e as Error).message };
+      }
+    },
+  };
+}
+
+// SendGrid wants `from` as `{ email, name? }`. EMAIL_FROM is stored in the
+// human-readable "Name <addr@host>" form (RFC 5322); parse it.
+function parseFromAddress(value: string): { email: string; name?: string } {
+  const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value);
+  if (m) {
+    const name = (m[1] ?? "").trim();
+    const email = m[2] ?? "";
+    return name ? { email, name } : { email };
+  }
+  return { email: value.trim() };
 }
 
 /** Render plain-text + HTML invite bodies. Kept side-effect free for tests. */

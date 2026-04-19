@@ -184,10 +184,10 @@ For the "browse like a human" fallback on Google Images and Pinterest.
 
 ## Notes
 
-- Email verification is off by default when `RESEND_API_KEY` is still
-  `test_stub`. Once you push a real Resend key, it flips back on automatically.
-  Force-on anyway with `wrangler secret put REQUIRE_EMAIL_VERIFICATION` set to
-  `1`.
+- Email verification is off by default when `SENDGRID_API_KEY` is unset or
+  starts with `test_`. Once you push a real SendGrid key, it flips back on
+  automatically. Force-on anyway with `wrangler secret put REQUIRE_EMAIL_VERIFICATION`
+  set to `1`.
 - Every platform key is optional; the resolver in
   `cloud/workers/src/middleware/platform-keys.ts` enables each provider only
   when its env secret is present. Missing keys degrade gracefully.

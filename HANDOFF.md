@@ -15,7 +15,7 @@ This is the do-this list. See LAUNCH.md for detailed runbook, per-step rollback,
 
 - Cloudflare — workers + D1 for `api.getwebfetch.com`
 - Stripe — billing (live mode keys)
-- Resend — team invite emails (verify `getwebfetch.com` sending domain)
+- SendGrid — team invite emails (authenticate `getwebfetch.com` sender domain)
 - Vercel — hosts `app.getwebfetch.com` (dashboard) + `getwebfetch.com` (landing)
 - PyPI — if you don't already have a publisher token
 - VS Code Marketplace publisher (Azure DevOps PAT) — if not already
@@ -30,7 +30,7 @@ This is the do-this list. See LAUNCH.md for detailed runbook, per-step rollback,
 | `CLOUDFLARE_API_TOKEN` | dash.cloudflare.com → API Tokens | Workers + D1 edit |
 | `STRIPE_SECRET_KEY` | dashboard.stripe.com | Live secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → add endpoint | Signing secret |
-| `RESEND_API_KEY` | resend.com | Full access |
+| `SENDGRID_API_KEY` | sendgrid.com → API Keys | Full access (Mail Send) |
 | `VERCEL_TOKEN` | vercel.com → Tokens | Account-scoped |
 | `VSCE_PAT` | dev.azure.com PAT | Marketplace (manage) |
 | `PYPI_TOKEN` | pypi.org → API tokens | Project-scoped once created |
@@ -47,7 +47,7 @@ This is the do-this list. See LAUNCH.md for detailed runbook, per-step rollback,
    gh secret set CLOUDFLARE_API_TOKEN
    gh secret set STRIPE_SECRET_KEY
    gh secret set STRIPE_WEBHOOK_SECRET
-   gh secret set RESEND_API_KEY
+   gh secret set SENDGRID_API_KEY
    gh secret set VERCEL_TOKEN
    ```
 4. `git tag v0.1.0 && git push --tags` — CI publishes npm packages + Docker image + Homebrew formula. Watch: `gh run watch`.
@@ -58,7 +58,7 @@ This is the do-this list. See LAUNCH.md for detailed runbook, per-step rollback,
    wrangler d1 migrations apply webfetch-prod --remote
    wrangler secret put STRIPE_SECRET_KEY
    wrangler secret put STRIPE_WEBHOOK_SECRET
-   wrangler secret put RESEND_API_KEY
+   wrangler secret put SENDGRID_API_KEY
    wrangler deploy
    ```
    Point `api.getwebfetch.com` at the worker (Cloudflare → Workers → Custom Domains).

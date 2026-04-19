@@ -51,13 +51,13 @@ export interface Env {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
 
-  // Email provider (Resend). Optional — invites stay queued in D1 if absent.
-  RESEND_API_KEY?: string;
+  // Email provider (SendGrid). Optional — invites stay queued in D1 if absent.
+  SENDGRID_API_KEY?: string;
   EMAIL_FROM?: string;
 
-  // When RESEND_API_KEY is still the `test_stub` placeholder, Better Auth's
+  // When SENDGRID_API_KEY is still a `test_*` placeholder, Better Auth's
   // email-verification gate is turned OFF automatically so self-signup works
-  // for dogfooding. Set this to "1" to force-on in non-Resend environments
+  // for dogfooding. Set this to "1" to force-on in non-SendGrid environments
   // (e.g. magic-link fallback).
   REQUIRE_EMAIL_VERIFICATION?: string;
 

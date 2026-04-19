@@ -58,7 +58,7 @@ export default function PrivacyPage() {
       <ul>
         <li>Cloudflare (infrastructure)</li>
         <li>Stripe (billing)</li>
-        <li>Better Auth (self-hosted) + Resend (transactional email)</li>
+        <li>Better Auth (self-hosted) + SendGrid (transactional email)</li>
         <li>Bright Data (managed browser fallback — only for Pro+ browser calls)</li>
       </ul>
 

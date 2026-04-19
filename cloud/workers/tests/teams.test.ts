@@ -83,18 +83,16 @@ describe("workspaces + teams", () => {
     expect(row?.email).toBe("pal@test.dev");
   });
 
-  test("invite email is dispatched when RESEND_API_KEY is set", async () => {
+  test("invite email is dispatched when SENDGRID_API_KEY is set", async () => {
     const sent: unknown[] = [];
-    globalThis.__webfetchResend = {
-      emails: {
-        send: async (payload: unknown) => {
-          sent.push(payload);
-          return { data: { id: "msg_test_123" }, error: null };
-        },
+    globalThis.__webfetchEmail = {
+      async send(payload) {
+        sent.push(payload);
+        return { ok: true, id: "msg_test_123" };
       },
     };
     try {
-      const { env } = makeEnv({ RESEND_API_KEY: "re_live_test" });
+      const { env } = makeEnv({ SENDGRID_API_KEY: "SG.live_test" });
       const { sessionToken, workspaceId } = await seedWorkspaceWithKey(env);
       const res = await app.fetch(
         new Request(`http://x/v1/workspaces/${workspaceId}/invite`, {
@@ -116,7 +114,7 @@ describe("workspaces + teams", () => {
       expect(payload.to).toBe("teammate@test.dev");
       expect(payload.subject).toContain("invited you");
     } finally {
-      globalThis.__webfetchResend = undefined;
+      globalThis.__webfetchEmail = undefined;
     }
   });
 

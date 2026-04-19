@@ -76,11 +76,11 @@ gh repo create ashlrai/homebrew-webfetch --public --description "Homebrew tap fo
 3. Get `STRIPE_SECRET_KEY` (live mode `sk_live_...`).
 4. Configure a webhook endpoint: `https://api.getwebfetch.com/v1/webhooks/stripe` (will exist after step 4). Capture the signing secret as `STRIPE_WEBHOOK_SECRET`.
 
-### 1.6 Resend
+### 1.6 SendGrid
 
-1. Sign up at https://resend.com.
-2. Add and verify `getwebfetch.com` (DKIM + SPF + DMARC records in Cloudflare DNS).
-3. Generate API key, store as `RESEND_API_KEY`.
+1. Sign up at https://sendgrid.com.
+2. Authenticate the `getwebfetch.com` sender domain (Settings → Sender Authentication → DKIM + SPF + DMARC records in Cloudflare DNS).
+3. Create an API key (Settings → API Keys → Restricted Access with **Mail Send** permission only), store as `SENDGRID_API_KEY`.
 
 ### 1.7 Vercel
 
@@ -114,7 +114,7 @@ gh secret set CLOUDFLARE_API_TOKEN   --body "xxx"
 gh secret set CLOUDFLARE_ACCOUNT_ID  --body "xxx"
 gh secret set STRIPE_SECRET_KEY      --body "sk_live_xxx"
 gh secret set STRIPE_WEBHOOK_SECRET  --body "whsec_xxx"
-gh secret set RESEND_API_KEY         --body "re_xxx"
+gh secret set SENDGRID_API_KEY       --body "SG.xxx"
 gh secret set VERCEL_TOKEN           --body "xxx"
 gh secret set VERCEL_ORG_ID          --body "team_xxx"
 gh secret set VERCEL_PROJECT_LANDING --body "prj_xxx"
@@ -255,7 +255,7 @@ npx wrangler d1 execute webfetch-prod --remote --file=../schema/0002_indexes.sql
 ```bash
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
-npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put SENDGRID_API_KEY
 npx wrangler secret put BETTER_AUTH_SECRET   # 32+ random bytes
 npx wrangler secret put JWT_SIGNING_KEY      # 32+ random bytes
 ```

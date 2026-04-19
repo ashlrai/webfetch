@@ -169,12 +169,12 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
     },
     emailAndPassword: {
       enabled: true,
-      // Email verification is ON when RESEND_API_KEY is a real key; we default
-      // to OFF when the placeholder `test_stub` is in place so self-signup
+      // Email verification is ON when SENDGRID_API_KEY is a real key; we
+      // default to OFF when the placeholder `test_*` is in place so self-signup
       // works for dogfooding. Set REQUIRE_EMAIL_VERIFICATION=1 to force-on in
-      // non-Resend environments (magic-link fallback, etc.).
+      // non-SendGrid environments (magic-link fallback, etc.).
       requireEmailVerification:
-        (!!c.env.RESEND_API_KEY && !c.env.RESEND_API_KEY.startsWith("test_")) ||
+        (!!c.env.SENDGRID_API_KEY && !c.env.SENDGRID_API_KEY.startsWith("test_")) ||
         c.env.REQUIRE_EMAIL_VERIFICATION === "1",
       // Better Auth's default is scrypt (N=16384) via a pure-JS fallback in
       // the Workers runtime → blows past the 10 ms CPU budget and returns
