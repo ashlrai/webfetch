@@ -45,17 +45,19 @@ export default async function OverviewPage() {
 
   const topProviders = perProvider.slice(0, 6);
 
-  const activityFeed = [
-    { t: "2m ago", label: "Key used: wf_live_8Kq…", sub: "GET /v1/search" },
-    { t: "14m ago", label: "Pro plan renewed", sub: formatUsd(plan.baseMonthlyUsd) },
-    { t: "1h ago", label: "Member invited", sub: "editor@ashlr.ai" },
-    { t: "3h ago", label: "Provider key added", sub: "unsplash · BYOK" },
-    {
-      t: "yesterday",
-      label: "Quota 80% warning sent",
-      sub: `${formatInt(used)} of ${formatInt(usage.included)}`,
-    },
-  ];
+  const activityFeed = isFirstRun
+    ? []
+    : [
+        { t: "2m ago", label: "Key used: wf_live_8Kq…", sub: "GET /v1/search" },
+        { t: "14m ago", label: "Pro plan renewed", sub: formatUsd(plan.baseMonthlyUsd) },
+        { t: "1h ago", label: "Member invited", sub: "editor@ashlr.ai" },
+        { t: "3h ago", label: "Provider key added", sub: "unsplash · BYOK" },
+        {
+          t: "yesterday",
+          label: "Quota 80% warning sent",
+          sub: `${formatInt(used)} of ${formatInt(usage.included)}`,
+        },
+      ];
 
   return (
     <div className="flex flex-col gap-7">
@@ -204,10 +206,22 @@ export default async function OverviewPage() {
               Manage →
             </Link>
           </div>
-          <HBarList
-            data={topProviders.map((p) => ({ label: p.provider, value: p.fetches }))}
-            format={formatInt}
-          />
+          {topProviders.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center py-8 gap-1"
+              style={{ color: "var(--text-mute)" }}
+            >
+              <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+                No provider data yet.
+              </span>
+              <span className="mono text-[11px]">Fetches break down by provider once you start calling the API.</span>
+            </div>
+          ) : (
+            <HBarList
+              data={topProviders.map((p) => ({ label: p.provider, value: p.fetches }))}
+              format={formatInt}
+            />
+          )}
         </div>
 
         <div className="lg:col-span-2 surface p-4 flex flex-col gap-3">
@@ -217,25 +231,37 @@ export default async function OverviewPage() {
               View all →
             </Link>
           </div>
-          <ul className="flex flex-col">
-            {activityFeed.map((a, i) => (
-              <li
-                key={i}
-                className="flex items-start justify-between gap-3 py-2 border-b last:border-0"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[13px] truncate">{a.label}</span>
-                  <span className="mono text-[11px] truncate" style={{ color: "var(--text-mute)" }}>
-                    {a.sub}
+          {activityFeed.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center py-8 gap-1"
+              style={{ color: "var(--text-mute)" }}
+            >
+              <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+                Activity starts here.
+              </span>
+              <span className="mono text-[11px]">Make your first API call to see events.</span>
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {activityFeed.map((a, i) => (
+                <li
+                  key={i}
+                  className="flex items-start justify-between gap-3 py-2 border-b last:border-0"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[13px] truncate">{a.label}</span>
+                    <span className="mono text-[11px] truncate" style={{ color: "var(--text-mute)" }}>
+                      {a.sub}
+                    </span>
+                  </div>
+                  <span className="mono text-[11px] shrink-0" style={{ color: "var(--text-mute)" }}>
+                    {a.t}
                   </span>
-                </div>
-                <span className="mono text-[11px] shrink-0" style={{ color: "var(--text-mute)" }}>
-                  {a.t}
-                </span>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 

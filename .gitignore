@@ -14,3 +14,4 @@ bun.lockb
 dist-release
 out
 *.tsbuildinfo
+.claude/

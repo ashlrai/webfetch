@@ -11,27 +11,33 @@ The HTTP API is a thin wrapper around the same core library that powers the CLI 
 ## Base URL
 
 - **Self-hosted:** `http://localhost:7777` (default; override with `WEBFETCH_HTTP_PORT`).
-- **webfetch Cloud:** `https://api.getwebfetch.com/v1`.
+- **webfetch Cloud:** `https://api.getwebfetch.com`.
 
 ## Authentication
 
-Every request (except `GET /health` when disabled) requires a bearer token:
+Every metered endpoint requires a bearer token:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer $WEBFETCH_KEY
 ```
 
 - **Self-hosted:** set `WEBFETCH_HTTP_TOKEN=mytoken` when starting the server.
-- **Cloud:** your API key from [app.getwebfetch.com/keys](https://app.getwebfetch.com/keys).
+- **Cloud:** your API key (prefix `wf_live_`) from [app.getwebfetch.com/keys](https://app.getwebfetch.com/keys).
 
-Missing or bad token → `401 Unauthorized`.
+Export the key once and paste any example below without editing it:
+
+```bash
+export WEBFETCH_KEY=wf_live_yourkey
+```
+
+Missing or invalid token → `401 Unauthorized`.
 
 ## Response envelope
 
 Every response is JSON with this shape:
 
 ```json
-{ "ok": true, "data": { /* endpoint-specific */ } }
+{ "ok": true, "data": { } }
 ```
 
 On error:
@@ -40,17 +46,13 @@ On error:
 { "ok": false, "error": "human-readable reason" }
 ```
 
-Validation errors include the Zod issue path:
-
-```json
-{ "ok": false, "error": "query: Required; limit: expected number, received string" }
-```
-
 ## Endpoints
 
-### `POST /search` — federated image search
+### `POST /v1/search` — federated image search
 
-Request body:
+**Auth:** bearer key required. **Cost:** 1 fetch unit.
+
+Request body (`query` is the only required field):
 
 ```json
 {
@@ -60,15 +62,34 @@ Request body:
   "maxPerProvider": 3,
   "minWidth": 1200,
   "minHeight": 800,
+  "safeSearch": "moderate",
   "timeoutMs": 15000
 }
 ```
+
+`licensePolicy` ∈ `"safe-only" | "prefer-safe" | "any"`. `safeSearch` ∈ `"strict" | "moderate" | "off"`.
 
 Response `data`:
 
 ```json
 {
-  "candidates": [ /* ImageCandidate[] */ ],
+  "candidates": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/...",
+      "thumbnailUrl": "https://...",
+      "sourcePageUrl": "https://commons.wikimedia.org/...",
+      "license": "CC_BY_SA",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "confidence": 0.95,
+      "author": "Jane Photog",
+      "authorUrl": "https://...",
+      "attributionLine": "Photo by Jane Photog / CC BY-SA 4.0",
+      "provider": "wikimedia",
+      "width": 2048,
+      "height": 1365,
+      "mime": "image/jpeg"
+    }
+  ],
   "providerReports": [
     { "provider": "wikimedia", "ok": true, "count": 12, "timeMs": 340 },
     { "provider": "openverse", "ok": true, "count": 8, "timeMs": 520 }
@@ -77,9 +98,18 @@ Response `data`:
 }
 ```
 
-All fields except `query` are optional. Sensible defaults apply (see [Providers](/docs/providers)).
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/search \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"drake portrait","licensePolicy":"safe-only"}'
+```
 
-### `POST /artist` — artist images by kind
+---
+
+### `POST /v1/artist` — artist images by kind
+
+**Auth:** bearer key required. **Cost:** 1 fetch unit.
 
 ```json
 {
@@ -90,9 +120,22 @@ All fields except `query` are optional. Sensible defaults apply (see [Providers]
 }
 ```
 
-`kind` ∈ `"portrait" | "album" | "logo" | "performing"`. The adapter auto-picks the best providers per kind if `providers` is omitted.
+`kind` ∈ `"portrait" | "album" | "logo" | "performing"`. Defaults to `"portrait"`. The adapter auto-picks the best providers per kind when `providers` is omitted.
 
-### `POST /album` — canonical album artwork
+Response shape is identical to `/v1/search` (`candidates`, `providerReports`, `warnings`).
+
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/artist \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"artist":"Taylor Swift","kind":"portrait","licensePolicy":"safe-only"}'
+```
+
+---
+
+### `POST /v1/album` — canonical album artwork
+
+**Auth:** bearer key required. **Cost:** 1 fetch unit.
 
 ```json
 {
@@ -102,33 +145,54 @@ All fields except `query` are optional. Sensible defaults apply (see [Providers]
 }
 ```
 
-Enforces 1:1 aspect ratio. Returns the highest-resolution CAA candidate available.
+Returns the highest-resolution cover art available. Response shape: `candidates`, `providerReports`, `warnings`.
 
-### `POST /download` — fetch image bytes to cache
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/album \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"artist":"Radiohead","album":"In Rainbows","minWidth":1000}'
+```
+
+---
+
+### `POST /v1/download` — fetch image bytes into the cloud cache
+
+**Auth:** bearer key required. **Cost:** 2 fetch units.
+
+```json
+{
+  "url": "https://upload.wikimedia.org/wikipedia/commons/...",
+  "maxBytes": 20971520
+}
+```
+
+`maxBytes` defaults to 20 MB (20,971,520). Maximum 100 MB. Only `image/*` MIME types are accepted. The worker fetches the URL server-side, SHA-256-hashes the bytes, stores them in R2, and returns the hash as a stable cache key — identical bytes from different URLs collapse to the same key.
+
+Response `data`:
 
 ```json
 {
   "url": "https://upload.wikimedia.org/wikipedia/...",
-  "maxBytes": 20000000,
-  "cacheDir": "/var/lib/webfetch/cache"
-}
-```
-
-Response:
-
-```json
-{
-  "url": "https://...",
-  "sha256": "abc123…",
+  "sha256": "4a9f3b...",
   "mime": "image/jpeg",
   "byteSize": 482019,
-  "cachedPath": "/var/lib/webfetch/cache/abc123…jpeg"
+  "cacheKey": "4a9f3b..."
 }
 ```
 
-Uses a SHA-256-keyed cache — identical bytes from different URLs collapse into one file.
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/download \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg"}'
+```
 
-### `POST /probe` — list every image on a page with per-image license
+---
+
+### `POST /v1/probe` — list every image on a page with per-image license
+
+**Auth:** bearer key required. **Cost:** 1 fetch unit.
 
 ```json
 {
@@ -137,109 +201,212 @@ Uses a SHA-256-keyed cache — identical bytes from different URLs collapse into
 }
 ```
 
-Returns an array of every `<img>` found on the page, each with an inferred license tag and confidence.
+`respectRobots` defaults to `true`. Returns an array of every image found on the page, each with an inferred license tag and confidence score.
 
-### `POST /license` — determine license for a specific URL
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/probe \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://en.wikipedia.org/wiki/Drake_(musician)","respectRobots":true}'
+```
+
+---
+
+### `POST /v1/license` — determine license for a specific URL
+
+**Auth:** bearer key required. **Cost:** 1 fetch unit.
 
 ```json
 {
   "url": "https://upload.wikimedia.org/wikipedia/commons/...",
-  "probe": true
+  "probe": false
 }
 ```
 
-Response:
+`probe: true` also downloads and caches the image bytes (costs an additional R2 write). `probe: false` (default) is metadata-only and faster.
+
+Response `data`:
 
 ```json
 {
   "license": "CC_BY_SA",
   "confidence": 0.95,
   "author": "Jane Photog",
-  "attributionLine": "...",
+  "attributionLine": "Photo by Jane Photog / CC BY-SA 4.0",
   "sourcePageUrl": "https://commons.wikimedia.org/...",
   "mime": "image/jpeg",
-  "sha256": "abc…",
-  "cachedPath": "/var/lib/webfetch/cache/abc…",
+  "sha256": "4a9f3b...",
   "byteSize": 482019
 }
 ```
 
-If `probe: true`, the adapter also downloads the bytes and caches them. If `false`, metadata only.
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/license \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg","probe":false}'
+```
 
-### `POST /similar` — reverse-image search
+---
+
+### `POST /v1/similar` — reverse-image search
+
+**Auth:** bearer key required. **Cost:** 3 fetch units. **Plan:** Pro or above.
 
 ```json
 {
   "url": "https://example.com/mystery.jpg",
-  "providers": ["serpapi"]
+  "providers": ["serpapi", "brave"]
 }
 ```
 
-Requires `SERPAPI_KEY`. Returns candidates visually similar to the input URL.
+`providers` is optional; omit to use all configured reverse-search providers. Requires at least one reverse-search provider key to be active on the platform side. Returns `candidates`, `providerReports`, `warnings`.
 
-### `GET /providers` — list configured providers + defaults
+```bash
+curl -sS -X POST https://api.getwebfetch.com/v1/similar \
+  -H "Authorization: Bearer $WEBFETCH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg"}'
+```
+
+---
+
+### `GET /providers` — list configured providers
+
+**Auth:** none required.
+
+Returns all known provider IDs, the default provider set, which platform-managed provider keys are active on the Cloud side, and the metered endpoint list. When called with a valid session cookie the response also includes `userPlan`.
+
+Response `data`:
 
 ```json
 {
-  "ok": true,
-  "data": {
-    "all": ["wikimedia", "openverse", "unsplash", "..."],
-    "defaults": ["wikimedia", "openverse", "..."],
-    "endpoints": ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar"]
-  }
+  "all": ["wikimedia", "openverse", "unsplash", "pexels", "pixabay", "itunes",
+          "musicbrainz-caa", "spotify", "youtube-thumb", "brave", "bing",
+          "serpapi", "browser"],
+  "defaults": ["wikimedia", "openverse", "unsplash"],
+  "platformProvidersAvailable": true,
+  "userPlan": null,
+  "endpoints": [
+    "/v1/search", "/v1/artist", "/v1/album", "/v1/download",
+    "/v1/probe", "/v1/license", "/v1/similar"
+  ]
 }
 ```
 
-No auth-sensitive data is exposed; safe to call unauthenticated on healthcheck paths.
+```bash
+curl -sS https://api.getwebfetch.com/providers
+```
+
+---
 
 ### `GET /health` — liveness probe
 
-Returns `{ "ok": true, "data": { "status": "ok", "version": "0.1.0" } }`. Still requires auth unless disabled with `WEBFETCH_HEALTH_NOAUTH=1`.
-
-## Error codes
-
-| Status | Meaning | Recovery |
-|---|---|---|
-| 200 | Success | — |
-| 400 | Bad JSON body | Fix client-side parsing |
-| 401 | Missing or invalid token | Regenerate key |
-| 402 | Over your plan's fetch budget (Cloud only) | Upgrade plan or wait until next cycle |
-| 404 | Unknown endpoint | Check the endpoint list |
-| 422 | Schema validation failed | Check error message; fix payload |
-| 429 | Rate limit exceeded | Back off, retry with exponential delay |
-| 500 | Internal error | Retry once; if persistent, report to support |
-
-All 4xx bodies include `{ ok: false, error: "..." }`. 429 responses also include `X-RateLimit-Reset` (Unix seconds).
-
-## Rate limits per plan (Cloud)
-
-| Plan | Fetches/month | Burst | Browser budget |
-|---|---|---|---|
-| Free | 1,000 | 10/min | 0 |
-| Starter ($19/mo) | 25,000 | 60/min | 500 browser-sourced |
-| Growth ($99/mo) | 250,000 | 300/min | 5,000 |
-| Scale | custom | custom | custom |
-
-Self-hosted has no rate limit — you're limited only by the upstream providers. Respect their ToS.
-
-## Example: curl (Cloud)
+**Auth:** none required.
 
 ```bash
-curl -sS -X POST https://api.getwebfetch.com/v1/search \
-  -H "authorization: Bearer wf_live_yourkeyhere" \
-  -H "content-type: application/json" \
-  -d '{"query":"drake portrait","licensePolicy":"safe-only"}' \
-  | jq '.data.candidates[0]'
+curl -sS https://api.getwebfetch.com/health
 ```
 
-## Example: Node.js / TypeScript
+Response:
+
+```json
+{ "ok": true, "service": "webfetch-api", "env": "production" }
+```
+
+---
+
+## Pricing & quota
+
+| Plan | Price | Fetches / period | Period | Rate limit | `/v1/similar` |
+|------|-------|-----------------|--------|------------|---------------|
+| **Free** | $0 | 100 | daily | 10 req/min | no |
+| **Pro** | $19/mo | 10,000 | monthly | 100 req/min | yes |
+| **Team** | $79/mo | 50,000 | monthly | 300 req/min | yes |
+| **Enterprise** | contact us | 1,000,000 | monthly | 1,000 req/min | yes |
+
+**Fetch unit costs by endpoint:**
+
+| Endpoint | Units |
+|----------|-------|
+| `/v1/search`, `/v1/artist`, `/v1/album`, `/v1/probe`, `/v1/license` | 1 |
+| `/v1/download` | 2 |
+| `/v1/similar` | 3 |
+
+Free plan has a hard daily cap — no overage charges, requests are rejected when the cap is hit. Pro and Team plans charge $0.015 and $0.010 per unit respectively for usage above the included amount.
+
+Manage your subscription and view live usage at [app.getwebfetch.com/billing](https://app.getwebfetch.com/billing). Full pricing details at [getwebfetch.com/pricing](https://getwebfetch.com/pricing).
+
+---
+
+## Common errors
+
+### 401 — missing or invalid key
+
+```json
+{ "ok": false, "error": "unauthenticated" }
+```
+
+Confirm `Authorization: Bearer wf_live_...` is present and the key hasn't been revoked in [app.getwebfetch.com/keys](https://app.getwebfetch.com/keys).
+
+### 402 — quota exhausted
+
+```json
+{ "ok": false, "error": "quota exceeded" }
+```
+
+Free tier: resets at the next daily boundary (UTC midnight). Paid tiers: upgrade or wait for the monthly billing cycle to roll over.
+
+### 403 — endpoint not available on your plan
+
+```json
+{ "ok": false, "error": "forbidden" }
+```
+
+`/v1/similar` requires Pro or above. Upgrade at [app.getwebfetch.com/billing](https://app.getwebfetch.com/billing).
+
+### 429 — rate limit hit
+
+```json
+{ "ok": false, "error": "rate limit exceeded" }
+```
+
+The response includes `X-RateLimit-Reset` (Unix seconds). Back off and retry after that timestamp. Limits are per API key.
+
+### 400 — validation error
+
+```json
+{ "ok": false, "error": "query: Required" }
+```
+
+The error message includes the Zod field path. Fix the request body and retry.
+
+### 415 — non-image content type (download only)
+
+```json
+{ "ok": false, "error": "disallowed content-type: text/html" }
+```
+
+`/v1/download` accepts only `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/avif`, and `image/svg+xml`.
+
+### 500 — internal error
+
+```json
+{ "ok": false, "error": "search failed" }
+```
+
+Retry once. If the error persists, [open an issue](https://github.com/ashlrai/web-fetcher-mcp/issues).
+
+---
+
+## Full example: Node.js / TypeScript
 
 ```ts
 const r = await fetch("https://api.getwebfetch.com/v1/search", {
   method: "POST",
   headers: {
-    "content-type": "application/json",
-    authorization: `Bearer ${process.env.WEBFETCH_API_KEY}`,
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${process.env.WEBFETCH_KEY}`,
   },
   body: JSON.stringify({
     query: "kyoto temple",
@@ -252,21 +419,7 @@ if (!ok) throw new Error(error);
 console.log(data.candidates[0]);
 ```
 
-## Example: Python SDK
-
-```py
-from webfetch import AsyncWebfetchClient
-
-async def main():
-    client = AsyncWebfetchClient(api_key="wf_live_yourkeyhere")
-    results = await client.search("drake portrait", license_policy="safe-only")
-    for c in results.candidates:
-        print(c.license, c.attribution_line, c.url)
-```
-
-The SDK mirrors every endpoint: `client.search(...)`, `client.artist(...)`, `client.album(...)`, `client.download(...)`, `client.probe(...)`, `client.license(...)`, `client.similar(...)`.
-
-## Running the server
+## Running the server (self-hosted)
 
 ```bash
 bun run --cwd packages/server start
@@ -274,4 +427,4 @@ bun run --cwd packages/server start
 docker run -p 7777:7777 -e WEBFETCH_HTTP_TOKEN=mytoken ghcr.io/ashlrai/webfetch-server
 ```
 
-See [Self-hosting](/docs/self-hosting) for production deployment (Docker Compose, systemd, Kubernetes).
+See [Self-hosting](/docs/self-hosting) for production deployment.

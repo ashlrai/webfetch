@@ -1,3 +1,4 @@
+import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import PageHeader from "@/components/PageHeader";
 import PlanCard from "@/components/PlanCard";
@@ -196,9 +197,15 @@ export default async function BillingPage({
           )}
         </div>
         {plan.baseMonthlyUsd === 0 ? (
-          <div className="surface p-5 text-[13px]" style={{ color: "var(--text-dim)" }}>
-            No invoices yet — you're on the free tier.
-          </div>
+          <EmptyState
+            title="No invoices yet."
+            description="Invoices appear here once you subscribe. Free tier has no charges — upgrade to unlock higher limits."
+            action={
+              <a href="/billing/checkout?plan=pro" className="btn btn-primary">
+                <Icon name="arrow-up" /> Upgrade to Pro
+              </a>
+            }
+          />
         ) : (
           <div className="surface overflow-hidden">
             <table className="data">

@@ -150,6 +150,16 @@ export default function TeamClient({
         <EmptyState
           title="No teammates yet."
           description="Invite someone to share keys, usage, and billing. Roles let you limit who can rotate keys or change plans."
+          action={
+            canManage ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => document.querySelector<HTMLInputElement>('input[type="email"]')?.focus()}
+              >
+                <Icon name="plus" /> Invite a teammate
+              </button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="surface overflow-hidden">

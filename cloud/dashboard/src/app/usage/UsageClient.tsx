@@ -1,8 +1,10 @@
 "use client";
 
 import { AreaChart, BarChart, HBarList } from "@/components/Chart";
+import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { formatInt, formatUsd, toCsv } from "@/lib/format";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Range = "7d" | "30d" | "90d";
@@ -62,6 +64,22 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
     endpointFilter === "all"
       ? perEndpoint
       : perEndpoint.filter((e) => e.endpoint === endpointFilter);
+
+  const hasData = dailySeries.some((d) => d.fetches > 0);
+
+  if (!hasData) {
+    return (
+      <EmptyState
+        title="No fetches in this period."
+        description="Charts populate as soon as your API key makes its first call. Grab a key and run the curl below to see data here."
+        action={
+          <Link href="/keys" className="btn btn-primary">
+            <Icon name="plus" /> Go to API keys
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,5 +1,6 @@
 "use client";
 
+import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { formatRelative, toCsv } from "@/lib/format";
 import type { AuditEntry, UsageRow } from "@shared/types";
@@ -147,91 +148,103 @@ export default function AuditClient({ audit, usage }: { audit: AuditEntry[]; usa
         </div>
       </div>
 
-      <div className="surface overflow-hidden">
-        <table className="data">
-          <thead>
-            {tab === "api" ? (
-              <tr>
-                <th>Time</th>
-                <th>Endpoint</th>
-                <th>Status</th>
-                <th>Units</th>
-                <th>Request ID</th>
-              </tr>
-            ) : (
-              <tr>
-                <th>Time</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Target</th>
-                <th>Meta</th>
-              </tr>
-            )}
-          </thead>
-          <tbody>
-            {tab === "api" ? (
-              filteredUsage.length === 0 ? (
+      {tab === "api" && usage.length === 0 ? (
+        <EmptyState
+          title="No API calls recorded yet."
+          description="Every request to api.getwebfetch.com appears here in real time — endpoint, status, latency, and cost."
+        />
+      ) : tab === "admin" && audit.length === 0 ? (
+        <EmptyState
+          title="No admin events yet."
+          description="Key rotations, member invites, plan changes, and provider updates will appear here once they happen."
+        />
+      ) : (
+        <div className="surface overflow-hidden">
+          <table className="data">
+            <thead>
+              {tab === "api" ? (
+                <tr>
+                  <th>Time</th>
+                  <th>Endpoint</th>
+                  <th>Status</th>
+                  <th>Units</th>
+                  <th>Request ID</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>Time</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Meta</th>
+                </tr>
+              )}
+            </thead>
+            <tbody>
+              {tab === "api" ? (
+                filteredUsage.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}
+                    >
+                      No rows match this filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsage.map((u) => (
+                    <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setDetail(u)}>
+                      <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                        {formatRelative(u.ts)}
+                      </td>
+                      <td className="mono">{u.endpoint}</td>
+                      <td>
+                        <span
+                          className={`badge ${u.status >= 500 ? "badge-err" : u.status >= 400 ? "badge-warn" : "badge-ok"}`}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="mono text-[12px]">{u.units}</td>
+                      <td className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
+                        {u.requestId}
+                      </td>
+                    </tr>
+                  ))
+                )
+              ) : filteredAudit.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
                     style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}
                   >
-                    No rows match this filter.
+                    No events match this filter.
                   </td>
                 </tr>
               ) : (
-                filteredUsage.map((u) => (
-                  <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setDetail(u)}>
+                filteredAudit.map((a) => (
+                  <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => setDetail(a)}>
                     <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
-                      {formatRelative(u.ts)}
+                      {formatRelative(a.ts)}
                     </td>
-                    <td className="mono">{u.endpoint}</td>
+                    <td className="mono text-[11.5px]">{a.actorUserId ?? "system"}</td>
                     <td>
-                      <span
-                        className={`badge ${u.status >= 500 ? "badge-err" : u.status >= 400 ? "badge-warn" : "badge-ok"}`}
-                      >
-                        {u.status}
-                      </span>
+                      <span className="badge">{a.action}</span>
                     </td>
-                    <td className="mono text-[12px]">{u.units}</td>
-                    <td className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
-                      {u.requestId}
+                    <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+                      {a.targetType ?? "—"}
+                      {a.targetId ? `:${a.targetId}` : ""}
+                    </td>
+                    <td className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
+                      {a.meta ?? "—"}
                     </td>
                   </tr>
                 ))
-              )
-            ) : filteredAudit.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  style={{ textAlign: "center", color: "var(--text-dim)", padding: 40 }}
-                >
-                  No events match this filter.
-                </td>
-              </tr>
-            ) : (
-              filteredAudit.map((a) => (
-                <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => setDetail(a)}>
-                  <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
-                    {formatRelative(a.ts)}
-                  </td>
-                  <td className="mono text-[11.5px]">{a.actorUserId ?? "system"}</td>
-                  <td>
-                    <span className="badge">{a.action}</span>
-                  </td>
-                  <td className="mono text-[11.5px]" style={{ color: "var(--text-dim)" }}>
-                    {a.targetType ?? "—"}
-                    {a.targetId ? `:${a.targetId}` : ""}
-                  </td>
-                  <td className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
-                    {a.meta ?? "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {detail && (
         <>

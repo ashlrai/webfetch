@@ -1,3 +1,4 @@
+import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import PageHeader from "@/components/PageHeader";
 import ProviderRow from "@/components/ProviderRow";
@@ -34,11 +35,23 @@ export default async function ProvidersPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {providers.map((p) => (
-          <ProviderRow key={p.name} provider={p} />
-        ))}
-      </div>
+      {providers.length === 0 ? (
+        <EmptyState
+          title="No providers configured."
+          description="Add your own API keys for Unsplash, Pexels, and others, or upgrade to Pro to use webfetch's pooled quota automatically."
+          action={
+            <a href="/billing/checkout?plan=pro" className="btn btn-primary">
+              <Icon name="arrow-up" /> Upgrade to enable pool
+            </a>
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {providers.map((p) => (
+            <ProviderRow key={p.name} provider={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
