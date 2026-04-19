@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { DocsSearch } from "@/components/docs/DocsSearch";
 import { DocsSidebar } from "@/components/docs/DocsSidebar";
+
+export const metadata: Metadata = {
+  title: "Docs",
+  description:
+    "API reference, CLI guide, MCP setup, and provider docs for webfetch — the license-first image layer for AI agents.",
+  alternates: { canonical: "/docs" },
+};
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (

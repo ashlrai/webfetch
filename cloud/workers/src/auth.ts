@@ -19,6 +19,7 @@
 import type { Context } from "hono";
 import type { Env } from "./env.ts";
 import { constantTimeEq, sha256Hex, ulid } from "./ids.ts";
+import { sendWelcomeEmail } from "./email.ts";
 
 // Better Auth is imported lazily inside the handlers below to avoid pulling its
 // cold-start cost into the hot path. The types import is fine though.
@@ -162,6 +163,17 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
             } catch (err) {
               // Do not block signup on provisioning failure; log for debug.
               console.error("[auth.hooks.user.create.after] provisioning error", err);
+            }
+            // Best-effort welcome email — never blocks signup.
+            const welcomeP = sendWelcomeEmail(c.env, { to: user.email, name: user.name });
+            if (c.executionCtx?.waitUntil) {
+              c.executionCtx.waitUntil(welcomeP.catch((err) => {
+                console.error("[auth.hooks.user.create.after] welcome email error", err);
+              }));
+            } else {
+              await welcomeP.catch((err) => {
+                console.error("[auth.hooks.user.create.after] welcome email error", err);
+              });
             }
           },
         },

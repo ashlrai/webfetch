@@ -32,6 +32,7 @@ export interface EmailPayload {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 }
 
 export interface EmailDispatcher {
@@ -52,10 +53,10 @@ export async function sendInviteEmail(env: Env, input: SendInviteEmailInput): Pr
     });
     return { skipped: "no-email-provider" };
   }
-  const from = env.EMAIL_FROM || "webfetch <invites@getwebfetch.com>";
+  const from = env.EMAIL_FROM || "webfetch <support@ashlr.ai>";
   const subject = `${input.inviterName} invited you to ${input.workspaceName} on webfetch`;
   const { html, text } = renderInviteBodies(input);
-  return dispatcher.send({ from, to: input.to, subject, html, text });
+  return dispatcher.send({ from, to: input.to, subject, html, text, replyTo: env.REPLY_TO });
 }
 
 function resolveDispatcher(env: Env): EmailDispatcher | null {
@@ -77,6 +78,7 @@ function sendgridDispatcher(apiKey: string): EmailDispatcher {
           body: JSON.stringify({
             personalizations: [{ to: [{ email: payload.to }] }],
             from: parseFromAddress(payload.from),
+            ...(payload.replyTo ? { reply_to: parseFromAddress(payload.replyTo) } : {}),
             subject: payload.subject,
             content: [
               { type: "text/plain", value: payload.text },
@@ -135,11 +137,67 @@ export function renderInviteBodies(input: SendInviteEmailInput): { html: string;
   return { html, text };
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/** Render plain-text + HTML welcome bodies. Side-effect free for tests. */
+export function renderWelcomeBodies(input: { name?: string }): { html: string; text: string } {
+  const greeting = input.name ? `Hey ${input.name},` : "Hey,";
+  const safeGreeting = input.name ? `Hey ${escapeHtml(input.name)},` : "Hey,";
+  const text = [
+    greeting,
+    "",
+    "Your free webfetch account is live.",
+    "",
+    "What you get on the free tier:",
+    "  • 100 fetches/day",
+    "  • 24 licensed content providers",
+    "  • All content fully licensed — no legal grey areas",
+    "",
+    "Docs:      https://getwebfetch.com/docs",
+    "Dashboard: https://app.getwebfetch.com",
+    "",
+    "Every response includes an attribution header pointing back to the original source. That's the deal that keeps the content flowing.",
+    "",
+    "— the webfetch team",
+  ].join("\n");
+
+  const html = `<!doctype html><html><body style="font-family: -apple-system, system-ui, sans-serif; color: #111; max-width: 560px; margin: 0 auto; padding: 24px;">
+<p>${safeGreeting}</p>
+<p>Your free webfetch account is live.</p>
+<p><strong>What you get on the free tier:</strong></p>
+<ul style="padding-left: 20px;">
+  <li>100 fetches/day</li>
+  <li>24 licensed content providers</li>
+  <li>All content fully licensed — no legal grey areas</li>
+</ul>
+<p>
+  <a href="https://app.getwebfetch.com" style="display:inline-block; padding: 10px 16px; background:#111; color:#fff; text-decoration:none; border-radius:6px;">Open dashboard</a>
+</p>
+<p style="color:#555; font-size: 13px;">Explore the docs at <a href="https://getwebfetch.com/docs">https://getwebfetch.com/docs</a>.</p>
+<p style="color:#888; font-size: 12px;">Every response includes an attribution header pointing back to the original source. That's the deal that keeps the content flowing.</p>
+<p style="color:#888; font-size: 12px;">— the webfetch team</p>
+</body></html>`;
+  return { html, text };
+}
+
+export async function sendWelcomeEmail(
+  env: Env,
+  input: { to: string; name?: string },
+): Promise<EmailResult> {
+  const dispatcher = resolveDispatcher(env);
+  if (!dispatcher) {
+    console.warn("[email] SENDGRID_API_KEY not set; skipping welcome delivery", { to: input.to });
+    return { skipped: "no-email-provider" };
+  }
+  const from = env.EMAIL_FROM || "webfetch <support@ashlr.ai>";
+  const subject = "Welcome to webfetch — your free tier is live";
+  const { html, text } = renderWelcomeBodies(input);
+  return dispatcher.send({ from, to: input.to, subject, html, text, replyTo: env.REPLY_TO });
 }

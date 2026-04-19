@@ -10,9 +10,14 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const session = await getServerSession();
   if (!session) redirect("/login");
+  const { status } = await searchParams;
 
   const [overview, billing] = await Promise.all([getOverview(), getBilling()]);
   const plan = PLANS[overview.workspace.plan];
@@ -34,6 +39,30 @@ export default async function BillingPage() {
 
   return (
     <div className="flex flex-col gap-7">
+      {status === "success" && (
+        <div
+          className="surface flex items-center gap-3 p-4"
+          style={{ borderColor: "var(--ok)", background: "rgba(34,197,94,0.06)" }}
+        >
+          <Icon name="check" style={{ color: "var(--ok)" }} />
+          <span className="text-[13px]">Subscription activated — your plan has been upgraded.</span>
+        </div>
+      )}
+      {status === "canceled" && (
+        <div className="surface flex items-center gap-3 p-4" style={{ borderColor: "var(--border)" }}>
+          <Icon name="info" style={{ color: "var(--text-dim)" }} />
+          <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>Checkout canceled — no charge was made.</span>
+        </div>
+      )}
+      {status === "checkout_error" && (
+        <div
+          className="surface flex items-center gap-3 p-4"
+          style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.06)" }}
+        >
+          <Icon name="alert" style={{ color: "var(--danger)" }} />
+          <span className="text-[13px]">Could not start checkout. Please try again or contact support.</span>
+        </div>
+      )}
       <PageHeader
         title="Billing"
         description="Manage your subscription, payment method, and invoice history. Payments processed by Stripe."
@@ -48,7 +77,7 @@ export default async function BillingPage() {
               <Icon name="external" /> Manage subscription
             </a>
           ) : (
-            <a href="/api/proxy/workspaces/current/checkout?plan=pro" className="btn btn-primary">
+            <a href="/billing/checkout?plan=pro" className="btn btn-primary">
               <Icon name="arrow-up" /> Start subscription
             </a>
           )
@@ -138,7 +167,7 @@ export default async function BillingPage() {
                   </a>
                 ) : (
                   <a
-                    href={`/api/proxy/workspaces/current/checkout?plan=${p}`}
+                    href={`/billing/checkout?plan=${p}`}
                     className="btn btn-primary w-full"
                   >
                     {plan.baseMonthlyUsd > PLANS[p].baseMonthlyUsd ? "Downgrade" : "Upgrade"}

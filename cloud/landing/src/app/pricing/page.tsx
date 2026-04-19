@@ -17,14 +17,12 @@ export const metadata: Metadata = {
     description:
       "Free, Pro ($19), Team ($79 + seats), Enterprise. Transparent usage metering on every tier.",
     url: "https://getwebfetch.com/pricing",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "webfetch pricing",
     description: "Free self-host. Pro from $19. Transparent usage metering.",
-    images: ["/og-image.png"],
   },
 };
 

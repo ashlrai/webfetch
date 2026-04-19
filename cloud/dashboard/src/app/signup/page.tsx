@@ -3,7 +3,15 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const { plan } = await searchParams;
+  const validPlan = plan === "pro" || plan === "team" ? plan : null;
+  const callbackURL = validPlan ? `/billing/checkout?plan=${validPlan}` : "/";
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
@@ -18,7 +26,7 @@ export default function SignupPage() {
         method="post"
         className="surface p-5 flex flex-col gap-3"
       >
-        <input type="hidden" name="callbackURL" value="/" />
+        <input type="hidden" name="callbackURL" value={callbackURL} />
         <label className="flex flex-col gap-1.5">
           <span className="eyebrow">Name</span>
           <input type="text" name="name" className="input" required autoComplete="name" />
@@ -55,13 +63,13 @@ export default function SignupPage() {
 
       <div className="flex flex-col gap-2">
         <a
-          href="/api/proxy/auth/sign-in/social?provider=google&callbackURL=/"
+          href={`/api/proxy/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`}
           className="btn btn-lg"
         >
           <Icon name="external" /> Continue with Google
         </a>
         <a
-          href="/api/proxy/auth/sign-in/social?provider=github&callbackURL=/"
+          href={`/api/proxy/auth/sign-in/social?provider=github&callbackURL=${encodeURIComponent(callbackURL)}`}
           className="btn btn-lg"
         >
           <Icon name="external" /> Continue with GitHub

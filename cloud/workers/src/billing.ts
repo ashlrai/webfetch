@@ -32,7 +32,16 @@ export const billingRouter = new Hono<{ Bindings: Env }>();
 billingRouter.post("/workspaces/:id/checkout", async (c) => {
   const user = await getSessionUser(c);
   if (!user) return err(c, "unauthenticated", 401);
-  const workspaceId = c.req.param("id");
+  let workspaceId = c.req.param("id");
+  if (workspaceId === "current") {
+    const row = await c.env.DB.prepare(
+      "SELECT workspace_id FROM members WHERE user_id = ?1 ORDER BY invited_at ASC LIMIT 1",
+    )
+      .bind(user.userId)
+      .first<{ workspace_id: string }>();
+    if (!row) return err(c, "no workspace found", 404);
+    workspaceId = row.workspace_id;
+  }
   const role = await roleFor(c.env, workspaceId, user.userId);
   if (!role || !canManageBilling(role)) return err(c, "forbidden", 403);
   const parsed = await parseJson(c, createCheckoutSchema);
@@ -90,7 +99,16 @@ billingRouter.post("/workspaces/:id/checkout", async (c) => {
 billingRouter.post("/workspaces/:id/portal", async (c) => {
   const user = await getSessionUser(c);
   if (!user) return err(c, "unauthenticated", 401);
-  const workspaceId = c.req.param("id");
+  let workspaceId = c.req.param("id");
+  if (workspaceId === "current") {
+    const row = await c.env.DB.prepare(
+      "SELECT workspace_id FROM members WHERE user_id = ?1 ORDER BY invited_at ASC LIMIT 1",
+    )
+      .bind(user.userId)
+      .first<{ workspace_id: string }>();
+    if (!row) return err(c, "no workspace found", 404);
+    workspaceId = row.workspace_id;
+  }
   const role = await roleFor(c.env, workspaceId, user.userId);
   if (!role || !canManageBilling(role)) return err(c, "forbidden", 403);
   const ws = await c.env.DB.prepare("SELECT stripe_customer_id FROM workspaces WHERE id = ?1")

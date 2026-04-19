@@ -54,6 +54,10 @@ export interface Env {
   // Email provider (SendGrid). Optional — invites stay queued in D1 if absent.
   SENDGRID_API_KEY?: string;
   EMAIL_FROM?: string;
+  // Optional reply-to address. Defaults to the EMAIL_FROM address. Useful when
+  // the from-address is a no-reply alias but you want replies routed to a
+  // monitored inbox (e.g. from=invites@..., reply-to=support@...).
+  REPLY_TO?: string;
 
   // When SENDGRID_API_KEY is still a `test_*` placeholder, Better Auth's
   // email-verification gate is turned OFF automatically so self-signup works

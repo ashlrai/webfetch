@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { SESSION_COOKIE } from "../src/auth.ts";
 import type { EmailDispatcher } from "../src/email.ts";
-import { renderInviteBodies, sendInviteEmail } from "../src/email.ts";
+import { renderInviteBodies, renderWelcomeBodies, sendInviteEmail, sendWelcomeEmail } from "../src/email.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
 
@@ -134,5 +134,56 @@ describe("email — invite delivery", () => {
     const body = (await res.json()) as { data: { emailDelivery: { status: string; id?: string } } };
     expect(body.data.emailDelivery.status).toBe("sent");
     expect(body.data.emailDelivery.id).toBe("msg_ok_1");
+  });
+});
+
+describe("email — welcome delivery", () => {
+  beforeEach(() => setStub(undefined));
+  afterEach(() => setStub(undefined));
+
+  test("renderWelcomeBodies includes docs link and has both html + text", () => {
+    const { html, text } = renderWelcomeBodies({ name: "Alice" });
+    expect(text).toContain("https://getwebfetch.com/docs");
+    expect(text).toContain("https://app.getwebfetch.com");
+    expect(html).toContain("https://getwebfetch.com/docs");
+    expect(html).toContain("https://app.getwebfetch.com");
+    expect(text).toContain("Hey Alice,");
+    expect(html).toContain("Hey Alice,");
+  });
+
+  test("renderWelcomeBodies escapes HTML in name", () => {
+    const { html, text } = renderWelcomeBodies({ name: "<script>" });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(text).toContain("Hey <script>,");
+  });
+
+  test("renderWelcomeBodies works without a name", () => {
+    const { html, text } = renderWelcomeBodies({});
+    expect(text).toContain("Hey,");
+    expect(html).toContain("Hey,");
+  });
+
+  test("sendWelcomeEmail returns skipped when SENDGRID_API_KEY is absent", async () => {
+    const { env } = makeEnv();
+    const res = await sendWelcomeEmail(env, { to: "new@user.dev" });
+    expect("skipped" in res && res.skipped).toBe("no-email-provider");
+  });
+
+  test("sendWelcomeEmail dispatches with subject containing 'Welcome' and correct to", async () => {
+    const sent: unknown[] = [];
+    setStub({
+      async send(payload) {
+        sent.push(payload);
+        return { ok: true, id: "msg_welcome_1" };
+      },
+    });
+    const { env } = makeEnv({ SENDGRID_API_KEY: "SG.test_key" });
+    const res = await sendWelcomeEmail(env, { to: "new@user.dev", name: "Alice" });
+    expect("ok" in res && res.ok).toBe(true);
+    expect(sent).toHaveLength(1);
+    const p = sent[0] as { to: string; subject: string };
+    expect(p.to).toBe("new@user.dev");
+    expect(p.subject).toContain("Welcome");
   });
 });
