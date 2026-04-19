@@ -71,12 +71,53 @@ describe("workspaces + teams", () => {
       makeExecCtx(),
     );
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { data: { acceptUrl: string } };
+    const body = (await res.json()) as {
+      data: { acceptUrl: string; emailDelivery: { status: string; reason?: string } };
+    };
     expect(body.data.acceptUrl).toContain("/invite/");
+    expect(body.data.emailDelivery.status).toBe("skipped");
+    expect(body.data.emailDelivery.reason).toBe("no-email-provider");
     const row = await env.DB.prepare("SELECT email, role FROM invitations WHERE workspace_id = ?1")
       .bind(workspaceId)
       .first<{ email: string; role: string }>();
     expect(row?.email).toBe("pal@test.dev");
+  });
+
+  test("invite email is dispatched when RESEND_API_KEY is set", async () => {
+    const sent: unknown[] = [];
+    globalThis.__webfetchResend = {
+      emails: {
+        send: async (payload: unknown) => {
+          sent.push(payload);
+          return { data: { id: "msg_test_123" }, error: null };
+        },
+      },
+    };
+    try {
+      const { env } = makeEnv({ RESEND_API_KEY: "re_live_test" });
+      const { sessionToken, workspaceId } = await seedWorkspaceWithKey(env);
+      const res = await app.fetch(
+        new Request(`http://x/v1/workspaces/${workspaceId}/invite`, {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: cookie(sessionToken) },
+          body: JSON.stringify({ email: "teammate@test.dev", role: "admin" }),
+        }),
+        env,
+        makeExecCtx(),
+      );
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as {
+        data: { acceptUrl: string; emailDelivery: { status: string; id?: string } };
+      };
+      expect(body.data.emailDelivery.status).toBe("sent");
+      expect(body.data.emailDelivery.id).toBe("msg_test_123");
+      expect(sent).toHaveLength(1);
+      const payload = sent[0] as { to: string; subject: string };
+      expect(payload.to).toBe("teammate@test.dev");
+      expect(payload.subject).toContain("invited you");
+    } finally {
+      globalThis.__webfetchResend = undefined;
+    }
   });
 
   test("cannot remove the owner", async () => {

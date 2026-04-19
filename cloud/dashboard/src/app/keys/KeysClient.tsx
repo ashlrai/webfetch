@@ -19,7 +19,7 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
   const [scope, setScope] = useState("workspace");
   const [error, setError] = useState<string | null>(null);
   const [reveal, setReveal] = useState<{ key: ApiKey; raw: string } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"idle" | "ok" | "err">("idle");
   const [saved, setSaved] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
@@ -67,11 +67,20 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
     if (!reveal) return;
     try {
       await navigator.clipboard.writeText(reveal.raw);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setCopied("ok");
+      setTimeout(() => setCopied("idle"), 1500);
     } catch {
-      /* noop */
+      setCopied("err");
+      setTimeout(() => setCopied("idle"), 3000);
     }
+  };
+
+  const handleSelectKey = (e: React.MouseEvent<HTMLElement>) => {
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(e.currentTarget);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
   };
 
   const closeReveal = () => {
@@ -251,12 +260,22 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
               className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-[8px]"
               style={{ background: "var(--bg-elev)", border: "1px solid var(--border-mid)" }}
             >
-              <code className="mono text-[12.5px] break-all">{reveal.raw}</code>
-              <button type="button" className="btn btn-sm" onClick={handleCopy}>
-                <Icon name={copied ? "check" : "copy"} />
-                {copied ? "Copied" : "Copy"}
+              <code
+                className="mono text-[12.5px] break-all cursor-text select-all"
+                onClick={handleSelectKey}
+              >
+                {reveal.raw}
+              </code>
+              <button type="button" className="btn btn-sm shrink-0" onClick={handleCopy}>
+                <Icon name={copied === "ok" ? "check" : copied === "err" ? "alert" : "copy"} />
+                {copied === "ok" ? "Copied" : copied === "err" ? "Failed" : "Copy"}
               </button>
             </div>
+            {copied === "err" && (
+              <p className="text-[11.5px] mono" style={{ color: "var(--danger)" }}>
+                Clipboard unavailable — select the key and copy manually.
+              </p>
+            )}
             <label
               className="flex items-center gap-2 text-[12.5px] cursor-pointer"
               style={{ color: "var(--text-dim)" }}

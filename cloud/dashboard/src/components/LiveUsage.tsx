@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 interface Tick {
@@ -9,87 +9,166 @@ interface Tick {
   status: number;
 }
 
+type Status = "idle" | "connecting" | "reconnecting" | "live" | "error";
+
+const MAX_RETRIES = 5;
+// 5 s is generous for a CF Worker cold start without freezing the UI indefinitely.
+const CONNECT_TIMEOUT_MS = 5_000;
+
 export default function LiveUsage() {
-  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
   const [ticks, setTicks] = useState<Tick[]>([]);
   const [flash, setFlash] = useState(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attemptRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  const connect = useCallback(() => {
+    if (!mountedRef.current) return;
+
+    const attempt = attemptRef.current;
+    setStatus(attempt === 0 ? "connecting" : "reconnecting");
+
+    const useFixtures =
+      typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_FIXTURES === "1";
+    const streamUrl = useFixtures ? "/usage/stream" : "/api/proxy/v1/usage/stream";
+
+    const es = new EventSource(streamUrl, { withCredentials: true });
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let reconnectId: ReturnType<typeof setTimeout> | null = null;
+    let settled = false;
+
+    const cleanup = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (reconnectId) clearTimeout(reconnectId);
+      es.close();
+    };
+
+    const scheduleReconnect = () => {
+      if (!mountedRef.current) return;
+      cleanup();
+      attemptRef.current += 1;
+      if (attemptRef.current > MAX_RETRIES) {
+        setStatus("error");
+        return;
+      }
+      const delay = Math.min(30_000, 1_000 * 2 ** (attemptRef.current - 1));
+      reconnectId = setTimeout(() => {
+        if (mountedRef.current) connect();
+      }, delay);
+    };
+
+    timeoutId = setTimeout(() => {
+      if (!settled && mountedRef.current) scheduleReconnect();
+    }, CONNECT_TIMEOUT_MS);
+
+    es.addEventListener("ready", () => {
+      if (!mountedRef.current) { es.close(); return; }
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      attemptRef.current = 0;
+      setStatus("live");
+    });
+
+    es.onerror = () => {
+      if (!mountedRef.current) { es.close(); return; }
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      scheduleReconnect();
+    };
+
+    const onTick = (ev: MessageEvent) => {
+      if (!mountedRef.current) return;
+      try {
+        const t = JSON.parse(ev.data) as Tick;
+        setTicks((prev) => [t, ...prev].slice(0, 12));
+        setFlash(true);
+        if (flashTimer.current) clearTimeout(flashTimer.current);
+        flashTimer.current = setTimeout(() => {
+          if (mountedRef.current) setFlash(false);
+        }, 600);
+      } catch {
+        /* ignore malformed frames */
+      }
+    };
+
+    es.addEventListener("tick", onTick as EventListener);
+
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (typeof EventSource === "undefined") return;
-    let es: EventSource | null = null;
-    let connectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let attempt = 0;
-
-    const open = () => {
-      // In prod, stream from api.getwebfetch.com via the proxy so the SSE
-      // connection carries the session cookie. In fixtures-only dev we fall
-      // back to the local synthetic stream at /usage/stream.
-      const useFixtures =
-        typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_FIXTURES === "1";
-      const streamUrl = useFixtures ? "/usage/stream" : "/api/proxy/v1/usage/stream";
-      es = new EventSource(streamUrl, { withCredentials: true });
-      // Mark as offline if first byte hasn't arrived in 4s; UI surfaces "reconnecting" instead of a stuck spinner.
-      connectTimer = setTimeout(() => setConnected(false), 4000);
-
-      es.onopen = () => {
-        if (connectTimer) clearTimeout(connectTimer);
-        attempt = 0;
-        setConnected(true);
-      };
-      es.onerror = () => {
-        setConnected(false);
-        es?.close();
-        // Exponential backoff: 1s, 2s, 4s, capped 30s.
-        const delay = Math.min(30_000, 1000 * 2 ** attempt++);
-        reconnectTimer = setTimeout(open, delay);
-      };
-      const onTick = (ev: MessageEvent) => {
-        try {
-          const t = JSON.parse(ev.data) as Tick;
-          setTicks((prev) => [t, ...prev].slice(0, 12));
-          setFlash(true);
-          if (flashTimer.current) clearTimeout(flashTimer.current);
-          flashTimer.current = setTimeout(() => setFlash(false), 600);
-        } catch {
-          /* ignore */
-        }
-      };
-      es.addEventListener("tick", onTick as EventListener);
-    };
-
-    open();
+    mountedRef.current = true;
+    const cleanup = connect();
     return () => {
-      if (connectTimer) clearTimeout(connectTimer);
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      es?.close();
+      mountedRef.current = false;
+      cleanup?.();
       if (flashTimer.current) clearTimeout(flashTimer.current);
     };
-  }, []);
+  }, [connect]);
 
-  const color = connected ? "var(--ok)" : "var(--text-mute)";
+  const retry = () => {
+    attemptRef.current = 0;
+    connect();
+  };
+
+  const isLive = status === "live";
+  const isPending = status === "connecting" || status === "reconnecting";
+  const dotColor = isLive ? "var(--ok)" : "var(--text-mute)";
 
   return (
     <div className="surface p-4 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span
-            className="dot"
-            style={{
-              color,
-              animation: connected ? "pulse 1.6s ease-in-out infinite" : undefined,
-              boxShadow: flash ? "0 0 0 4px rgba(63,185,80,0.2)" : undefined,
-              transition: "box-shadow 200ms ease",
-            }}
-          />
+          {isPending ? (
+            <Icon
+              name="cog"
+              size={14}
+              className="animate-spin"
+              style={{ color: "var(--text-mute)" }}
+            />
+          ) : (
+            <span
+              className="dot"
+              style={{
+                color: dotColor,
+                animation: isLive ? "pulse 1.6s ease-in-out infinite" : undefined,
+                boxShadow: flash ? "0 0 0 4px rgba(63,185,80,0.2)" : undefined,
+                transition: "box-shadow 200ms ease",
+              }}
+            />
+          )}
           <span className="h2">Live usage</span>
         </div>
         <span className="mono text-[11px]" style={{ color: "var(--text-mute)" }}>
-          {connected ? "streaming" : "offline"}
+          {status === "live" && "streaming"}
+          {status === "connecting" && "connecting\u2026"}
+          {status === "reconnecting" && "reconnecting\u2026"}
+          {status === "error" && "unavailable"}
+          {status === "idle" && "offline"}
         </span>
       </div>
-      {ticks.length === 0 ? (
+
+      {status === "error" ? (
+        <div className="flex flex-col gap-3 py-4">
+          <div className="flex items-center gap-2 text-[12.5px]" style={{ color: "var(--text-dim)" }}>
+            <Icon name="alert" />
+            Live updates unavailable — refresh to retry.
+          </div>
+          <button
+            onClick={retry}
+            className="self-start text-[12px] mono px-2.5 py-1 rounded border"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
+          >
+            Retry
+          </button>
+        </div>
+      ) : isPending && ticks.length === 0 ? (
+        <div className="text-[12.5px] flex items-center gap-2 py-6" style={{ color: "var(--text-dim)" }}>
+          {status === "reconnecting" ? "Reconnecting\u2026" : "Connecting\u2026"}
+        </div>
+      ) : ticks.length === 0 ? (
         <div
           className="text-[12.5px] flex items-center gap-2 py-6"
           style={{ color: "var(--text-dim)" }}

@@ -46,6 +46,28 @@ export default function SignupPage() {
         </button>
       </form>
 
+      <div
+        className="flex items-center gap-3 text-[11px] mono"
+        style={{ color: "var(--text-mute)" }}
+      >
+        <div className="rule flex-1" /> OR <div className="rule flex-1" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <a
+          href="/api/proxy/auth/sign-in/social?provider=google&callbackURL=/"
+          className="btn btn-lg"
+        >
+          <Icon name="external" /> Continue with Google
+        </a>
+        <a
+          href="/api/proxy/auth/sign-in/social?provider=github&callbackURL=/"
+          className="btn btn-lg"
+        >
+          <Icon name="external" /> Continue with GitHub
+        </a>
+      </div>
+
       <ul className="flex flex-col gap-2 text-[12.5px]" style={{ color: "var(--text-dim)" }}>
         {[
           "100 fetches/day on the free tier",
