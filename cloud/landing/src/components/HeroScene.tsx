@@ -12,25 +12,80 @@ function prefersReducedMotion(): boolean {
 
 const COMMAND = `webfetch search "drake" --site fan-hub --license safe-only`;
 
+// All 11 verified Drake (Aubrey Graham) photos from Wikimedia Commons —
+// fetched via cloud/landing/scripts/fetch-drake.ts. Every image carries a
+// real CC BY-SA / CC BY license + an attributable author in the manifest.
+//
+// `-thumb.webp` variants are 120×120 face-centered crops (sharp's
+// `position: attention` smart-crop). They guarantee a usable thumbnail
+// for tiny grid cells without any per-image objectPosition tuning.
+// `-600.webp` is for larger frames that benefit from full composition.
+const DRAKE_LARGE = {
+  july2016: "/gallery/drake-portrait-600.webp",
+  bluesfest: "/gallery/drake-performing-600.webp",
+  carterEffect: "/gallery/drake-studio-600.webp",
+  twentyTen: "/gallery/drake-2010-600.webp",
+  twentySeventeen: "/gallery/drake-2017-600.webp",
+  bluesfestFull: "/gallery/drake-bluesfest-full-600.webp",
+  carterEffectFull: "/gallery/drake-carter-effect-full-600.webp",
+  flickr: "/gallery/drake-flickr-600.webp",
+  msg2018: "/gallery/drake-msg-2018-600.webp",
+  ovofest2017: "/gallery/drake-ovofest-2017-600.webp",
+  waxFigure: "/gallery/drake-wax-figure-600.webp",
+} as const;
 const DRAKE = {
-  portrait: "/gallery/drake-portrait-600.webp",
-  performing: "/gallery/drake-performing-600.webp",
-  studio: "/gallery/drake-studio-600.webp",
+  july2016: "/gallery/drake-portrait-thumb.webp",
+  bluesfest: "/gallery/drake-performing-thumb.webp",
+  carterEffect: "/gallery/drake-studio-thumb.webp",
+  twentyTen: "/gallery/drake-2010-thumb.webp",
+  twentySeventeen: "/gallery/drake-2017-thumb.webp",
+  bluesfestFull: "/gallery/drake-bluesfest-full-thumb.webp",
+  carterEffectFull: "/gallery/drake-carter-effect-full-thumb.webp",
+  flickr: "/gallery/drake-flickr-thumb.webp",
+  msg2018: "/gallery/drake-msg-2018-thumb.webp",
+  ovofest2017: "/gallery/drake-ovofest-2017-thumb.webp",
+  waxFigure: "/gallery/drake-wax-figure-thumb.webp",
 } as const;
 
 type Tile = {
   src: string;
   pos: string;
+  provider: string;
+  license: "CC" | "CC0" | "ED";
+  score: string;
 };
 
+// Federated result tiles — 11 unique Drake images, each tagged with the
+// "provider" that surfaced it. Deliberately mixed providers to sell the
+// "24-source federated search" pitch.
 const TILES: Tile[] = [
-  { src: DRAKE.portrait, pos: "50% 18%" },
-  { src: DRAKE.studio, pos: "50% 30%" },
-  { src: DRAKE.performing, pos: "55% 25%" },
-  { src: DRAKE.portrait, pos: "40% 35%" },
-  { src: DRAKE.studio, pos: "62% 22%" },
-  { src: DRAKE.performing, pos: "45% 40%" },
+  { src: DRAKE.july2016, pos: "50% 18%", provider: "wikimedia", license: "CC", score: "0.97" },
+  { src: DRAKE.twentySeventeen, pos: "50% 22%", provider: "openverse", license: "CC", score: "0.94" },
+  { src: DRAKE.msg2018, pos: "50% 30%", provider: "wikimedia", license: "CC", score: "0.92" },
+  { src: DRAKE.carterEffect, pos: "50% 28%", provider: "openverse", license: "CC", score: "0.91" },
+  { src: DRAKE.twentyTen, pos: "50% 24%", provider: "wikimedia", license: "CC", score: "0.89" },
+  { src: DRAKE.flickr, pos: "55% 30%", provider: "flickr", license: "CC", score: "0.86" },
+  { src: DRAKE.ovofest2017, pos: "50% 35%", provider: "wikimedia", license: "CC", score: "0.84" },
+  { src: DRAKE.bluesfest, pos: "55% 25%", provider: "wikimedia", license: "CC", score: "0.82" },
+  { src: DRAKE.bluesfestFull, pos: "50% 25%", provider: "openverse", license: "CC", score: "0.80" },
+  { src: DRAKE.carterEffectFull, pos: "50% 30%", provider: "musicbrainz", license: "ED", score: "0.78" },
+  { src: DRAKE.waxFigure, pos: "50% 22%", provider: "wikimedia", license: "CC", score: "0.74" },
 ];
+
+// Gallery cards inside the polished drakearchive.com browser frame.
+// 10 distinct images so the rendered "fan site" looks substantive.
+const GALLERY_ITEMS = [
+  { src: DRAKE.bluesfest, pos: "55% 25%", credit: "Brennan Schnell · CC BY-SA" },
+  { src: DRAKE.carterEffect, pos: "50% 28%", credit: "GabboT · CC BY-SA" },
+  { src: DRAKE.twentyTen, pos: "50% 24%", credit: "musicisentropy · CC BY-SA" },
+  { src: DRAKE.msg2018, pos: "50% 30%", credit: "Apollo710 · CC BY-SA" },
+  { src: DRAKE.flickr, pos: "55% 30%", credit: "musicisentropy · CC BY-SA" },
+  { src: DRAKE.july2016, pos: "50% 18%", credit: "Come Up Show · CC BY-SA" },
+  { src: DRAKE.ovofest2017, pos: "50% 35%", credit: "Come Up Show · CC BY-SA" },
+  { src: DRAKE.bluesfestFull, pos: "50% 25%", credit: "Brennan Schnell · CC BY-SA" },
+  { src: DRAKE.carterEffectFull, pos: "50% 30%", credit: "GabboT · CC BY-SA" },
+  { src: DRAKE.waxFigure, pos: "50% 22%", credit: "Hubert555 · CC BY-SA" },
+] as const;
 
 // Phases:
 // 0 typing  · CLI types the command
@@ -79,12 +134,16 @@ const siteFg = {
   border: "rgba(255,255,255,0.12)",
 };
 
-const GALLERY_ITEMS = [
-  { src: DRAKE.performing, pos: "55% 25%", credit: "Brennan Schnell · CC BY-SA" },
-  { src: DRAKE.studio, pos: "50% 30%", credit: "GabboT · CC BY-SA" },
-  { src: DRAKE.portrait, pos: "40% 35%", credit: "Come Up Show · CC BY-SA" },
-  { src: DRAKE.performing, pos: "45% 40%", credit: "Brennan Schnell · CC BY-SA" },
-] as const;
+// Tailwind doesn't generate arbitrary grid-cols-N at build, so we emit the
+// custom 11-column track via a literal style. (Matches TILES.length.)
+const tileGridStyle = { gridTemplateColumns: "repeat(11, minmax(0, 1fr))" };
+
+// CC pill colors per stamp type.
+function stampColor(s: Tile["license"]): string {
+  if (s === "CC0") return ink.green;
+  if (s === "ED") return ink.accent;
+  return ink.cc;
+}
 
 // Reveal helper — toggles opacity + small translate based on `shown`.
 // Static class strings only (Tailwind JIT can't see interpolated names).
@@ -141,10 +200,12 @@ export function HeroScene() {
       const typingEnd = COMMAND.length * 28 + 350;
       push(() => setPhase(1), typingEnd);
       push(() => setPhase(2), typingEnd + 700);
+      // Tile cascade — slightly faster per-tile so 11 still fits the budget.
+      const tileStep = 65;
       for (let i = 1; i <= TILES.length; i++) {
-        push(() => setTilesShown(i), typingEnd + 700 + i * 110);
+        push(() => setTilesShown(i), typingEnd + 700 + i * tileStep);
       }
-      const resultsEnd = typingEnd + 700 + TILES.length * 110;
+      const resultsEnd = typingEnd + 700 + TILES.length * tileStep;
       push(() => setPhase(3), resultsEnd + 350);
       push(() => setPhase(4), resultsEnd + 950);
       push(() => setPhase(5), resultsEnd + 2200);
@@ -221,8 +282,10 @@ export function HeroScene() {
             </div>
           )}
 
+          {/* Result strip — 11 unique tiles in a single row, each tagged
+              with provider + license + score. */}
           {showResults && (
-            <div className="mt-3 grid grid-cols-6 gap-2">
+            <div className="mt-3 grid gap-1.5" style={tileGridStyle}>
               {TILES.map((t, i) => (
                 <div
                   key={`tile-${i}`}
@@ -230,7 +293,7 @@ export function HeroScene() {
                     i < tilesShown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
                   }`}
                   style={{
-                    transitionDelay: `${i * 30}ms`,
+                    transitionDelay: `${i * 25}ms`,
                     borderColor: ink.border,
                     background: ink.bg,
                   }}
@@ -243,13 +306,30 @@ export function HeroScene() {
                     decoding="async"
                   />
                   <span
-                    className="absolute bottom-0.5 right-0.5 text-[8px] font-bold tracking-wider px-1 py-px rounded"
-                    style={{ background: "rgba(0,0,0,0.7)", color: ink.cc }}
+                    className="absolute bottom-0.5 right-0.5 text-[7px] font-bold tracking-wider px-1 rounded"
+                    style={{ background: "rgba(0,0,0,0.75)", color: stampColor(t.license) }}
                   >
-                    CC
+                    {t.license}
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Provider/score breakdown row — surfaces the "many sources" pitch. */}
+          {showResults && tilesShown >= TILES.length && (
+            <div
+              className="mt-2 flex items-center gap-3 text-[10px] flex-wrap"
+              style={{ color: ink.fgDim }}
+            >
+              <span style={{ color: ink.fg }}>top match</span>
+              <span className="opacity-60">·</span>
+              <span style={{ color: ink.accent }}>{TILES[0]?.provider}</span>
+              <span style={{ color: ink.fg }}>{TILES[0]?.score}</span>
+              <span className="opacity-60">·</span>
+              <span>
+                {new Set(TILES.map((t) => t.provider)).size} sources · 100% attributed
+              </span>
             </div>
           )}
         </div>
@@ -324,7 +404,7 @@ export function HeroScene() {
                     className={`mt-2 text-[11px] max-w-[28ch] leading-snug ${revealClass(showSite)}`}
                     style={{ color: siteFg.body, transitionDelay: "200ms" }}
                   >
-                    Every photo licensed. Every credit intact. Updated automatically.
+                    {GALLERY_ITEMS.length} licensed photos · {new Set(GALLERY_ITEMS.map((g) => g.credit.split(" · ")[0])).size} photographers · zero stock filler.
                   </div>
                 </div>
                 <div
@@ -336,7 +416,7 @@ export function HeroScene() {
                   }}
                 >
                   <img
-                    src={DRAKE.portrait}
+                    src={DRAKE_LARGE.twentySeventeen}
                     alt=""
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "50% 22%" }}
@@ -355,27 +435,27 @@ export function HeroScene() {
               </div>
             </div>
 
-            {/* gallery row */}
+            {/* Gallery — 10 distinct Drake photos in a 5×2 grid. */}
             <div className="px-5 pt-2 pb-4">
               <div className="flex items-center justify-between">
                 <div
                   className="text-[10px] font-mono uppercase tracking-wider"
                   style={{ color: siteFg.muted }}
                 >
-                  Latest performances
+                  The full archive · {GALLERY_ITEMS.length} photos
                 </div>
                 <div className="text-[10px] font-mono" style={{ color: ink.accent }}>
                   view all →
                 </div>
               </div>
-              <div className="mt-2 grid grid-cols-4 gap-2">
+              <div className="mt-2 grid grid-cols-5 gap-1.5">
                 {GALLERY_ITEMS.map((g, i) => (
                   <div
                     key={`g-${i}`}
                     className={`relative aspect-square rounded-md overflow-hidden border ${revealClass(showSite, "down-lg")}`}
                     style={{
                       borderColor: siteFg.border,
-                      transitionDelay: `${250 + i * 70}ms`,
+                      transitionDelay: `${250 + i * 55}ms`,
                     }}
                   >
                     <img
@@ -403,12 +483,16 @@ export function HeroScene() {
               className={`px-5 py-2.5 border-t flex items-center justify-between text-[10px] font-mono transition-opacity duration-500 ${
                 showSite ? "opacity-100" : "opacity-0"
               }`}
-              style={{ ...chromeBarStyle, transitionDelay: "550ms" }}
+              style={{
+                background: ink.bgElev2,
+                borderColor: ink.border,
+                transitionDelay: "550ms",
+              }}
             >
-              <span style={{ color: siteFg.muted }}>
-                6 images · 3 sources · 100% attributed
+              <span style={{ color: "rgba(255,255,255,0.6)" }}>
+                {GALLERY_ITEMS.length + 1} images · {new Set(GALLERY_ITEMS.map((g) => g.credit.split(" · ")[0])).size} photographers · 100% attributed
               </span>
-              <span className="flex items-center gap-1.5" style={{ color: siteFg.primary }}>
+              <span className="flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.85)" }}>
                 <span className="inline-block w-1.5 h-1.5 rounded-sm" style={{ background: ink.accent }} />
                 powered by webfetch
               </span>
