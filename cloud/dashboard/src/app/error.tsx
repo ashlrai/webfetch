@@ -27,20 +27,31 @@ export default function GlobalError({
           <h1 className="h2">Something went sideways.</h1>
         </div>
         <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>
-          The dashboard couldn't reach api.getwebfetch.com just now. This is
-          usually a cold-start or a transient 502 — retrying almost always
-          works.
+          The dashboard couldn't reach api.getwebfetch.com just now. This is usually a cold-start or
+          a transient 502 — retrying almost always works.
         </p>
         {error.digest && (
-          <code
-            className="mono text-[11px] p-2 rounded-[6px]"
-            style={{ background: "var(--bg-elev)", color: "var(--text-mute)" }}
-          >
-            {error.digest}
-          </code>
+          <div className="flex flex-col gap-1.5">
+            <span className="eyebrow">Error ID</span>
+            <div className="flex items-center gap-2">
+              <code
+                className="mono text-[11px] p-2 rounded-[6px] flex-1"
+                style={{ background: "var(--bg-elev)", color: "var(--text-mute)" }}
+              >
+                {error.digest}
+              </code>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost shrink-0"
+                onClick={() => navigator.clipboard.writeText(error.digest ?? "")}
+              >
+                Copy error ID
+              </button>
+            </div>
+          </div>
         )}
         <div className="flex items-center gap-2">
-          <button className="btn btn-primary" onClick={() => reset()}>
+          <button type="button" className="btn btn-primary" onClick={() => reset()}>
             Retry
           </button>
           <a className="btn" href="/">

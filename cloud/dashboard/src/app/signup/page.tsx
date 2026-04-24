@@ -1,16 +1,34 @@
+"use client";
+
 import { Icon } from "@/components/Icon";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
-export const dynamic = "force-dynamic";
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://getwebfetch.com";
 
-export default async function SignupPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ plan?: string }>;
-}) {
-  const { plan } = await searchParams;
+export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const plan = searchParams.get("plan");
   const validPlan = plan === "pro" || plan === "team" ? plan : null;
   const callbackURL = validPlan ? `/billing/checkout?plan=${validPlan}` : "/";
+
+  const [agreed, setAgreed] = useState(false);
+  const [showConsentError, setShowConsentError] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    if (!agreed) {
+      e.preventDefault();
+      setShowConsentError(true);
+    }
+  }
+
+  function handleOAuth(e: React.MouseEvent) {
+    if (!agreed) {
+      e.preventDefault();
+      setShowConsentError(true);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,6 +43,7 @@ export default async function SignupPage({
         action="/api/proxy/auth/sign-up/email"
         method="post"
         className="surface p-5 flex flex-col gap-3"
+        onSubmit={handleSubmit}
       >
         <input type="hidden" name="callbackURL" value={callbackURL} />
         <label className="flex flex-col gap-1.5">
@@ -49,7 +68,7 @@ export default async function SignupPage({
             8+ characters
           </span>
         </label>
-        <button type="submit" className="btn btn-primary btn-lg">
+        <button type="submit" className="btn btn-primary btn-lg" disabled={!agreed}>
           Create account
         </button>
       </form>
@@ -64,17 +83,62 @@ export default async function SignupPage({
       <div className="flex flex-col gap-2">
         <a
           href={`/api/proxy/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`}
-          className="btn btn-lg"
+          className={`btn btn-lg${!agreed ? " opacity-50 pointer-events-none" : ""}`}
+          aria-disabled={!agreed}
+          onClick={handleOAuth}
         >
           <Icon name="external" /> Continue with Google
         </a>
         <a
           href={`/api/proxy/auth/sign-in/social?provider=github&callbackURL=${encodeURIComponent(callbackURL)}`}
-          className="btn btn-lg"
+          className={`btn btn-lg${!agreed ? " opacity-50 pointer-events-none" : ""}`}
+          aria-disabled={!agreed}
+          onClick={handleOAuth}
         >
           <Icon name="external" /> Continue with GitHub
         </a>
       </div>
+
+      {/* Terms + Privacy consent */}
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => {
+            setAgreed(e.target.checked);
+            if (e.target.checked) setShowConsentError(false);
+          }}
+          className="mt-0.5 shrink-0"
+        />
+        <span className="text-[12.5px]" style={{ color: "var(--text-dim)" }}>
+          I agree to the{" "}
+          <a
+            href={`${LANDING_URL}/legal/terms`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="hover:underline"
+            style={{ color: "var(--accent)" }}
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href={`${LANDING_URL}/legal/privacy`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="hover:underline"
+            style={{ color: "var(--accent)" }}
+          >
+            Privacy Policy
+          </a>
+          .
+        </span>
+      </label>
+      {showConsentError && (
+        <p className="text-[12px] mono" style={{ color: "var(--danger)" }}>
+          Please agree to the Terms of Service and Privacy Policy to continue.
+        </p>
+      )}
 
       <ul className="flex flex-col gap-2 text-[12.5px]" style={{ color: "var(--text-dim)" }}>
         {[

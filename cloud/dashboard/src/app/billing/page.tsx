@@ -50,9 +50,14 @@ export default async function BillingPage({
         </div>
       )}
       {status === "canceled" && (
-        <div className="surface flex items-center gap-3 p-4" style={{ borderColor: "var(--border)" }}>
+        <div
+          className="surface flex items-center gap-3 p-4"
+          style={{ borderColor: "var(--border)" }}
+        >
           <Icon name="info" style={{ color: "var(--text-dim)" }} />
-          <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>Checkout canceled — no charge was made.</span>
+          <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+            Checkout canceled — no charge was made.
+          </span>
         </div>
       )}
       {status === "checkout_error" && (
@@ -61,7 +66,35 @@ export default async function BillingPage({
           style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.06)" }}
         >
           <Icon name="alert" style={{ color: "var(--danger)" }} />
-          <span className="text-[13px]">Could not start checkout. Please try again or contact support.</span>
+          <span className="text-[13px]">
+            Could not start checkout. Please try again or contact support.
+          </span>
+        </div>
+      )}
+      {billing.status === "past_due" && (
+        <div
+          className="surface flex flex-col gap-2 p-4"
+          style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.06)" }}
+        >
+          <div className="flex items-center gap-3">
+            <Icon name="alert" style={{ color: "var(--danger)" }} />
+            <span className="text-[13px] font-medium" style={{ color: "var(--danger)" }}>
+              Payment failed
+            </span>
+          </div>
+          <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+            Your last payment didn&apos;t go through. Update your card to restore API access.
+          </p>
+          {portalUrl && (
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="btn btn-primary self-start"
+            >
+              <Icon name="external" /> Update payment method
+            </a>
+          )}
         </div>
       )}
       <PageHeader
@@ -159,7 +192,7 @@ export default async function BillingPage({
               current={p === overview.workspace.plan}
               cta={
                 p === overview.workspace.plan ? (
-                  <button className="btn w-full" disabled>
+                  <button type="button" className="btn w-full" disabled>
                     Current plan
                   </button>
                 ) : p === "enterprise" ? (
@@ -167,10 +200,7 @@ export default async function BillingPage({
                     Talk to sales
                   </a>
                 ) : (
-                  <a
-                    href={`/billing/checkout?plan=${p}`}
-                    className="btn btn-primary w-full"
-                  >
+                  <a href={`/billing/checkout?plan=${p}`} className="btn btn-primary w-full">
                     {plan.baseMonthlyUsd > PLANS[p].baseMonthlyUsd ? "Downgrade" : "Upgrade"}
                   </a>
                 )

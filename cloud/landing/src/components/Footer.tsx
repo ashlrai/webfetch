@@ -64,7 +64,6 @@ export function Footer() {
           <FooterLink href="https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/SELF_HOSTING.md">
             Self-hosting
           </FooterLink>
-          <FooterLink href="https://status.getwebfetch.com">Status</FooterLink>
         </FooterCol>
 
         <FooterCol title="Company">
