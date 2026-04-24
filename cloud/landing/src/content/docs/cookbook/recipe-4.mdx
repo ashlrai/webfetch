@@ -21,33 +21,31 @@ webfetch watch "ukraine frontline 2026" \
 On every tick:
 
 1. Runs the search with your flags.
-2. Compares to the previous tick's state file at `~/.webfetch/watch/<slug>.json` (keyed by `sha256` or `url`).
-3. Emits only the net-new candidates — to stdout as JSONL *and* to your webhook (POST, JSON body).
+2. Compares to the previous tick's state file at `~/.webfetch/watch/<sha256(query)>.json` (keyed by URL).
+3. Emits only the net-new candidates to stdout and to your webhook (POST, JSON body) when configured.
 
 ## State file
 
 ```json
 {
   "query": "ukraine frontline 2026",
-  "lastTickAt": "2026-04-13T10:00:00Z",
-  "known": [
-    { "url": "...", "sha256": "..." },
-    { "url": "...", "sha256": "..." }
-  ]
+  "firstSeen": "2026-04-13T10:00:00Z",
+  "lastSeen": "2026-04-13T16:00:00Z",
+  "urls": ["https://example.com/a.jpg", "https://example.com/b.jpg"]
 }
 ```
 
-Reset with `--reset` if you want to re-emit everything.
+Delete the state file if you want to re-emit everything.
 
 ## Running under cron / systemd
 
 Cron every 6h:
 
 ```cron
-0 */6 * * * webfetch watch "ukraine frontline 2026" --interval 0 --webhook https://... >> /var/log/webfetch-watch.log 2>&1
+0 */6 * * * webfetch watch "ukraine frontline 2026" --once --webhook https://... >> /var/log/webfetch-watch.log 2>&1
 ```
 
-`--interval 0` means "one tick, exit". That way cron owns the scheduling, not the long-running webfetch process.
+`--once` means "one tick, exit". That way cron owns the scheduling, not the long-running webfetch process.
 
 systemd timer:
 
@@ -55,7 +53,7 @@ systemd timer:
 # /etc/systemd/system/webfetch-watch@.service
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/webfetch watch "%i" --interval 0 --webhook %E{WEBHOOK_URL}
+ExecStart=/usr/local/bin/webfetch watch "%i" --once --webhook %E{WEBHOOK_URL}
 ```
 
 ```ini
@@ -87,6 +85,6 @@ Then `systemctl enable --now webfetch-watch@ukraine-frontline.timer`.
 
 ## Tips
 
-- Use a distinct `--slug` to give multiple watchers for related queries their own state file.
+- Use distinct query strings to give related watchers separate state files.
 - If your webhook endpoint isn't idempotent, add request deduplication keyed on the candidate `sha256`.
-- For high-volume watchers (thousands of new items per tick), pipe the stdout JSONL to your message queue instead of relying on the synchronous webhook.
+- For high-volume watchers (thousands of new items per tick), pipe the JSON output to your message queue instead of relying on the synchronous webhook.

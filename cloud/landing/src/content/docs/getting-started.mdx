@@ -11,7 +11,7 @@ This page gets you from zero to a working license-safe image search in under fiv
 ### Option A — one-line install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
 ```
 
 This clones the repo to `~/.webfetch/repo`, installs `bun` if missing, builds the CLI, symlinks `webfetch` onto your `$PATH`, and (with your consent) merges the MCP entry into `~/.claude/settings.json`. Re-run any time to update.
@@ -19,7 +19,7 @@ This clones the repo to `~/.webfetch/repo`, installs `bun` if missing, builds th
 For CI and Dockerfiles, use the non-interactive variant:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash -s -- --yes --no-claude
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash -s -- --yes --no-claude
 ```
 
 ### Option B — npm
@@ -31,14 +31,15 @@ npm install -g @webfetch/cli
 ### Option C — Homebrew (macOS / Linux)
 
 ```bash
-brew install ashlrai/tap/webfetch
+brew tap ashlrai/webfetch
+brew install webfetch
 ```
 
 ### Option D — Docker
 
 ```bash
 docker pull ghcr.io/ashlrai/webfetch:latest
-docker run --rm ghcr.io/ashlrai/webfetch:latest search "drake portrait" --limit 3
+docker run --rm ghcr.io/ashlrai/webfetch:latest cli search "drake portrait" --limit 3
 ```
 
 ## Your first search
@@ -82,7 +83,7 @@ The installer above does this automatically. If you declined, or want to do it m
 claude mcp add webfetch -- npx -y @webfetch/mcp
 ```
 
-Restart Claude Code. In a new chat, ask it to "list the providers available in webfetch". It should return a JSON list with ~20 providers.
+Restart Claude Code. In a new chat, ask it to search for a simple licensed image, or run `webfetch providers` locally. The canonical registry has 24 providers and 19 defaults.
 
 Per-IDE instructions: [Claude Code](/docs/mcp/claude-code) · [Cursor](/docs/mcp/cursor) · [Cline](/docs/mcp/cline) · [Continue](/docs/mcp/continue) · [Roo Code](/docs/mcp/roo) · [Codex](/docs/mcp/codex).
 

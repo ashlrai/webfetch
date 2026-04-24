@@ -42,7 +42,9 @@ export default function BillingCheckoutPage() {
           credentials: "include",
         });
         if (res.status === 401) {
-          router.replace(`/login?next=${encodeURIComponent(`/billing/checkout?plan=${validPlan}`)}`);
+          router.replace(
+            `/login?next=${encodeURIComponent(`/billing/checkout?plan=${validPlan}`)}`,
+          );
           return;
         }
         if (!res.ok) {

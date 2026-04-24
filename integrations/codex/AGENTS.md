@@ -1,6 +1,6 @@
 # Codex agent notes
 
-This project uses [web-fetcher-mcp](https://github.com/ashlrai/web-fetcher-mcp)
+This project uses [webfetch](https://github.com/ashlrai/webfetch)
 for every image lookup. Do not download images directly from the web.
 
 ## Preferred workflow
@@ -28,8 +28,7 @@ webfetch download <url> --out ./assets/foo.jpg --json
 - `search_album_cover`
 - `download_image`
 - `probe_page`
-- `license_for_url`
-- `list_providers`
+- `fetch_with_license`
 
 ## Guardrails
 

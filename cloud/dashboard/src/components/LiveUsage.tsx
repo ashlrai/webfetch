@@ -63,7 +63,10 @@ export default function LiveUsage() {
     }, CONNECT_TIMEOUT_MS);
 
     es.addEventListener("ready", () => {
-      if (!mountedRef.current) { es.close(); return; }
+      if (!mountedRef.current) {
+        es.close();
+        return;
+      }
       settled = true;
       if (timeoutId) clearTimeout(timeoutId);
       attemptRef.current = 0;
@@ -71,7 +74,10 @@ export default function LiveUsage() {
     });
 
     es.onerror = () => {
-      if (!mountedRef.current) { es.close(); return; }
+      if (!mountedRef.current) {
+        es.close();
+        return;
+      }
       settled = true;
       if (timeoutId) clearTimeout(timeoutId);
       scheduleReconnect();
@@ -152,11 +158,15 @@ export default function LiveUsage() {
 
       {status === "error" ? (
         <div className="flex flex-col gap-3 py-4">
-          <div className="flex items-center gap-2 text-[12.5px]" style={{ color: "var(--text-dim)" }}>
+          <div
+            className="flex items-center gap-2 text-[12.5px]"
+            style={{ color: "var(--text-dim)" }}
+          >
             <Icon name="alert" />
             Live updates unavailable — refresh to retry.
           </div>
           <button
+            type="button"
             onClick={retry}
             className="self-start text-[12px] mono px-2.5 py-1 rounded border"
             style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
@@ -165,7 +175,10 @@ export default function LiveUsage() {
           </button>
         </div>
       ) : isPending && ticks.length === 0 ? (
-        <div className="text-[12.5px] flex items-center gap-2 py-6" style={{ color: "var(--text-dim)" }}>
+        <div
+          className="text-[12.5px] flex items-center gap-2 py-6"
+          style={{ color: "var(--text-dim)" }}
+        >
           {status === "reconnecting" ? "Reconnecting\u2026" : "Connecting\u2026"}
         </div>
       ) : ticks.length === 0 ? (

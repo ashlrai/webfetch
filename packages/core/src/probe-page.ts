@@ -3,6 +3,7 @@
  * from attributes and a heuristic license per image.
  */
 
+import { assertPublicHttpUrl } from "./download.ts";
 import { heuristicLicenseFromUrl } from "./license.ts";
 import type { Fetcher, ImageCandidate } from "./types.ts";
 
@@ -21,6 +22,8 @@ export async function probePage(
   const fetcher = opts.fetcher ?? fetch;
   const ua = opts.userAgent ?? "webfetch-mcp/0.1";
   const warnings: string[] = [];
+  const publicUrl = assertPublicHttpUrl(url);
+  if (!publicUrl.ok) throw new Error(publicUrl.error);
 
   if (opts.respectRobots !== false) {
     const allowed = await robotsAllows(url, ua, fetcher, opts.signal);
@@ -41,9 +44,8 @@ export async function probePage(
 export function extractImages(html: string, baseUrl: string): ImageCandidate[] {
   const out: ImageCandidate[] = [];
   const re = /<img\b[^>]*>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) !== null) {
-    const tag = m[0];
+  for (const match of html.matchAll(re)) {
+    const tag = match[0];
     const src = attr(tag, "src") ?? attr(tag, "data-src");
     if (!src) continue;
     const abs = resolveUrl(src, baseUrl);

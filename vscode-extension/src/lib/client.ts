@@ -5,7 +5,7 @@
  * Accepts either api.getwebfetch.com or a self-hosted http://127.0.0.1:7600.
  */
 
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import type {
   ImageCandidate,
   LicensePolicy,
@@ -13,7 +13,6 @@ import type {
   ProvidersResponse,
   SearchResponse,
 } from "../types";
-import { loadSettings } from "./settings";
 
 export interface CallResult<T> {
   ok: boolean;
@@ -22,17 +21,47 @@ export interface CallResult<T> {
   status: number;
 }
 
+const VERSIONED_PATHS = new Set([
+  "/search",
+  "/artist",
+  "/album",
+  "/download",
+  "/probe",
+  "/license",
+  "/similar",
+]);
+
+export function apiPathForBase(baseUrl: string, path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (normalizedPath.startsWith("/v1/")) return normalizedPath;
+  if (!VERSIONED_PATHS.has(normalizedPath)) return normalizedPath;
+
+  try {
+    const base = new URL(baseUrl);
+    if (base.pathname.replace(/\/+$/, "").endsWith("/v1")) return normalizedPath;
+    if (base.hostname.toLowerCase() === "api.getwebfetch.com") return `/v1${normalizedPath}`;
+  } catch {
+    // Invalid base URLs will fail in fetch; keep path handling conservative.
+  }
+  return normalizedPath;
+}
+
+export function buildApiUrl(baseUrl: string, path: string): string {
+  return baseUrl.replace(/\/+$/, "") + apiPathForBase(baseUrl, path);
+}
+
 async function call<T = unknown>(
   context: vscode.ExtensionContext,
   path: string,
   body?: unknown,
   method: "GET" | "POST" = "POST",
 ): Promise<CallResult<T>> {
+  const { loadSettings } = await import("./settings");
   const s = await loadSettings(context);
   if (!s.apiKey) {
     return { ok: false, error: "no API key configured — run 'webfetch: Set API Key'", status: 0 };
   }
-  const url = s.baseUrl + path;
+  const url = buildApiUrl(s.baseUrl, path);
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 60_000);

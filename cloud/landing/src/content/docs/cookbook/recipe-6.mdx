@@ -22,14 +22,20 @@ on:
 jobs:
   assets:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        asset:
+          - { query: "minimalist mountain sunrise", out: "homepage-hero" }
+          - { query: "modern co-working space", out: "about-page" }
+          - { query: "reading glasses on book", out: "blog-latest" }
     steps:
       - uses: actions/checkout@v4
 
       - name: Fetch license-safe assets
-        uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
+        uses: ashlrai/webfetch/integrations/github-action@main
         with:
-          queries-file: ./data/asset-queries.tsv
-          out-dir: ./public/generated
+          query: ${{ matrix.asset.query }}
+          out-dir: ./public/generated/${{ matrix.asset.out }}
           license: safe-only
           min-width: 1600
           providers: wikimedia,openverse,unsplash,pexels
@@ -48,27 +54,25 @@ jobs:
           directory: ./out
 ```
 
-## The queries file
+## Output
 
-```tsv
-slug	query	providers
-homepage-hero	minimalist mountain sunrise	unsplash,pexels
-about-page	modern co-working space	unsplash,pexels
-blog-latest	reading glasses on book	unsplash,wikimedia
-```
-
-For each row, the Action downloads a fresh top candidate to `./public/generated/<slug>.jpg` and writes `./public/generated/<slug>.credit.json` next to it:
+For each matrix row, the Action writes downloaded files plus `_manifest.json`
+under `./public/generated/<slug>/`:
 
 ```json
-{
-  "slug": "homepage-hero",
-  "url": "https://images.unsplash.com/...",
-  "license": "CC0",
-  "author": "Jane Photog",
-  "attributionLine": "Photo by Jane Photog on Unsplash",
-  "confidence": 0.85,
-  "sha256": "..."
-}
+[
+  {
+    "file": "./public/generated/homepage-hero/001.jpg",
+    "sha256": "...",
+    "candidate": {
+      "url": "https://images.unsplash.com/...",
+      "license": "CC0",
+      "author": "Jane Photog",
+      "attributionLine": "Photo by Jane Photog on Unsplash",
+      "confidence": 0.85
+    }
+  }
+]
 ```
 
 ## Render the credit
@@ -76,17 +80,14 @@ For each row, the Action downloads a fresh top candidate to `./public/generated/
 ```astro
 ---
 // src/pages/index.astro
-import credit from "../../public/generated/homepage-hero.credit.json";
+import manifest from "../../public/generated/homepage-hero/_manifest.json";
+const first = manifest[0];
 ---
-<img src="/generated/homepage-hero.jpg" alt="" />
-<small class="credit">{credit.attributionLine}</small>
+<img src={`/generated/homepage-hero/${first.file.split("/").at(-1)}`} alt="" />
+<small class="credit">{first.candidate.attributionLine}</small>
 ```
 
-## Don't re-fetch on every build
-
-The Action caches by `(query, provider-set)` in a JSON manifest at `./public/generated/.manifest.json`. If the top candidate for a query hasn't changed, it skips the download. On a typical CI run, only a handful of images are actually re-fetched.
-
-To force refresh for a specific slug: `webfetch_force_refresh=homepage-hero,about-page` env var.
+Adjust the import paths if you rename the generated files after download.
 
 ## Committing vs not committing
 

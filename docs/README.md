@@ -1,4 +1,4 @@
-# web-fetcher-mcp docs
+# webfetch docs
 
 ## Installation
 

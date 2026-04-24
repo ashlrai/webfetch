@@ -91,6 +91,7 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
         >
           {(["7d", "30d", "90d"] as const).map((r) => (
             <button
+              type="button"
               key={r}
               onClick={() => setRange(r)}
               className="px-3 h-7 rounded-[6px] text-[12px] mono transition-colors"
@@ -128,7 +129,7 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
               ))}
             </select>
           </div>
-          <button className="btn btn-sm" onClick={handleExport}>
+          <button type="button" className="btn btn-sm" onClick={handleExport}>
             <Icon name="download" /> Export CSV
           </button>
         </div>

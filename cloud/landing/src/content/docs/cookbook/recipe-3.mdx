@@ -31,8 +31,9 @@ webfetch license https://... --probe
 ## HTTP
 
 ```bash
-curl -sS -X POST http://localhost:7777/license \
-  -H "authorization: Bearer $WEBFETCH_TOKEN" \
+TOKEN="$(cat ~/.webfetch/server.token)"
+curl -sS -X POST http://127.0.0.1:7600/license \
+  -H "authorization: Bearer $TOKEN" \
   -H "content-type: application/json" \
   -d '{"url":"https://upload.wikimedia.org/...","probe":true}' \
   | jq

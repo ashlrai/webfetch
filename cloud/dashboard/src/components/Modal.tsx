@@ -69,13 +69,12 @@ export default function Modal({
   }, [onClose]);
 
   return (
-    <div
+    <dialog
+      open
       className="modal-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="dialog"
-      aria-modal="true"
       aria-label={title}
     >
       <div ref={ref} className="modal" style={{ maxWidth: width }}>
@@ -88,13 +87,18 @@ export default function Modal({
               </p>
             )}
           </div>
-          <button className="btn btn-sm btn-ghost" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={onClose}
+            aria-label="Close"
+          >
             <Icon name="x" />
           </button>
         </div>
         <div>{children}</div>
         {footer && <div className="mt-5 flex items-center justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </dialog>
   );
 }

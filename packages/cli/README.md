@@ -49,6 +49,9 @@ webfetch download <url>                    [--out path] [--max-bytes N] [--json]
 webfetch probe <url>                       [--json]
 webfetch license <url>                     [--probe] [--json]
 webfetch providers                         [--json]
+webfetch batch [--file path]               [--download-best] [--concurrency N] [--json]
+webfetch watch <query>                     [--interval 1h] [--once] [--webhook URL] [--json]
+webfetch config <init|show|get|set>        [--profile name] [--force] [--json]
 webfetch help
 webfetch version
 ```
@@ -80,10 +83,21 @@ Every provider gracefully skips when its auth is missing. Run
 | pixabay           | `PIXABAY_API_KEY`                              | yes     | no     |
 | spotify           | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`   | yes     | no     |
 | brave             | `BRAVE_API_KEY`                                | yes     | no     |
-| youtube-thumb     | -                                              | no      | no     |
+| youtube-thumb     | -                                              | no      | yes    |
 | bing              | `BING_API_KEY`                                 | no      | yes    |
 | serpapi           | `SERPAPI_KEY`                                  | no      | yes    |
 | browser           | -                                              | no      | yes    |
+| flickr            | `FLICKR_API_KEY`                               | yes     | no     |
+| internet-archive  | -                                              | yes     | no     |
+| smithsonian       | `SMITHSONIAN_API_KEY`                          | yes     | no     |
+| nasa              | -                                              | yes     | no     |
+| met-museum        | -                                              | yes     | no     |
+| europeana         | `EUROPEANA_API_KEY`                            | yes     | no     |
+| library-of-congress | -                                            | yes     | no     |
+| wellcome-collection | -                                            | yes     | no     |
+| rawpixel          | `RAWPIXEL_API_KEY`                             | yes     | no     |
+| burst             | -                                              | yes     | no     |
+| europeana-archival | `EUROPEANA_API_KEY`                          | no      | yes    |
 
 Other env vars:
 
@@ -110,7 +124,8 @@ content hash.
 
 - `licensePolicy: "safe-only"` — `UNKNOWN`-licensed results rejected.
 - 20 MB per-download cap, content-type guard, host blocklist.
-- `serpapi`, `bing`, `browser` providers are opt-in; enable with `--providers`.
+- `youtube-thumb`, `bing`, `serpapi`, `browser`, and `europeana-archival`
+  providers are opt-in; enable with `--providers`.
 - `robots.txt` respected on generic page probes.
 
 ## Development

@@ -54,9 +54,9 @@ Consent-gated headless Chromium, four-tier fallback ladder (Bright Data → Camo
 ### Tooling
 
 - GitHub Action for build-time asset fetching.
-- Homebrew tap: `brew install ashlrai/tap/webfetch`.
+- Homebrew tap: `brew tap ashlrai/webfetch && brew install webfetch`.
 - npm: `npm install -g @webfetch/cli`.
-- Docker: `ghcr.io/ashlrai/webfetch` and `webfetch-server` images.
+- Docker: `ghcr.io/ashlrai/webfetch` image with `cli`, `server`, and `mcp` subcommands.
 - Curl installer: `curl -fsSL .../install.sh | bash`.
 
 ### Documentation
@@ -70,4 +70,4 @@ Shipped with this launch: the full docs site (you're reading it now). Covers ins
 - No Helm chart yet — see [Self-hosting](/docs/self-hosting) for a hand-written Deployment.
 - `find_similar` only works with `serpapi`; other reverse-image providers planned.
 
-Roadmap and upcoming releases live in [GitHub issues](https://github.com/ashlrai/web-fetcher-mcp/issues).
+Roadmap and upcoming releases live in [GitHub issues](https://github.com/ashlrai/webfetch/issues).

@@ -6,7 +6,7 @@ and verify it works before moving on.
 ## 0. One-line install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
 ```
 
 This clones the repo to `~/.webfetch/repo`, installs bun if missing, builds
@@ -16,7 +16,7 @@ the CLI, symlinks `webfetch` onto `$PATH`, and merges the MCP entry into
 Non-interactive variant for CI and Dockerfiles:
 
 ```bash
-curl -fsSL .../install.sh | bash -s -- --yes --no-claude
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash -s -- --yes --no-claude
 ```
 
 ## 1. CLI
@@ -37,8 +37,8 @@ Exit code `0`.
 1. Run the installer above, OR copy the matching snippet from
    [`integrations/`](../integrations/) into your agent's MCP config.
 2. Restart the agent.
-3. Verify: ask the agent to call `list_providers`. It should return a JSON
-   list with ~12 providers and their auth status.
+3. Verify: ask the agent to call `search_images` for a simple query, or run
+   `webfetch providers` locally. The registry has 24 providers and 19 defaults.
 
 Per-agent details:
 
@@ -56,12 +56,17 @@ bun run --cwd packages/server start
 Verify:
 
 ```bash
-curl -s localhost:7777/search?q=drake+portrait | jq '.candidates[0]'
+TOKEN="$(cat ~/.webfetch/server.token)"
+curl -sS -X POST http://127.0.0.1:7600/search \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"drake portrait","licensePolicy":"safe-only"}' \
+  | jq '.data.candidates[0]'
 ```
 
 ## 4. Chrome extension
 
-The extension lives at `chrome-extension/` in the repo and is loaded as an
+The extension lives at `extension/` in the repo and is loaded as an
 unpacked extension via `chrome://extensions`. See that directory's README
 for packaging details.
 
@@ -70,7 +75,7 @@ for packaging details.
 No local install needed:
 
 ```yaml
-- uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
+- uses: ashlrai/webfetch/integrations/github-action@main
   with:
     query: "..."
     out-dir: ./assets

@@ -14,13 +14,13 @@ Do not submit until `@webfetch/mcp` is published to npm (see blocker note at bot
 ### Exact line to add
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp) - License-first image search across 13 providers (Wikimedia, Openverse, Unsplash, Pexels, and more) with per-result CC/editorial license tags, attribution lines, and download tooling.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - License-first image search across 24 providers (Wikimedia, Openverse, Unsplash, Pexels, and more) with per-result CC/editorial license tags, attribution lines, and download tooling.
 ```
 
 > Character count of description: 198. Registry entries typically prefer ≤160 chars. Shorter variant:
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp) - Federated image search across 13 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 24 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
 ```
 
 (157 chars)
@@ -33,7 +33,7 @@ Find the `## 🌐 Web & Browser` (or equivalent) section in the servers README a
  ## 🌐 Web & Browser
 
  ...
-+- [webfetch](https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp) - Federated image search across 13 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
++- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 24 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
  ...
 ```
 
@@ -48,7 +48,7 @@ Find the `## 🌐 Web & Browser` (or equivalent) section in the servers README a
 ### Exact line to add
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 13 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 24 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
 ```
 
 Awesome-MCP-Servers uses emoji badges: 🏠 = open-source/self-hosted, ☁️ = cloud-optional. webfetch runs locally with optional cloud provider keys — both apply.
@@ -59,7 +59,7 @@ Awesome-MCP-Servers uses emoji badges: 🏠 = open-source/self-hosted, ☁️ = 
  ## 🔍 Search
 
  ...
-+- [webfetch](https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 13 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
++- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 24 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
  ...
 ```
 
@@ -84,7 +84,7 @@ feat: add webfetch — license-first image search MCP server
 
 ### What it does
 
-- Federated search across **13 providers** — Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, MusicBrainz CAA, iTunes, Spotify, YouTube thumbnails, Brave, Bing, SerpApi, and a browser fallback
+- Federated search across **24 providers** — Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, MusicBrainz CAA, iTunes, Spotify, YouTube thumbnails, Brave, Bing, SerpApi, browser fallback, and public-domain/GLAM sources like NASA, The Met, Library of Congress, Internet Archive, Smithsonian, Europeana, Wellcome, Rawpixel, and Burst
 - Every result carries a **structured license tag** (`CC0`, `CC_BY`, `CC_BY_SA`, `EDITORIAL_LICENSED`, …), a **confidence score** in [0, 1], and a **ready-to-render attribution line**
 - Results with `confidence < 0.5` are excluded from "safe" results by default
 - 7 composable tools: `search_images`, `search_artist_images`, `search_album_cover`, `download_image`, `fetch_with_license`, `find_similar`, `probe_page`
@@ -94,7 +94,7 @@ feat: add webfetch — license-first image search MCP server
 
 ```bash
 # one-line installer (sets up bun, builds server, merges Claude config)
-curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
 ```
 
 Or add manually to `~/.claude/settings.json`:
@@ -104,7 +104,7 @@ Or add manually to `~/.claude/settings.json`:
   "mcpServers": {
     "webfetch": {
       "command": "bun",
-      "args": ["run", "/path/to/web-fetcher-mcp/packages/mcp/src/index.ts"]
+      "args": ["run", "/path/to/webfetch/packages/mcp/src/index.ts"]
     }
   }
 }
@@ -120,8 +120,8 @@ Or add manually to `~/.claude/settings.json`:
 
 ### Links
 
-- Repo: https://github.com/ashlrai/web-fetcher-mcp
-- Package dir: https://github.com/ashlrai/web-fetcher-mcp/tree/main/packages/mcp
+- Repo: https://github.com/ashlrai/webfetch
+- Package dir: https://github.com/ashlrai/webfetch/tree/main/packages/mcp
 - Landing: https://getwebfetch.com
 ```
 
@@ -144,8 +144,8 @@ Or add manually to `~/.claude/settings.json`:
    }
    ```
 
-2. **Repository URL inconsistency.**  
-   `package.json` references `github.com/ashlrai/webfetch` but the working directory is `web-fetcher-mcp`. Confirm the canonical public GitHub URL before the PR — registries link directly to it.
+2. **Repository URL.**  
+   Canonical public GitHub URL is `https://github.com/ashlrai/webfetch`; registries link directly to it.
 
 3. **No `mcp-registry` page under `/mcp`.**  
    The landing site has the route at `/mcp-registry`, not `/mcp`. Submission copy above links to GitHub directly, which is fine, but the landing URL in the README (`getwebfetch.com`) should route reviewers somewhere meaningful. Verify the canonical marketing URL before submitting.

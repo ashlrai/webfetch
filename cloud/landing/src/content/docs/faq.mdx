@@ -46,7 +46,7 @@ No. Self-hosted webfetch with the default free-auth providers gets you ~19 worki
 
 **Self-hosted:** no. webfetch writes one log line per request if logging is enabled; it never phones home.
 
-**webfetch Cloud:** yes, we store the query text, the provider set called, the number of candidates returned, and the requester ID, for 30 days. Used for abuse detection, billing, and your dashboard. We don't share it with third parties and we don't use it for anything else. See [PRIVACY.md](https://github.com/ashlrai/web-fetcher-mcp/blob/main/PRIVACY.md).
+**webfetch Cloud:** yes, we store the query text, the provider set called, the number of candidates returned, and the requester ID, for 30 days. Used for abuse detection, billing, and your dashboard. We don't share it with third parties and we don't use it for anything else. See [PRIVACY.md](https://github.com/ashlrai/webfetch/blob/main/PRIVACY.md).
 
 You can opt out of Cloud query logging with `X-Webfetch-No-Log: 1` on every request — billing then runs on aggregate counts only.
 
@@ -66,7 +66,7 @@ Image metadata returned by providers may include photographer names. Those are p
 
 ## What's the webfetch license?
 
-Apache 2.0. The cloud-hosted product has a separate ToS; the self-hostable core is Apache all the way down. Forks and derivative products are welcome. See [LICENSE](https://github.com/ashlrai/web-fetcher-mcp/blob/main/LICENSE).
+MIT. The cloud-hosted product has a separate ToS; the self-hostable packages in this repo are MIT-licensed. Forks and derivative products are welcome. See [LICENSE](https://github.com/ashlrai/webfetch/blob/main/LICENSE).
 
 ## What does "confidence" mean, exactly?
 
@@ -92,4 +92,4 @@ Search results themselves aren't cached by default — only downloads. If you wa
 
 ## How do I contribute?
 
-Open an issue or PR on [GitHub](https://github.com/ashlrai/web-fetcher-mcp). New provider adapters are especially welcome — see [Recipe 10](/docs/cookbook/recipe-10) for the interface. For substantive design changes, open an issue first so we can align on direction before you spend time building.
+Open an issue or PR on [GitHub](https://github.com/ashlrai/webfetch). New provider adapters are especially welcome — see [Recipe 10](/docs/cookbook/recipe-10) for the interface. For substantive design changes, open an issue first so we can align on direction before you spend time building.

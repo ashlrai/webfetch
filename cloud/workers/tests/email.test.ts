@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { SESSION_COOKIE } from "../src/auth.ts";
 import type { EmailDispatcher } from "../src/email.ts";
-import { renderInviteBodies, renderWelcomeBodies, sendInviteEmail, sendWelcomeEmail } from "../src/email.ts";
+import {
+  renderInviteBodies,
+  renderWelcomeBodies,
+  sendInviteEmail,
+  sendWelcomeEmail,
+} from "../src/email.ts";
 import { app } from "../src/index.ts";
 import { makeEnv, makeExecCtx, seedWorkspaceWithKey } from "./harness.ts";
 

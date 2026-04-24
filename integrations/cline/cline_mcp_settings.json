@@ -9,8 +9,7 @@
         "search_artist_images",
         "search_album_cover",
         "probe_page",
-        "license_for_url",
-        "list_providers"
+        "fetch_with_license"
       ],
       "env": {
         "UNSPLASH_ACCESS_KEY": "",

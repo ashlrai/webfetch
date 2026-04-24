@@ -27,14 +27,55 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Lint green subset
+        run: bun run lint:ci
+
       - name: Test
         run: bun test
+
+      - name: Verify dashboard
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun run build
+        working-directory: cloud/dashboard
+
+      - name: Verify landing
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun run build
+        working-directory: cloud/landing
+
+      - name: Verify browser extension
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun run build
+        working-directory: extension
+
+      - name: Verify VS Code extension
+        run: |
+          npm ci
+          npm run compile
+        working-directory: vscode-extension
+
+      - name: Verify Python SDK
+        run: |
+          python -m pip install -e packages/sdk-python pytest pytest-asyncio respx
+          python -m pytest packages/sdk-python/tests
 
       - name: Derive version from tag
         id: version
@@ -45,7 +86,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           for pkg in core cli mcp server browser; do
-            node -e "const fs=require('fs');const p='packages/'+process.argv[1]+'/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "$pkg"
+            PKG="$pkg" node -e "const fs=require('node:fs');const pkg=process.env.PKG;const version=process.env.VERSION;const p='packages/'+pkg+'/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=version;if(j.dependencies?.['@webfetch/core'])j.dependencies['@webfetch/core']=version;fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');"
           done
 
       - name: Build packages
@@ -55,6 +96,16 @@ jobs:
           bun run --cwd packages/mcp build
           bun run --cwd packages/server build
           bun run --cwd packages/browser build
+
+      - name: Smoke built Node artifacts
+        run: |
+          node packages/cli/dist/index.js help
+          node packages/server/dist/index.js --help
+          node -e "const m=await import('./packages/core/dist/index.js'); if (typeof m.searchImages !== 'function') throw new Error('core import failed');"
+          node -e "const m=await import('./packages/browser/dist/index.js'); if (typeof m.createBrowserProvider !== 'function') throw new Error('browser import failed');"
+          test "$(head -n 1 packages/cli/dist/index.js)" = "#!/usr/bin/env node"
+          test "$(head -n 1 packages/mcp/dist/index.js)" = "#!/usr/bin/env node"
+          test "$(head -n 1 packages/server/dist/index.js)" = "#!/usr/bin/env node"
 
       - name: Publish @webfetch/core
         run: npm publish --access public --provenance

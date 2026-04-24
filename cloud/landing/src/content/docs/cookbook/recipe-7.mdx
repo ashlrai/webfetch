@@ -12,11 +12,11 @@ You have an internal AI agent (an LLM + some tools) running in your infrastructu
 # docker-compose.yml
 services:
   webfetch:
-    image: ghcr.io/ashlrai/webfetch-server:latest
+    image: ghcr.io/ashlrai/webfetch:latest
+    command: ["server", "--host", "0.0.0.0", "--no-open"]
     ports:
-      - "127.0.0.1:7777:7777"
+      - "127.0.0.1:7600:7600"
     environment:
-      WEBFETCH_HTTP_TOKEN: "${WEBFETCH_HTTP_TOKEN}"
       WEBFETCH_CACHE_DIR: "/var/cache/webfetch"
       WEBFETCH_ENABLE_BROWSER: "0"
       UNSPLASH_ACCESS_KEY: "${UNSPLASH_ACCESS_KEY}"
@@ -25,54 +25,40 @@ services:
       SPOTIFY_CLIENT_SECRET: "${SPOTIFY_CLIENT_SECRET}"
     volumes:
       - webfetch-cache:/var/cache/webfetch
+      - webfetch-home:/root/.webfetch
     restart: unless-stopped
 
 volumes:
   webfetch-cache:
+  webfetch-home:
 ```
 
 Start:
 
 ```bash
 docker compose up -d
-curl -sS localhost:7777/providers -H "authorization: Bearer $WEBFETCH_HTTP_TOKEN"
+TOKEN="$(docker compose exec -T webfetch cat /root/.webfetch/server.token)"
+curl -sS http://127.0.0.1:7600/providers -H "authorization: Bearer $TOKEN"
 ```
 
-## MCP bridge for the internal agent
+## Connecting internal agents
 
-If your agent speaks MCP natively, you can point it at the webfetch HTTP endpoint. Two approaches:
-
-### A — HTTP transport (agent connects directly)
-
-```json
-{
-  "mcpServers": {
-    "webfetch": {
-      "transport": {
-        "type": "http",
-        "url": "http://webfetch.internal:7777",
-        "headers": {
-          "authorization": "Bearer INSERT_TOKEN_HERE"
-        }
-      }
-    }
-  }
-}
-```
-
-Only works if the agent's MCP client supports HTTP transport. Claude Code, Cursor, and Cline all do as of early 2026.
-
-### B — Local stdio shim
-
-For older MCP clients, run a local `@webfetch/mcp` that proxies to your HTTP server:
+If your agent can call HTTP tools directly, point it at the webfetch REST endpoint:
 
 ```bash
-WEBFETCH_API_URL=http://webfetch.internal:7777 \
-WEBFETCH_API_TOKEN=... \
-npx -y @webfetch/mcp --remote
+curl -sS -X POST http://webfetch.internal:7600/search \
+  -H "authorization: Bearer INSERT_TOKEN_HERE" \
+  -H "content-type: application/json" \
+  -d '{"query":"architecture diagram","licensePolicy":"safe-only"}'
 ```
 
-Point the MCP client at this local shim (same stdio config as the standard MCP setup).
+For MCP-native IDEs, run `@webfetch/mcp` as a local stdio server in the IDE
+and give that process the same provider keys. The current MCP package does not
+proxy to a remote HTTP server.
+
+```bash
+npx -y @webfetch/mcp
+```
 
 ## Locking down the network
 
@@ -88,8 +74,8 @@ Deploy behind an ALB / Caddy / Nginx with per-team tokens:
 webfetch.internal {
   @team-alpha header Authorization "Bearer alpha-token"
   @team-beta  header Authorization "Bearer beta-token"
-  handle @team-alpha { reverse_proxy webfetch-alpha:7777 }
-  handle @team-beta  { reverse_proxy webfetch-beta:7777 }
+  handle @team-alpha { reverse_proxy webfetch-alpha:7600 }
+  handle @team-beta  { reverse_proxy webfetch-beta:7600 }
 }
 ```
 

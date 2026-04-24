@@ -8,7 +8,7 @@
 
 **The license-first image layer for AI agents and humans.**
 
-One MCP server, one CLI, and one HTTP server that federate across 12+ image
+One MCP server, one CLI, and one HTTP server that federate across 24 image
 providers, rank results license-first, and refuse to return anything you
 can't safely ship. Any agent that speaks MCP (Claude Code, Cursor, Cline,
 Continue, Roo Code, Codex) wires up from one config line. Landing page,
@@ -19,7 +19,7 @@ pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**
 | Surface       | One-liner |
 | ------------- | --------- |
 | npm           | `npm i -g @webfetch/cli` |
-| Homebrew      | `brew install ashlrai/webfetch/webfetch` |
+| Homebrew      | `brew tap ashlrai/webfetch && brew install webfetch` |
 | Docker        | `docker run --rm ghcr.io/ashlrai/webfetch cli --help` |
 | curl \| bash  | `curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh \| bash` |
 
@@ -82,11 +82,22 @@ license-first, and exposing the result as a single MCP tool.
 | itunes           | album covers, artist portraits           | EDITORIAL_LICENSED   | —                            | no     |
 | musicbrainz-caa  | canonical album art                      | EDITORIAL_LICENSED   | —                            | no     |
 | spotify          | artist + album images                    | EDITORIAL_LICENSED   | `SPOTIFY_CLIENT_ID/SECRET`   | no     |
-| youtube-thumb    | video thumbnails                         | EDITORIAL_LICENSED   | —                            | no     |
+| youtube-thumb    | video thumbnails                         | EDITORIAL_LICENSED   | —                            | yes    |
 | brave            | general web image search                 | UNKNOWN (+heuristic) | `BRAVE_API_KEY`              | no     |
 | bing             | general web image search                 | UNKNOWN (+heuristic) | `BING_API_KEY`               | yes    |
 | serpapi          | Google Images + reverse lookup           | UNKNOWN (+heuristic) | `SERPAPI_KEY`                | yes    |
 | browser          | headless fallback vs images.google.com   | UNKNOWN              | —                            | yes    |
+| flickr           | CC / public-domain photography           | CC_BY (metadata)     | `FLICKR_API_KEY`             | no     |
+| internet-archive | public-domain / CC archive media         | PUBLIC_DOMAIN        | —                            | no     |
+| smithsonian      | Open Access museum media                 | CC0                  | `SMITHSONIAN_API_KEY`        | no     |
+| nasa             | NASA imagery                             | PUBLIC_DOMAIN        | —                            | no     |
+| met-museum       | The Met Open Access                      | CC0                  | —                            | no     |
+| europeana        | European cultural heritage               | CC_BY (metadata)     | `EUROPEANA_API_KEY`          | no     |
+| library-of-congress | US historical archive                 | PUBLIC_DOMAIN        | —                            | no     |
+| wellcome-collection | medical/historical imagery            | CC_BY (metadata)     | —                            | no     |
+| rawpixel         | CC0 stock slice                          | CC0                  | `RAWPIXEL_API_KEY` optional  | no     |
+| burst            | Shopify Burst stock photos               | CC0                  | —                            | no     |
+| europeana-archival | Europeana text/manuscript records      | CC_BY (metadata)     | `EUROPEANA_API_KEY`          | yes    |
 
 See [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) for gotchas, rate limits, and
 [`docs/PROVIDER_TUNING.md`](./docs/PROVIDER_TUNING.md) for per-use-case picks.
@@ -129,8 +140,8 @@ most of the web is all-rights-reserved unless proven otherwise). See
           +----------------+-----------+-----------+----------------+
           |                |                       |                |
   +-------v------+  +------v-------+       +-------v------+  +------v-------+
-  | @webfetch/   |  | @webfetch/   |       | @webfetch/   |  | chrome-      |
-  | cli          |  | mcp (stdio)  |       | server (HTTP)|  | extension    |
+  | @webfetch/   |  | @webfetch/   |       | @webfetch/   |  | browser      |
+  | cli          |  | mcp (stdio)  |       | server (HTTP)|  | extensions   |
   +-------+------+  +------+-------+       +-------+------+  +------+-------+
           |                |                       |                |
           |                |                       |                |
@@ -141,7 +152,9 @@ most of the web is all-rights-reserved unless proven otherwise). See
                  |  wikimedia  openverse  unsplash  pexels   |
                  |  pixabay    itunes     mb-caa    spotify  |
                  |  youtube    brave      bing      serpapi  |
-                 |  browser (opt-in, playwright)             |
+                 |  flickr     nasa       met       europeana|
+                 |  loc        wellcome   rawpixel  burst    |
+                 |  browser + europeana-archival opt-in       |
                  +-------------------------------------------+
 ```
 
@@ -152,7 +165,7 @@ from the CLI is instantly available to the MCP server and vice versa.
 
 - `licensePolicy: "safe-only"` — `UNKNOWN` results rejected.
 - `safeSearch: "strict"`.
-- Opt-in providers (`serpapi`, `bing`, `browser`) off by default.
+- Opt-in providers (`youtube-thumb`, `bing`, `serpapi`, `browser`, `europeana-archival`) off by default.
 - 20 MB per-download cap, content-type guard, host blocklist.
 - `robots.txt` respected on generic page probes.
 

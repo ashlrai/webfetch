@@ -126,10 +126,10 @@ Precedence (highest wins): CLI flags → env vars → active profile → top-lev
 
 ## Picker mode
 
-Pass `--pick` to any `search`, `artist`, or `album` call. webfetch renders the candidate table, waits for a keypress (1-9 to select, `q` to quit), and downloads the chosen one to `./` (override with `--out path`). The XMP sidecar is written next to the file.
+Pass `--pick` to any `search`, `artist`, or `album` call. webfetch renders the candidate table, waits for a keypress (1-9 to select, `q` to quit), and downloads the chosen one to `./` (override with `--out-dir path`). The XMP sidecar is written next to the file.
 
 ```bash
-webfetch search "sunrise over lake" --pick --out ./assets/
+webfetch search "sunrise over lake" --pick --out-dir ./assets/
 # → Table with 5 candidates
 # → Press 2
 # → Downloads candidate 2 to ./assets/<sha256>.jpg
@@ -150,7 +150,8 @@ kyoto temple      wikimedia,openverse
 cat queries.txt | webfetch batch --concurrency 4 --json > results.jsonl
 ```
 
-Output is JSONL — one line per input query, each a `{query, candidates, errors}` record.
+With `--json`, output is a JSON array. Each item includes `query`,
+`candidateCount`, `top`, and `downloadedPath` when `--download-best` is set.
 
 ## Watch mode
 
@@ -158,13 +159,14 @@ Output is JSONL — one line per input query, each a `{query, candidates, errors
 webfetch watch "ukraine frontline photos" --interval 6h --webhook https://hooks.example/new
 ```
 
-State is persisted at `~/.webfetch/watch/<slug>.json`. Each tick:
+State is persisted at `~/.webfetch/watch/<sha256(query)>.json`. Each tick:
 
 1. Runs the query.
-2. Diffs against the last tick (by `sha256` or `url`).
-3. Emits only the new candidates to stdout (JSON lines) and, if `--webhook` set, POSTs them to the URL.
+2. Diffs against the last tick by URL.
+3. Emits only the new candidates to stdout and, if `--webhook` is set, POSTs them to the URL.
 
-Kill with Ctrl-C. Re-run — state is remembered. Reset with `--reset`.
+Kill with Ctrl-C. Re-run and state is remembered. Delete the state file to
+re-emit everything.
 
 ## Environment variables
 

@@ -3,6 +3,8 @@ import {
   buildAttribution,
   coerceLicense,
   heuristicLicenseFromUrl,
+  isContextSafeLicense,
+  isOpenLicense,
   isSafeLicense,
 } from "../packages/core/src/license.ts";
 
@@ -28,10 +30,17 @@ describe("license coercion", () => {
 });
 
 describe("safety", () => {
-  test("UNKNOWN is unsafe; others are safe", () => {
+  test("UNKNOWN is unsafe; safe-only compatibility treats editorial as context-safe", () => {
     expect(isSafeLicense("UNKNOWN")).toBe(false);
     expect(isSafeLicense("CC0")).toBe(true);
     expect(isSafeLicense("EDITORIAL_LICENSED")).toBe(true);
+  });
+
+  test("open licenses exclude editorial/press aliases", () => {
+    expect(isOpenLicense("CC_BY")).toBe(true);
+    expect(isOpenLicense("EDITORIAL_LICENSED")).toBe(false);
+    expect(isOpenLicense("PRESS_KIT_ALLOWLIST")).toBe(false);
+    expect(isContextSafeLicense("EDITORIAL_LICENSED")).toBe(true);
   });
 });
 

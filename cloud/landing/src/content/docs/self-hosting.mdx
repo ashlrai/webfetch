@@ -9,7 +9,7 @@ Everything in webfetch is self-hostable. The same binaries that power webfetch C
 ## What you're hosting
 
 - **`@webfetch/cli`** — a Node/Bun binary. No daemon, no config server.
-- **`@webfetch/server`** — a stateless HTTP server on port 7777 by default.
+- **`@webfetch/server`** — a stateless HTTP server on `127.0.0.1:7600` by default.
 - **`@webfetch/mcp`** — an MCP stdio server. Used inline by IDEs; also runs standalone.
 
 All three share `@webfetch/core`, so behavior is identical across surfaces.
@@ -25,25 +25,28 @@ All three share `@webfetch/core`, so behavior is identical across surfaces.
 ### Bare metal
 
 ```bash
-git clone https://github.com/ashlrai/web-fetcher-mcp
-cd web-fetcher-mcp
+git clone https://github.com/ashlrai/webfetch
+cd webfetch
 bun install
-WEBFETCH_HTTP_TOKEN=mytoken \
 UNSPLASH_ACCESS_KEY=... \
 PEXELS_API_KEY=... \
 bun run --cwd packages/server start
 ```
 
+On first boot the server generates `~/.webfetch/server.token`, prints it to
+stdout, and opens `http://127.0.0.1:7600/auth/display` unless you pass
+`--no-open`. Every API request, including `/health` and `/providers`, must send
+`Authorization: Bearer <token>`.
+
 ### Docker
 
 ```bash
 docker run -d --name webfetch \
-  -p 7777:7777 \
-  -e WEBFETCH_HTTP_TOKEN=mytoken \
+  -p 7600:7600 \
   -e UNSPLASH_ACCESS_KEY=... \
   -e PEXELS_API_KEY=... \
-  -v webfetch-cache:/var/cache/webfetch \
-  ghcr.io/ashlrai/webfetch-server:latest
+  -v webfetch-home:/root/.webfetch \
+  ghcr.io/ashlrai/webfetch:latest server --host 0.0.0.0 --no-open
 ```
 
 ### Docker Compose
@@ -51,23 +54,26 @@ docker run -d --name webfetch \
 ```yaml
 services:
   webfetch:
-    image: ghcr.io/ashlrai/webfetch-server:latest
-    ports: ["127.0.0.1:7777:7777"]
+    image: ghcr.io/ashlrai/webfetch:latest
+    command: ["server", "--host", "0.0.0.0", "--no-open"]
+    ports: ["127.0.0.1:7600:7600"]
     environment:
-      WEBFETCH_HTTP_TOKEN: "${WEBFETCH_HTTP_TOKEN}"
       WEBFETCH_CACHE_DIR: "/var/cache/webfetch"
       UNSPLASH_ACCESS_KEY: "${UNSPLASH_ACCESS_KEY}"
       PEXELS_API_KEY: "${PEXELS_API_KEY}"
       SPOTIFY_CLIENT_ID: "${SPOTIFY_CLIENT_ID}"
       SPOTIFY_CLIENT_SECRET: "${SPOTIFY_CLIENT_SECRET}"
-    volumes: ["webfetch-cache:/var/cache/webfetch"]
+    volumes:
+      - webfetch-cache:/var/cache/webfetch
+      - webfetch-home:/root/.webfetch
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "--header=authorization: Bearer ${WEBFETCH_HTTP_TOKEN}", "http://localhost:7777/health"]
+      test: ["CMD-SHELL", "TOKEN=$$(cat /root/.webfetch/server.token); curl -fsS -H \"authorization: Bearer $$TOKEN\" http://127.0.0.1:7600/health >/dev/null"]
       interval: 30s
 
 volumes:
   webfetch-cache:
+  webfetch-home:
 ```
 
 ## Kubernetes (Helm hint)
@@ -86,24 +92,29 @@ spec:
     spec:
       containers:
         - name: webfetch
-          image: ghcr.io/ashlrai/webfetch-server:latest
-          ports: [{ containerPort: 7777 }]
+          image: ghcr.io/ashlrai/webfetch:latest
+          args: ["server", "--host", "0.0.0.0", "--no-open"]
+          ports: [{ containerPort: 7600 }]
           envFrom: [{ secretRef: { name: webfetch-secrets } }]
           resources:
             requests: { cpu: "100m", memory: "256Mi" }
             limits:   { cpu: "1",    memory: "1Gi" }
           readinessProbe:
-            httpGet: { path: /health, port: 7777, httpHeaders: [{ name: authorization, value: "Bearer $(WEBFETCH_HTTP_TOKEN)" }] }
+            exec: { command: ["sh", "-c", "TOKEN=$(cat /root/.webfetch/server.token); curl -fsS -H \"authorization: Bearer $TOKEN\" http://127.0.0.1:7600/health >/dev/null"] }
             initialDelaySeconds: 5
-          volumeMounts: [{ name: cache, mountPath: /var/cache/webfetch }]
-      volumes: [{ name: cache, emptyDir: {} }]
+          volumeMounts:
+            - { name: cache, mountPath: /var/cache/webfetch }
+            - { name: home, mountPath: /root/.webfetch }
+      volumes:
+        - { name: cache, emptyDir: {} }
+        - { name: home, emptyDir: {} }
 ---
 apiVersion: v1
 kind: Service
 metadata: { name: webfetch }
 spec:
   selector: { app: webfetch }
-  ports: [{ port: 7777, targetPort: 7777 }]
+  ports: [{ port: 7600, targetPort: 7600 }]
 ```
 
 For a horizontally-scaled deployment, put a shared Redis behind `WEBFETCH_CACHE_REDIS_URL` so every replica sees the same cache.
@@ -145,11 +156,11 @@ No telemetry is sent anywhere. If you want webfetch Cloud's dashboards without C
 ## Security posture
 
 - Outbound traffic only: image provider APIs on port 443.
-- Inbound: port 7777, auth-required for everything except `/health` when `WEBFETCH_HEALTH_NOAUTH=1`.
+- Inbound: port 7600, bearer auth required for `/health`, `/providers`, and every POST endpoint. Only `/auth/display` is public.
 - No filesystem writes outside `$WEBFETCH_CACHE_DIR`.
 - No code execution — every response is JSON.
 
-See [SECURITY.md](https://github.com/ashlrai/web-fetcher-mcp/blob/main/SECURITY.md) in the repo for our disclosure policy.
+See [SECURITY.md](https://github.com/ashlrai/webfetch/blob/main/SECURITY.md) in the repo for our disclosure policy.
 
 ## Upgrading
 
@@ -174,9 +185,9 @@ Not recommended on self-hosted deployments unless you need it. It's resource-int
 ```bash
 docker run -d --name webfetch \
   -e WEBFETCH_ENABLE_BROWSER=1 \
-  -e WEBFETCH_HTTP_TOKEN=... \
   -v /dev/shm:/dev/shm \
-  ghcr.io/ashlrai/webfetch-server-browser:latest
+  ghcr.io/ashlrai/webfetch:latest server --host 0.0.0.0 --no-open
 ```
 
-The `-browser` image variant has Chromium pre-installed. See [Browser layer](/docs/browser) for what this costs and what it enables.
+Install Playwright/Chromium in a derived image before enabling the browser
+provider. See [Browser layer](/docs/browser) for what this costs and what it enables.

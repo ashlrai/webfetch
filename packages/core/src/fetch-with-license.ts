@@ -10,7 +10,7 @@
  *   - Visible attribution on the page (basic regex)
  */
 
-import { downloadImage } from "./download.ts";
+import { assertPublicHttpUrl, downloadImage } from "./download.ts";
 import { buildAttribution, coerceLicense, heuristicLicenseFromUrl } from "./license.ts";
 import { type EmbeddedMetadata, readImageMetadata } from "./metadata-reader.ts";
 import type { Fetcher, License } from "./types.ts";
@@ -43,6 +43,8 @@ export async function fetchWithLicense(
 ): Promise<FetchWithLicenseResult> {
   const fetcher = opts.fetcher ?? fetch;
   const ua = opts.userAgent ?? "webfetch-mcp/0.1";
+  const publicUrl = assertPublicHttpUrl(url);
+  if (!publicUrl.ok) throw new Error(publicUrl.error);
   // Probe the URL shallowly to see if it's an image.
   let head: Response;
   try {

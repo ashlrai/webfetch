@@ -30,6 +30,9 @@ export function startServer(opts: ServerOptions) {
       // Auth-display is public (same-origin 127.0.0.1 only, exposes only the
       // token value that was already written to disk).
       if (req.method === "GET" && url.pathname === "/auth/display") {
+        if (!isLoopbackHost(hostname) || !isLoopbackHost(url.hostname)) {
+          return withHeaders(json({ ok: false, error: "not found" }, 404), cors);
+        }
         return withHeaders(
           new Response(renderAuthDisplay(token, port), {
             status: 200,
@@ -46,7 +49,10 @@ export function startServer(opts: ServerOptions) {
       if (req.method === "GET" && url.pathname === "/health") {
         return withHeaders(json({ ok: true, data: { status: "ok" } }), cors);
       }
-      if (req.method === "GET" && url.pathname === "/providers") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/providers" || url.pathname === "/v1/providers")
+      ) {
         return withHeaders(getProviders(), cors);
       }
       if (req.method === "POST") {
@@ -56,6 +62,16 @@ export function startServer(opts: ServerOptions) {
     },
   });
   return server;
+}
+
+function isLoopbackHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
+  if (h === "::1") return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (!m) return false;
+  const parts = m.slice(1, 5).map(Number);
+  return parts.every((n) => n >= 0 && n <= 255) && parts[0] === 127;
 }
 
 function json(body: unknown, status = 200): Response {

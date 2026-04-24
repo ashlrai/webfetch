@@ -20,7 +20,9 @@ export const LICENSE_RANK: Record<License, number> = {
   UNKNOWN: 99,
 };
 
-export const SAFE_LICENSES: readonly License[] = [
+export const OPEN_LICENSES: readonly License[] = ["CC0", "PUBLIC_DOMAIN", "CC_BY", "CC_BY_SA"];
+
+export const CONTEXT_SAFE_LICENSES: readonly License[] = [
   "CC0",
   "PUBLIC_DOMAIN",
   "CC_BY",
@@ -29,8 +31,22 @@ export const SAFE_LICENSES: readonly License[] = [
   "PRESS_KIT_ALLOWLIST",
 ];
 
+/**
+ * Compatibility alias for the historical `safe-only` policy. Prefer
+ * `CONTEXT_SAFE_LICENSES` for new code when editorial/press assets are allowed.
+ */
+export const SAFE_LICENSES = CONTEXT_SAFE_LICENSES;
+
+export function isOpenLicense(tag: License): boolean {
+  return OPEN_LICENSES.includes(tag);
+}
+
+export function isContextSafeLicense(tag: License): boolean {
+  return CONTEXT_SAFE_LICENSES.includes(tag);
+}
+
 export function isSafeLicense(tag: License): boolean {
-  return SAFE_LICENSES.includes(tag);
+  return isContextSafeLicense(tag);
 }
 
 export function requiresAttribution(tag: License): boolean {

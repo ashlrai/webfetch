@@ -1,7 +1,7 @@
 /**
- * Deterministic fixture data used when `NEXT_PUBLIC_USE_FIXTURES=1` or when
- * the cloud API is unreachable. Lets the dashboard render end-to-end during
- * development before api.getwebfetch.com exists.
+ * Deterministic fixture data used when `NEXT_PUBLIC_USE_FIXTURES=1`. Lets the
+ * dashboard render end-to-end during development before api.getwebfetch.com
+ * exists.
  */
 
 import type {

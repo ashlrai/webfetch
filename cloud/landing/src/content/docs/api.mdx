@@ -10,7 +10,7 @@ The HTTP API is a thin wrapper around the same core library that powers the CLI 
 
 ## Base URL
 
-- **Self-hosted:** `http://localhost:7777` (default; override with `WEBFETCH_HTTP_PORT`).
+- **Self-hosted:** `http://127.0.0.1:7600` by default (`--port` / `--host` override).
 - **webfetch Cloud:** `https://api.getwebfetch.com`.
 
 ## Authentication
@@ -21,7 +21,7 @@ Every metered endpoint requires a bearer token:
 Authorization: Bearer $WEBFETCH_KEY
 ```
 
-- **Self-hosted:** set `WEBFETCH_HTTP_TOKEN=mytoken` when starting the server.
+- **Self-hosted:** the server generates `~/.webfetch/server.token` on first boot and prints it to stdout.
 - **Cloud:** your API key (prefix `wf_live_`) from [app.getwebfetch.com/keys](https://app.getwebfetch.com/keys).
 
 Export the key once and paste any example below without editing it:
@@ -47,6 +47,10 @@ On error:
 ```
 
 ## Endpoints
+
+Metered webfetch Cloud API endpoints live under `/v1`. The public Cloud
+utility endpoints, `/providers` and `/health`, remain unversioned; the
+self-hosted local server uses the same unversioned paths for every endpoint.
 
 ### `POST /v1/search` — federated image search
 
@@ -273,7 +277,8 @@ curl -sS -X POST https://api.getwebfetch.com/v1/similar \
 
 ### `GET /providers` — list configured providers
 
-**Auth:** none required.
+**Auth:** none required on webfetch Cloud. Self-hosted servers require
+`Authorization: Bearer <token>`.
 
 Returns all known provider IDs, the default provider set, which platform-managed provider keys are active on the Cloud side, and the metered endpoint list. When called with a valid session cookie the response also includes `userPlan`.
 
@@ -283,8 +288,14 @@ Response `data`:
 {
   "all": ["wikimedia", "openverse", "unsplash", "pexels", "pixabay", "itunes",
           "musicbrainz-caa", "spotify", "youtube-thumb", "brave", "bing",
-          "serpapi", "browser"],
-  "defaults": ["wikimedia", "openverse", "unsplash"],
+          "serpapi", "browser", "flickr", "internet-archive", "smithsonian",
+          "nasa", "met-museum", "europeana", "library-of-congress",
+          "wellcome-collection", "rawpixel", "burst", "europeana-archival"],
+  "defaults": ["wikimedia", "openverse", "itunes", "musicbrainz-caa",
+               "unsplash", "pexels", "pixabay", "spotify", "brave",
+               "internet-archive", "smithsonian", "nasa", "met-museum",
+               "flickr", "europeana", "library-of-congress",
+               "wellcome-collection", "rawpixel", "burst"],
   "platformProvidersAvailable": true,
   "userPlan": null,
   "endpoints": [
@@ -302,7 +313,8 @@ curl -sS https://api.getwebfetch.com/providers
 
 ### `GET /health` — liveness probe
 
-**Auth:** none required.
+**Auth:** none required on webfetch Cloud. Self-hosted servers require
+`Authorization: Bearer <token>`.
 
 ```bash
 curl -sS https://api.getwebfetch.com/health
@@ -395,7 +407,7 @@ The error message includes the Zod field path. Fix the request body and retry.
 { "ok": false, "error": "search failed" }
 ```
 
-Retry once. If the error persists, [open an issue](https://github.com/ashlrai/web-fetcher-mcp/issues).
+Retry once. If the error persists, [open an issue](https://github.com/ashlrai/webfetch/issues).
 
 ---
 
@@ -424,7 +436,7 @@ console.log(data.candidates[0]);
 ```bash
 bun run --cwd packages/server start
 # or, Docker:
-docker run -p 7777:7777 -e WEBFETCH_HTTP_TOKEN=mytoken ghcr.io/ashlrai/webfetch-server
+docker run -p 7600:7600 ghcr.io/ashlrai/webfetch server --host 0.0.0.0 --no-open
 ```
 
 See [Self-hosting](/docs/self-hosting) for production deployment.

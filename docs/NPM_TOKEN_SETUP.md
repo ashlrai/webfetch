@@ -114,7 +114,7 @@ Preflight locally (no auth required — this just validates the tarball
 contents):
 
 ```bash
-cd ~/Desktop/web-fetcher-mcp
+cd ~/Desktop/webfetch
 for pkg in core cli mcp server; do
   (cd packages/$pkg && npm pack --dry-run | tail -5)
 done
@@ -123,7 +123,7 @@ done
 Cut the first release:
 
 ```bash
-cd ~/Desktop/web-fetcher-mcp
+cd ~/Desktop/webfetch
 git tag v0.1.0
 git push --tags
 ```

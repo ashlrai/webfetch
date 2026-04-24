@@ -25,6 +25,20 @@ describe("pick", () => {
     expect(best?.url).toBe("b");
   });
 
+  test("safe-only is a compatibility alias for context-safe editorial results", () => {
+    const cands = [mk({ url: "a", license: "EDITORIAL_LICENSED", width: 2000, height: 2000 })];
+    expect(pickBest(cands, { licensePolicy: "safe-only" })?.url).toBe("a");
+    expect(pickBest(cands, { licensePolicy: "context-safe" })?.url).toBe("a");
+  });
+
+  test("open-only rejects editorial and press results", () => {
+    const cands = [
+      mk({ url: "a", license: "EDITORIAL_LICENSED", width: 3000, height: 3000 }),
+      mk({ url: "b", license: "PRESS_KIT_ALLOWLIST", width: 3000, height: 3000 }),
+    ];
+    expect(rankAll(cands, { licensePolicy: "open-only" })).toEqual([]);
+  });
+
   test("higher pixels wins within same license", () => {
     const cands = [
       mk({ url: "a", license: "CC_BY", width: 800, height: 800 }),

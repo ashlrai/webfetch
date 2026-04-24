@@ -153,8 +153,11 @@ export default function TeamClient({
           action={
             canManage ? (
               <button
+                type="button"
                 className="btn btn-primary"
-                onClick={() => document.querySelector<HTMLInputElement>('input[type="email"]')?.focus()}
+                onClick={() =>
+                  document.querySelector<HTMLInputElement>('input[type="email"]')?.focus()
+                }
               >
                 <Icon name="plus" /> Invite a teammate
               </button>

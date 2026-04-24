@@ -8,8 +8,8 @@ and by `curl` during development.
 
 ```bash
 bun run --cwd packages/server src/index.ts
-# or, from a workspace install:
-bunx webfetch-server --port 7600
+# or, from npm:
+npx -y @webfetch/server -- --port 7600
 ```
 
 On first boot the server writes a random 32-byte hex token to

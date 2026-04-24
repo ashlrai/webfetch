@@ -5,11 +5,11 @@
  * browser never sees raw cross-origin calls — the proxy adds session auth,
  * rate-limit headers, and workspace context.
  *
- * When `USE_FIXTURES` is on we short-circuit to the deterministic fixtures so
- * the dashboard renders end-to-end even before api.getwebfetch.com exists.
+ * When fixture mode is on we short-circuit to deterministic fixtures so the
+ * dashboard renders end-to-end during local development.
  */
 
-import { USE_FIXTURES } from "@/env";
+import { isFixtureMode } from "@/env";
 import {
   type ProviderStatus,
   fixtureAudit,
@@ -101,22 +101,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-/**
- * Wrap a live-API call so a transient backend failure falls back to a
- * deterministic fixture instead of crashing the render. We log the error so
- * prod observability can surface it, but return a usable shape to the UI.
- */
-async function liveOrFallback<T>(path: string, fallback: () => T | Promise<T>): Promise<T> {
-  try {
-    return await request<T>(path);
-  } catch (err) {
-    if (typeof console !== "undefined") {
-      console.warn(`[webfetch] live API ${path} failed — falling back to fixture`, err);
-    }
-    return fallback();
-  }
-}
-
 export interface DashboardOverview {
   user: User;
   workspace: Workspace;
@@ -142,21 +126,20 @@ function fixtureOverview(): DashboardOverview {
 }
 
 export async function getOverview(): Promise<DashboardOverview> {
-  if (USE_FIXTURES) return fixtureOverview();
-  return liveOrFallback<DashboardOverview>("/v1/dashboard/overview", fixtureOverview);
+  if (isFixtureMode()) return fixtureOverview();
+  return request<DashboardOverview>("/v1/dashboard/overview");
 }
 
 export async function listKeys(): Promise<ApiKey[]> {
-  if (USE_FIXTURES) return fixtureKeys;
-  // Worker returns `{ ok, data: [...] }` style in some routes — we're tolerant.
-  return liveOrFallback<ApiKey[]>("/v1/keys", () => []);
+  if (isFixtureMode()) return fixtureKeys;
+  return request<ApiKey[]>("/v1/keys");
 }
 
 export async function createKey(
   name: string,
   scope: string,
 ): Promise<{ key: ApiKey; raw: string }> {
-  if (USE_FIXTURES) {
+  if (isFixtureMode()) {
     const key: ApiKey = {
       id: `key_${Math.random().toString(36).slice(2, 10)}`,
       workspaceId: fixtureWorkspace.id,
@@ -178,23 +161,19 @@ export async function createKey(
 }
 
 export async function revokeKey(id: string): Promise<void> {
-  if (USE_FIXTURES) return;
+  if (isFixtureMode()) return;
   await request(`/v1/keys/${id}`, { method: "DELETE" });
 }
 
 export async function listMembers() {
-  if (USE_FIXTURES) return fixtureMembers;
+  if (isFixtureMode()) return fixtureMembers;
   // Worker exposes `/v1/workspaces/:id/members`. We pass a synthetic "current"
   // segment — the worker resolves "current" to the session user's workspace.
-  // Fallback to an empty list so the page still renders for first-run users.
-  return liveOrFallback<typeof fixtureMembers>(
-    "/v1/workspaces/current/members",
-    () => [] as typeof fixtureMembers,
-  );
+  return request<typeof fixtureMembers>("/v1/workspaces/current/members");
 }
 
 export async function inviteMember(email: string, role: string): Promise<void> {
-  if (USE_FIXTURES) return;
+  if (isFixtureMode()) return;
   await request("/v1/workspaces/current/invite", {
     method: "POST",
     body: JSON.stringify({ email, role }),
@@ -202,32 +181,32 @@ export async function inviteMember(email: string, role: string): Promise<void> {
 }
 
 export async function removeMember(userId: string): Promise<void> {
-  if (USE_FIXTURES) return;
+  if (isFixtureMode()) return;
   await request(`/v1/workspaces/current/members/${userId}`, { method: "DELETE" });
 }
 
 export async function getBilling(): Promise<BillingSnapshot> {
-  if (USE_FIXTURES) return fixtureBilling;
-  return liveOrFallback<BillingSnapshot>("/v1/billing/snapshot", () => fixtureBilling);
+  if (isFixtureMode()) return fixtureBilling;
+  return request<BillingSnapshot>("/v1/billing/snapshot");
 }
 
 export async function getUsageRows(limit = 100): Promise<UsageRow[]> {
-  if (USE_FIXTURES) return fixtureUsageRows(limit);
-  return liveOrFallback<UsageRow[]>(`/v1/usage?limit=${limit}`, () => []);
+  if (isFixtureMode()) return fixtureUsageRows(limit);
+  return request<UsageRow[]>(`/v1/usage?limit=${limit}`);
 }
 
 export async function getAudit(limit = 100): Promise<AuditEntry[]> {
-  if (USE_FIXTURES) return fixtureAudit(limit);
-  return liveOrFallback<AuditEntry[]>(`/v1/audit?limit=${limit}`, () => []);
+  if (isFixtureMode()) return fixtureAudit(limit);
+  return request<AuditEntry[]>(`/v1/audit?limit=${limit}`);
 }
 
 export async function getProviders(): Promise<ProviderStatus[]> {
-  if (USE_FIXTURES) return fixtureProviders;
-  return liveOrFallback<ProviderStatus[]>("/providers", () => fixtureProviders);
+  if (isFixtureMode()) return fixtureProviders;
+  return request<ProviderStatus[]>("/providers");
 }
 
 export async function saveProviderKey(name: string, apiKey: string): Promise<void> {
-  if (USE_FIXTURES) return;
+  if (isFixtureMode()) return;
   await request(`/v1/keys/providers/${name}`, {
     method: "POST",
     body: JSON.stringify({ apiKey }),
@@ -235,6 +214,6 @@ export async function saveProviderKey(name: string, apiKey: string): Promise<voi
 }
 
 export async function testProvider(name: string): Promise<{ ok: boolean; message: string }> {
-  if (USE_FIXTURES) return { ok: true, message: "Fixture — key works." };
+  if (isFixtureMode()) return { ok: true, message: "Fixture - key works." };
   return request(`/v1/keys/providers/${name}/test`, { method: "POST" });
 }

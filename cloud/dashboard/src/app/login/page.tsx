@@ -9,8 +9,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; reset?: string }>;
 }) {
   const { next } = await searchParams;
-  const callbackURL =
-    next && next.startsWith("/") ? next : "/";
+  const callbackURL = next?.startsWith("/") ? next : "/";
 
   return (
     <div className="flex flex-col gap-6">

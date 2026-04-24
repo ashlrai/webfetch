@@ -3,7 +3,7 @@
 Run the one-line installer first so the CLI and repo are on disk:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/web-fetcher-mcp/main/install/install.sh | bash --no-claude
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash -s -- --no-claude
 ```
 
 Then, Cursor loads MCP servers from `~/.cursor/mcp.json`:

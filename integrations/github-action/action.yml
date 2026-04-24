@@ -37,13 +37,13 @@ inputs:
     required: false
     default: "0"
   webfetch-ref:
-    description: "Git ref of web-fetcher-mcp to install (branch / tag / sha)."
+    description: "Git ref of webfetch to install (branch / tag / sha)."
     required: false
     default: "main"
   webfetch-repo:
     description: "Git URL of the webfetch repo."
     required: false
-    default: "https://github.com/ashlrai/web-fetcher-mcp.git"
+    default: "https://github.com/ashlrai/webfetch.git"
 
 outputs:
   manifest:

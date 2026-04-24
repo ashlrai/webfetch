@@ -7,7 +7,7 @@ per file and a JSON manifest.
 ## Usage
 
 ```yaml
-- uses: ashlrai/web-fetcher-mcp/integrations/github-action@main
+- uses: ashlrai/webfetch/integrations/github-action@main
   with:
     query: "Drake musician portrait"
     out-dir: ./assets/portraits

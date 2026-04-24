@@ -4,14 +4,23 @@
   "description": "License-first federated image search core: ranker, cache, provider federation, pHash dedupe, EXIF/IPTC/XMP metadata.",
   "license": "MIT",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./providers": "./src/providers/index.ts",
-    "./hints": "./src/hints/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
+    },
+    "./hints": {
+      "types": "./dist/hints/index.d.ts",
+      "import": "./dist/hints/index.js"
+    }
   },
-  "files": ["dist", "src", "README.md", "LICENSE"],
+  "files": ["dist", "README.md", "LICENSE"],
   "keywords": ["image-search", "licensing", "mcp", "agent", "federated", "creative-commons", "ai"],
   "homepage": "https://getwebfetch.com",
   "bugs": {
@@ -23,26 +32,13 @@
     "directory": "packages/core"
   },
   "publishConfig": {
-    "access": "public",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      },
-      "./providers": {
-        "types": "./dist/providers/index.d.ts",
-        "import": "./dist/providers/index.js"
-      },
-      "./hints": {
-        "types": "./dist/hints/index.d.ts",
-        "import": "./dist/hints/index.js"
-      }
-    }
+    "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp",
+    "build": "bun run build:js && bun run build:types && bun run build:fixup",
+    "build:js": "bun build src/index.ts src/providers/index.ts src/hints/index.ts --target=node --format=esm --outdir=dist --external=sharp",
+    "build:types": "tsc src/index.ts --emitDeclarationOnly --declaration --declarationMap false --outDir dist --rootDir src --allowImportingTsExtensions --module ESNext --target ES2022 --moduleResolution bundler --lib ES2022,DOM --strict --noImplicitAny --noUncheckedIndexedAccess --esModuleInterop --skipLibCheck --resolveJsonModule --types bun",
+    "build:fixup": "node -e \"const fs=require('node:fs'),path=require('node:path');if(fs.existsSync('dist/index.js')){const s=fs.readFileSync('dist/index.js','utf8');fs.writeFileSync('dist/index.js',s.replace(/^#!\\/usr\\/bin\\/env bun/m,'#!/usr/bin/env node'));}const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(p.endsWith('.d.ts')){const s=fs.readFileSync(p,'utf8').replaceAll('.ts\\\"','.js\\\"');fs.writeFileSync(p,s);}}};if(fs.existsSync('dist'))walk('dist');\"",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build"
   },

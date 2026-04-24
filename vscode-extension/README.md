@@ -1,6 +1,6 @@
 # webfetch for VS Code
 
-License-first federated image search inside your editor. Search 19 providers
+License-first federated image search inside your editor. Search 24 providers
 (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, Smithsonian, Europeana, NASA,
 and more), insert with attribution, and never ship an image of unknown license
 to production.
@@ -41,7 +41,7 @@ to production.
 | `webfetch.apiKey` | `""` | Bearer token for the webfetch API (prefer `Set API Key`). |
 | `webfetch.baseUrl` | `https://api.getwebfetch.com` | Set to `http://127.0.0.1:7600` for self-hosted. |
 | `webfetch.defaultLicense` | `safe-only` | `safe-only` / `prefer-safe` / `any`. |
-| `webfetch.defaultProviders` | `[]` | Subset of the 19 providers to query (empty = server defaults). |
+| `webfetch.defaultProviders` | `[]` | Subset of the 24 providers to query (empty = the 19-provider server default set). |
 | `webfetch.outputDir` | `./assets` | Where downloaded images land, relative to the workspace root. |
 | `webfetch.writeXmpSidecar` | `true` | Write `<image>.xmp` alongside each download. |
 | `webfetch.attributionStyle` | `html-comment` | `html-comment` / `markdown-caption` / `none`. |
@@ -51,11 +51,14 @@ to production.
 Run [`@webfetch/server`](https://github.com/ashlrai/webfetch) locally:
 
 ```
-npx @webfetch/server --port 7600 --token $(uuidgen)
+npx -y @webfetch/server -- --port 7600
 ```
 
-Then set `webfetch.baseUrl` to `http://127.0.0.1:7600` and paste the token via
-*webfetch: Set API Key*.
+The server writes a token to `~/.webfetch/server.token`, prints it to stdout,
+and opens `http://127.0.0.1:7600/auth/display` so you can copy it. Then set
+`webfetch.baseUrl` to `http://127.0.0.1:7600` and paste the token via
+*webfetch: Set API Key*. The extension sends POST JSON requests with
+`Authorization: Bearer <token>`.
 
 ## License
 

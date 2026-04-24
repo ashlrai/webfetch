@@ -17,9 +17,9 @@
  */
 
 import type { Context } from "hono";
+import { sendWelcomeEmail } from "./email.ts";
 import type { Env } from "./env.ts";
 import { constantTimeEq, sha256Hex, ulid } from "./ids.ts";
-import { sendWelcomeEmail } from "./email.ts";
 
 // Better Auth is imported lazily inside the handlers below to avoid pulling its
 // cold-start cost into the hot path. The types import is fine though.
@@ -58,7 +58,7 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
       const parts = appHost.split(".");
       if (parts.length < 2) return undefined;
       // e.g. app.getwebfetch.com → .getwebfetch.com
-      return "." + parts.slice(-2).join(".");
+      return `.${parts.slice(-2).join(".")}`;
     } catch {
       return undefined;
     }
@@ -143,7 +143,10 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
             try {
               const workspaceId = ulid();
               const now = Date.now();
-              const slug = (user.email.split("@")[0] || "workspace").replace(/[^a-z0-9-]/gi, "-").toLowerCase().slice(0, 24);
+              const slug = (user.email.split("@")[0] || "workspace")
+                .replace(/[^a-z0-9-]/gi, "-")
+                .toLowerCase()
+                .slice(0, 24);
               const name = user.name ? `${user.name}'s workspace` : `${slug}'s workspace`;
               // Quota resets on the 1st of the next month (UTC)
               const quotaResetsAt = (() => {
@@ -154,7 +157,14 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
                 c.env.DB.prepare(
                   `INSERT INTO workspaces (id, slug, name, owner_id, plan, subscription_status, quota_resets_at, created_at, updated_at)
                    VALUES (?1, ?2, ?3, ?4, 'free', 'active', ?5, ?6, ?6)`,
-                ).bind(workspaceId, `${slug}-${workspaceId.slice(-6).toLowerCase()}`, name, user.id, quotaResetsAt, now),
+                ).bind(
+                  workspaceId,
+                  `${slug}-${workspaceId.slice(-6).toLowerCase()}`,
+                  name,
+                  user.id,
+                  quotaResetsAt,
+                  now,
+                ),
                 c.env.DB.prepare(
                   `INSERT INTO members (workspace_id, user_id, role, invited_at, accepted_at)
                    VALUES (?1, ?2, 'owner', ?3, ?3)`,
@@ -167,9 +177,11 @@ export async function handleAuth(c: Context<{ Bindings: Env }>): Promise<Respons
             // Best-effort welcome email — never blocks signup.
             const welcomeP = sendWelcomeEmail(c.env, { to: user.email, name: user.name });
             if (c.executionCtx?.waitUntil) {
-              c.executionCtx.waitUntil(welcomeP.catch((err) => {
-                console.error("[auth.hooks.user.create.after] welcome email error", err);
-              }));
+              c.executionCtx.waitUntil(
+                welcomeP.catch((err) => {
+                  console.error("[auth.hooks.user.create.after] welcome email error", err);
+                }),
+              );
             } else {
               await welcomeP.catch((err) => {
                 console.error("[auth.hooks.user.create.after] welcome email error", err);
@@ -284,9 +296,7 @@ export async function getSessionUser(c: Context<{ Bindings: Env }>): Promise<Ses
   // `sessions.token`; `issueSessionForTest` writes the sha256 hash into both
   // `id` and `token`. Match if either comparison succeeds (constant-time).
   const tokenMatch =
-    !!row.token &&
-    row.token.length === token.length &&
-    constantTimeEq(row.token, token);
+    !!row.token && row.token.length === token.length && constantTimeEq(row.token, token);
   const hashMatch =
     (row.token ?? row.id).length === tokenHash.length &&
     constantTimeEq(row.token ?? row.id, tokenHash);

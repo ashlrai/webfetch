@@ -18,7 +18,7 @@ webfetch ships with 24 provider adapters. Each one normalizes a different source
 | itunes | album covers, artist portraits | EDITORIAL_LICENSED | none | 5/s | no |
 | musicbrainz-caa | canonical album art | EDITORIAL_LICENSED | none (UA required) | 1/s hard cap | no |
 | spotify | artist + album images | EDITORIAL_LICENSED | `SPOTIFY_CLIENT_ID`/`SECRET` | 10/s | no |
-| youtube-thumb | video thumbnail by id/URL | EDITORIAL_LICENSED | none | 20/s | no |
+| youtube-thumb | video thumbnail by id/URL | EDITORIAL_LICENSED | none | 20/s | yes |
 | brave | general web image search | UNKNOWN (+heuristic) | `BRAVE_API_KEY` | 1/s | no |
 | bing | general web image search | UNKNOWN (+heuristic) | `BING_API_KEY` | 3/s | yes |
 | serpapi | Google Images + reverse-image | UNKNOWN (+heuristic) | `SERPAPI_KEY` | 2/s | yes |
@@ -51,6 +51,7 @@ Providers that need auth gracefully skip when their keys are missing, so the def
 
 | Provider | Enable when |
 |---|---|
+| youtube-thumb | You already have YouTube video IDs or URLs and need their thumbnails. |
 | bing | Your queries are English-web-heavy and Brave coverage is thin. |
 | serpapi | You need Google-quality recall and accept per-query cost (~$10/1k queries). |
 | browser | You explicitly accept ToS risk and have Playwright installed. |

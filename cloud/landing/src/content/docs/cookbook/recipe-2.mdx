@@ -13,7 +13,7 @@ You have a list of 500 artists. You need a portrait for each one — 1200px+ wid
 - Use `webfetch batch` for parallelism.
 - Tune providers to the musician case: Spotify + MusicBrainz + Wikimedia.
 - Set `--license safe-only` so `UNKNOWN` never sneaks in.
-- Write results to JSONL; reconcile later.
+- Write JSON results; reconcile later.
 
 ## Setup
 
@@ -44,16 +44,17 @@ webfetch batch --file queries.tsv \
   --json \
   --min-width 1200 \
   --license safe-only \
-  > portraits.jsonl
+  > portraits.json
 ```
 
-Each output line:
+Each output item:
 
 ```json
 {
   "query": "Taylor Swift portrait",
-  "candidates": [ /* ranked, license-safe */ ],
-  "errors": []
+  "candidateCount": 8,
+  "top": { "url": "https://...", "license": "CC_BY", "attributionLine": "..." },
+  "downloadedPath": null
 }
 ```
 
@@ -61,15 +62,16 @@ Each output line:
 
 ```bash
 jq -r '
+  .[] |
   .query as $q |
-  (.candidates[0] // null) as $top |
+  .top as $top |
   if $top then
     [$q, $top.url, $top.license, $top.confidence, $top.attributionLine]
     | @tsv
   else
     [$q, "MISSING", "-", "-", "-"] | @tsv
   end
-' portraits.jsonl > portraits.tsv
+' portraits.json > portraits.tsv
 ```
 
 Audit the `MISSING` rows separately — those are artists where the safe providers didn't return a 1200px+ candidate. For those:
@@ -80,8 +82,9 @@ Audit the `MISSING` rows separately — those are artists where the safe provide
 ## Download the bytes
 
 ```bash
-jq -r '.candidates[0].url // empty' portraits.jsonl | while read url; do
-  webfetch download "$url" --out ./portraits/
+jq -r '.[].top.url // empty' portraits.json | while read url; do
+  name="$(basename "${url%%\\?*}")"
+  webfetch download "$url" --out "./portraits/$name"
 done
 ```
 

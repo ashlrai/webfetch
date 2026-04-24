@@ -1,3 +1,5 @@
+/// <reference types="chrome" />
+
 /**
  * Thin client for the @webfetch/server HTTP API.
  *
@@ -46,6 +48,35 @@ export interface ApiResult<T> {
   status: number;
 }
 
+const VERSIONED_PATHS = new Set([
+  "/search",
+  "/artist",
+  "/album",
+  "/download",
+  "/probe",
+  "/license",
+  "/similar",
+]);
+
+export function apiPathForBase(baseUrl: string, path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (normalizedPath.startsWith("/v1/")) return normalizedPath;
+  if (!VERSIONED_PATHS.has(normalizedPath)) return normalizedPath;
+
+  try {
+    const base = new URL(baseUrl);
+    if (base.pathname.replace(/\/+$/, "").endsWith("/v1")) return normalizedPath;
+    if (base.hostname.toLowerCase() === "api.getwebfetch.com") return `/v1${normalizedPath}`;
+  } catch {
+    // Invalid base URLs will fail in fetch; keep path handling conservative.
+  }
+  return normalizedPath;
+}
+
+export function buildApiUrl(baseUrl: string, path: string): string {
+  return baseUrl.replace(/\/+$/, "") + apiPathForBase(baseUrl, path);
+}
+
 export async function call<T = unknown>(
   path: string,
   body?: unknown,
@@ -53,7 +84,7 @@ export async function call<T = unknown>(
 ): Promise<ApiResult<T>> {
   const s = await loadSettings();
   if (!s.token) return { ok: false, error: "no token configured — open options", status: 0 };
-  const url = s.serverUrl.replace(/\/+$/, "") + path;
+  const url = buildApiUrl(s.serverUrl, path);
   try {
     const res = await fetch(url, {
       method,

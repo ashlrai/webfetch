@@ -10,7 +10,7 @@
 | itunes           | album covers, artist portraits          | EDITORIAL_LICENSED   | none                                   | 5/s                       | no     |
 | musicbrainz-caa  | canonical album art                     | EDITORIAL_LICENSED   | none (UA required)                     | 1/s (hard MB limit)       | no     |
 | spotify          | artist + album images                   | EDITORIAL_LICENSED   | SPOTIFY_CLIENT_ID/SECRET               | 10/s                      | no     |
-| youtube-thumb    | video thumbnail given id/URL            | EDITORIAL_LICENSED   | none                                   | 20/s                      | no     |
+| youtube-thumb    | video thumbnail given id/URL            | EDITORIAL_LICENSED   | none                                   | 20/s                      | **yes** (narrow-source provider) |
 | brave            | general web image search                | UNKNOWN (+heuristic) | BRAVE_API_KEY                          | 1/s                       | no     |
 | bing             | general web image search                | UNKNOWN (+heuristic) | BING_API_KEY                           | 3/s                       | **yes** (API deprecation risk) |
 | serpapi          | Google Images wrapper, reverse-image    | UNKNOWN (+heuristic) | SERPAPI_KEY                            | 2/s                       | **yes** |

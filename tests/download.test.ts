@@ -37,3 +37,15 @@ test("enforces byte cap", async () => {
     downloadImage("https://x/y", { fetcher, cacheDir, maxBytes: 100 }),
   ).rejects.toBeInstanceOf(DownloadError);
 });
+
+test("blocks private and non-http URLs before fetching", async () => {
+  const fetcher = stubFetcher([
+    { match: () => true, handler: async () => bytesResponse(new Uint8Array([1])) },
+  ]);
+  await expect(
+    downloadImage("http://169.254.169.254/latest", { fetcher, cacheDir }),
+  ).rejects.toThrow("host blocked by policy");
+  await expect(downloadImage("file:///tmp/image.jpg", { fetcher, cacheDir })).rejects.toThrow(
+    "disallowed url scheme",
+  );
+});

@@ -75,12 +75,16 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
     }
   };
 
-  const handleSelectKey = (e: React.MouseEvent<HTMLElement>) => {
+  const selectKeyElement = (el: HTMLElement) => {
     const sel = window.getSelection();
     const range = document.createRange();
-    range.selectNodeContents(e.currentTarget);
+    range.selectNodeContents(el);
     sel?.removeAllRanges();
     sel?.addRange(range);
+  };
+
+  const handleSelectKey = (e: React.MouseEvent<HTMLElement>) => {
+    selectKeyElement(e.currentTarget);
   };
 
   const closeReveal = () => {
@@ -127,7 +131,7 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>
             <Icon name="plus" /> New API key
           </button>
         </div>
@@ -138,7 +142,7 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
           title="No API keys yet."
           description="Create your first key to call api.getwebfetch.com from the CLI, MCP server, or your own code."
           action={
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>
               <Icon name="plus" /> Create your first key
             </button>
           }
@@ -149,20 +153,20 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
             <thead>
               <tr>
                 <th>
-                  <span className="sort" onClick={() => toggleSort("name")}>
+                  <button type="button" className="sort" onClick={() => toggleSort("name")}>
                     Name {sortArrow("name")}
-                  </span>
+                  </button>
                 </th>
                 <th>Key</th>
                 <th>
-                  <span className="sort" onClick={() => toggleSort("createdAt")}>
+                  <button type="button" className="sort" onClick={() => toggleSort("createdAt")}>
                     Created {sortArrow("createdAt")}
-                  </span>
+                  </button>
                 </th>
                 <th>
-                  <span className="sort" onClick={() => toggleSort("lastUsedAt")}>
+                  <button type="button" className="sort" onClick={() => toggleSort("lastUsedAt")}>
                     Last used {sortArrow("lastUsedAt")}
-                  </span>
+                  </button>
                 </th>
                 <th>Scope</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
@@ -250,7 +254,12 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
             if (saved) closeReveal();
           }}
           footer={
-            <button className="btn btn-primary" disabled={!saved} onClick={closeReveal}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!saved}
+              onClick={closeReveal}
+            >
               Done
             </button>
           }
@@ -263,6 +272,10 @@ export default function KeysClient({ initial }: { initial: ApiKey[] }) {
               <code
                 className="mono text-[12.5px] break-all cursor-text select-all"
                 onClick={handleSelectKey}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") selectKeyElement(e.currentTarget);
+                }}
+                tabIndex={0}
               >
                 {reveal.raw}
               </code>

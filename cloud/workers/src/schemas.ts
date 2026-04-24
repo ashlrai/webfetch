@@ -5,27 +5,14 @@
  */
 
 import { z } from "zod";
+import { LICENSE_POLICIES, PROVIDER_IDS } from "../../../packages/core/src/types.ts";
 
-export const providerIdSchema = z.enum([
-  "wikimedia",
-  "openverse",
-  "unsplash",
-  "pexels",
-  "pixabay",
-  "itunes",
-  "musicbrainz-caa",
-  "spotify",
-  "youtube-thumb",
-  "brave",
-  "bing",
-  "serpapi",
-  "browser",
-]);
+export const providerIdSchema = z.enum(PROVIDER_IDS);
 
 export const commonSearchOpts = {
   providers: z.array(providerIdSchema).optional(),
   safeSearch: z.enum(["strict", "moderate", "off"]).optional(),
-  licensePolicy: z.enum(["safe-only", "prefer-safe", "any"]).optional(),
+  licensePolicy: z.enum(LICENSE_POLICIES).optional(),
   maxPerProvider: z.number().int().min(1).max(50).optional(),
   minWidth: z.number().int().min(1).optional(),
   minHeight: z.number().int().min(1).optional(),

@@ -4,10 +4,10 @@ The license-first image layer for AI agents and humans. Python bindings for
 [getwebfetch.com](https://getwebfetch.com), at full parity with the TypeScript SDK
 ([`@webfetch/core`](https://www.npmjs.com/package/@webfetch/core)).
 
-- 19 image providers with license-aware ranking
+- 24 image providers with license-aware ranking
 - Safe-license defaults (CC0, Public Domain, CC-BY, CC-BY-SA) out of the box
 - Drop-in async API via `AsyncWebfetchClient`
-- Works against hosted cloud or your self-hosted server
+- Works against your self-hosted server; cloud account methods use `/v1/usage` and `/v1/keys`
 
 ## Install
 
@@ -19,7 +19,9 @@ Python 3.10+ required.
 
 ## Auth
 
-Get a key at https://getwebfetch.com. Either set an env var:
+Get a key at https://getwebfetch.com for cloud account methods, or use the
+self-hosted token from `~/.webfetch/server.token` for a local server. Either
+set an env var:
 
 ```bash
 export WEBFETCH_API_KEY=wf_live_...

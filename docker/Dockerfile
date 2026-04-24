@@ -45,8 +45,10 @@ COPY --from=builder /src/package.json             /app/package.json
 COPY --from=builder /src/bun.lock                 /app/bun.lock
 
 # Install production dependencies using npm (since runtime is Node).
-# We install only the runtime deps needed by the built artifacts.
+# Install @webfetch/core from the built local package so runtime imports never
+# resolve TypeScript source or a registry copy with a different version.
 RUN npm install --omit=dev --no-audit --no-fund \
+      ./packages/core \
       sharp@^0.33.0 \
       @modelcontextprotocol/sdk@^1.0.4 \
       zod@^3.23.8 \

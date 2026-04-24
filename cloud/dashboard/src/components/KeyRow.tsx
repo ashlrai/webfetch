@@ -57,6 +57,7 @@ export default function KeyRow({
           <span style={{ color: "var(--text-dim)" }}>{masked}</span>
           {!revoked && (
             <button
+              type="button"
               className="btn btn-sm btn-ghost"
               onClick={handleCopy}
               aria-label="Copy key prefix"
@@ -79,6 +80,7 @@ export default function KeyRow({
       <td style={{ textAlign: "right" }}>
         {!revoked && (
           <button
+            type="button"
             className="btn btn-sm btn-danger"
             onClick={handleRevoke}
             disabled={busy}

@@ -8,7 +8,7 @@
 export * from "./types.ts";
 export { searchImages } from "./federation.ts";
 export { pickBest, rankAll } from "./pick.ts";
-export { downloadImage, DownloadError } from "./download.ts";
+export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts";
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";
 export { findSimilar } from "./find-similar.ts";
@@ -25,15 +25,19 @@ export {
   buildAttribution,
   coerceLicense,
   heuristicLicenseFromUrl,
+  isContextSafeLicense,
+  isOpenLicense,
   isSafeLicense,
   prettyLicenseName,
   requiresAttribution,
+  CONTEXT_SAFE_LICENSES,
+  OPEN_LICENSES,
   SAFE_LICENSES,
   LICENSE_RANK,
 } from "./license.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
-export { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
+export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
 export { defaultCacheDir } from "./cache.ts";
 export {
   trackEvent,

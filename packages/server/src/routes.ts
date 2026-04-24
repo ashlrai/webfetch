@@ -24,6 +24,7 @@ import {
   searchImages,
 } from "@webfetch/core";
 import { z } from "zod";
+import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {
   downloadImageSchema,
   fetchWithLicenseSchema,
@@ -116,6 +117,7 @@ const handlers: Record<string, Handler> = {
     };
   }),
   "/download": wrap(downloadImageSchema, async (a) => {
+    assertPublicUrl(a.url);
     const r = await downloadImage(a.url, { maxBytes: a.maxBytes, cacheDir: a.cacheDir });
     return {
       url: a.url,
@@ -125,10 +127,12 @@ const handlers: Record<string, Handler> = {
       cachedPath: r.cachedPath,
     };
   }),
-  "/probe": wrap(probePageSchema, async (a) =>
-    probePage(a.url, { respectRobots: a.respectRobots }),
-  ),
+  "/probe": wrap(probePageSchema, async (a) => {
+    assertPublicUrl(a.url);
+    return probePage(a.url, { respectRobots: a.respectRobots });
+  }),
   "/license": wrap(fetchWithLicenseSchema, async (a) => {
+    assertPublicUrl(a.url);
     const r = await fetchWithLicense(a.url, { probe: a.probe });
     return {
       license: r.license,
@@ -147,8 +151,13 @@ const handlers: Record<string, Handler> = {
   ),
 };
 
+function assertPublicUrl(url: string): void {
+  const check = assertPublicHttpUrl(url);
+  if (!check.ok) throw new ValidationError(check.error);
+}
+
 export async function dispatchPost(path: string, req: Request): Promise<Response> {
-  const h = handlers[path];
+  const h = handlers[unversionPath(path)];
   if (!h) return jsonErr("not found", 404);
   let body: unknown;
   try {
@@ -163,6 +172,10 @@ export async function dispatchPost(path: string, req: Request): Promise<Response
     if (e instanceof ValidationError) return jsonErr(e.message, 422);
     return jsonErr(e?.message ?? "internal error", 500);
   }
+}
+
+function unversionPath(path: string): string {
+  return path.startsWith("/v1/") ? path.slice(3) : path;
 }
 
 export function getProviders(): Response {

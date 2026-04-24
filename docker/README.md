@@ -18,7 +18,7 @@ docker run --rm ghcr.io/ashlrai/webfetch cli providers
 docker run --rm ghcr.io/ashlrai/webfetch cli search "drake portrait" --limit 5
 
 # Local HTTP server (port 7600)
-docker run --rm -p 7600:7600 ghcr.io/ashlrai/webfetch server
+docker run --rm -p 7600:7600 ghcr.io/ashlrai/webfetch server --host 0.0.0.0 --no-open
 
 # MCP stdio server (typically invoked by an agent, not directly)
 docker run --rm -i ghcr.io/ashlrai/webfetch mcp
@@ -27,7 +27,7 @@ docker run --rm -i ghcr.io/ashlrai/webfetch mcp
 docker run --rm \
   -e UNSPLASH_ACCESS_KEY=... \
   -e PEXELS_API_KEY=... \
-  ghcr.io/ashlrai/webfetch cli search "sunset" --provider unsplash
+  ghcr.io/ashlrai/webfetch cli search "sunset" --providers unsplash
 ```
 
 ## Build locally
@@ -42,10 +42,11 @@ docker run --rm webfetch:local cli --help
 ## Persisting the cache
 
 The content-addressed cache lives at `~/.webfetch/cache/` inside the container.
-Mount a host volume to keep it warm across runs:
+The local server token is written to `~/.webfetch/server.token`. Mount a host
+volume to keep both cache and token stable across runs:
 
 ```bash
 docker run --rm \
-  -v "$HOME/.webfetch/cache:/root/.webfetch/cache" \
+  -v "$HOME/.webfetch:/root/.webfetch" \
   ghcr.io/ashlrai/webfetch cli search "sunset"
 ```

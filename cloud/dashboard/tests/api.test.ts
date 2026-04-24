@@ -1,6 +1,6 @@
 /**
- * The typed client honours USE_FIXTURES. We set the env var *before* importing
- * the module under test so `env.ts` captures the right value.
+ * The typed client honours fixture mode. Start in fixture mode for the static
+ * fixture assertions, then toggle it off for the live-error path.
  */
 import { describe, expect, test } from "bun:test";
 
@@ -44,5 +44,22 @@ describe("api client (fixtures)", () => {
     expect(hintForStatus(402)).toContain("Upgrade");
     expect(hintForStatus(429)).toContain("Rate");
     expect(hintForStatus(200)).toBeNull();
+  });
+
+  test("live API errors are not replaced with fixtures", async () => {
+    const originalFetch = globalThis.fetch;
+    process.env.NEXT_PUBLIC_USE_FIXTURES = "0";
+    globalThis.fetch = (async () =>
+      new Response("backend unavailable", {
+        status: 503,
+        statusText: "Service Unavailable",
+      })) as typeof fetch;
+
+    try {
+      await expect(getOverview()).rejects.toThrow("backend unavailable");
+    } finally {
+      globalThis.fetch = originalFetch;
+      process.env.NEXT_PUBLIC_USE_FIXTURES = "1";
+    }
   });
 });

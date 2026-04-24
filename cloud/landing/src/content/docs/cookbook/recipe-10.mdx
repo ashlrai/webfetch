@@ -101,7 +101,7 @@ import { registerProvider } from "@webfetch/core";
 import { internalDam } from "./internal-dam";
 
 registerProvider(internalDam);
-await startServer({ port: 7777 });
+await startServer({ port: 7600, token: process.env.WEBFETCH_TOKEN! });
 ```
 
 Run this instead of the stock server. Your internal users see `internal-dam` in the `providers` list and can call it via CLI, HTTP, or MCP like any built-in source.

@@ -20,7 +20,6 @@ import { billingRouter, emitMeterEventForUsage } from "./billing.ts";
 import { runAuditRetention } from "./cron/audit-retention.ts";
 import type { Env, RequestCtx, UsageMessage } from "./env.ts";
 import { persistUsageRow } from "./metering.ts";
-import { platformProvidersConfigured } from "./middleware/platform-keys.ts";
 import {
   RateLimiterDO,
   bearerAuth,
@@ -30,6 +29,7 @@ import {
   rateLimit,
   requestIdMiddleware,
 } from "./middleware.ts";
+import { platformProvidersConfigured } from "./middleware/platform-keys.ts";
 import { albumRouter } from "./routes/album.ts";
 import { artistRouter } from "./routes/artist.ts";
 import { downloadRouter } from "./routes/download.ts";

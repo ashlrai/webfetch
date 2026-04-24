@@ -15,33 +15,44 @@ export type License =
   | "PRESS_KIT_ALLOWLIST"
   | "UNKNOWN";
 
-export type ProviderId =
-  | "wikimedia"
-  | "openverse"
-  | "unsplash"
-  | "pexels"
-  | "pixabay"
-  | "itunes"
-  | "musicbrainz-caa"
-  | "spotify"
-  | "youtube-thumb"
-  | "brave"
-  | "bing"
-  | "serpapi"
-  | "browser"
-  | "flickr"
-  | "internet-archive"
-  | "smithsonian"
-  | "nasa"
-  | "met-museum"
-  | "europeana"
-  | "library-of-congress"
-  | "wellcome-collection"
-  | "rawpixel"
-  | "burst"
-  | "europeana-archival";
+export const PROVIDER_IDS = [
+  "wikimedia",
+  "openverse",
+  "unsplash",
+  "pexels",
+  "pixabay",
+  "itunes",
+  "musicbrainz-caa",
+  "spotify",
+  "youtube-thumb",
+  "brave",
+  "bing",
+  "serpapi",
+  "browser",
+  "flickr",
+  "internet-archive",
+  "smithsonian",
+  "nasa",
+  "met-museum",
+  "europeana",
+  "library-of-congress",
+  "wellcome-collection",
+  "rawpixel",
+  "burst",
+  "europeana-archival",
+] as const;
 
-export type LicensePolicy = "safe-only" | "prefer-safe" | "any";
+export type ProviderId = (typeof PROVIDER_IDS)[number];
+
+export const LICENSE_POLICIES = [
+  "open-only",
+  "safe-only",
+  "context-safe",
+  "prefer-safe",
+  "any",
+] as const;
+
+export type LicensePolicy = (typeof LICENSE_POLICIES)[number];
 export type SafeSearchMode = "strict" | "moderate" | "off";
 
 export interface ImageCandidate {

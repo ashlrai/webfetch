@@ -1,4 +1,5 @@
 import type { Provider, ProviderId } from "../types.ts";
+export { PROVIDER_IDS } from "../types.ts";
 import { bing } from "./bing.ts";
 import { brave } from "./brave.ts";
 import { browser } from "./browser.ts";
