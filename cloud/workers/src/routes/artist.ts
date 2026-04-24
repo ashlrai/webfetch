@@ -5,7 +5,11 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
-import { resolveProviderAuth } from "../middleware/platform-keys.ts";
+import {
+  enforcePoolRateLimit,
+  resolveProviderAuth,
+  resolveWorkspacePlan,
+} from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { searchArtistImagesSchema } from "../schemas.ts";
 
@@ -18,6 +22,9 @@ artistRouter.post("/", async (c) => {
   if (!parsed.ok) return parsed.response;
   const ctx = c.get("ctx");
   try {
+    const plan = await resolveWorkspacePlan(c);
+    const poolLimit = await enforcePoolRateLimit(c, plan);
+    if (poolLimit) return poolLimit;
     const auth = await resolveProviderAuth(c);
     const out = await searchArtistImages(parsed.data.artist, parsed.data.kind, {
       ...parsed.data,

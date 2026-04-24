@@ -5,7 +5,11 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
-import { resolveProviderAuth } from "../middleware/platform-keys.ts";
+import {
+  enforcePoolRateLimit,
+  resolveProviderAuth,
+  resolveWorkspacePlan,
+} from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { fetchWithLicenseSchema } from "../schemas.ts";
 import { assertPublicHttpUrl } from "../ssrf.ts";
@@ -22,6 +26,9 @@ licenseRouter.post("/", async (c) => {
   const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
   try {
+    const plan = await resolveWorkspacePlan(c);
+    const poolLimit = await enforcePoolRateLimit(c, plan);
+    if (poolLimit) return poolLimit;
     const auth = await resolveProviderAuth(c);
     const r = await fetchWithLicense(parsed.data.url, {
       probe: parsed.data.probe,

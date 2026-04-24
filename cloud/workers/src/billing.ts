@@ -20,6 +20,7 @@ import type { PlanId, SubscriptionStatus } from "../../shared/types.ts";
 import { audit } from "./audit.ts";
 import { getSessionUser } from "./auth.ts";
 import type { Env } from "./env.ts";
+import { cacheKeyFor } from "./keys.ts";
 import { err, ok, parseJson } from "./responses.ts";
 import { createCheckoutSchema } from "./schemas.ts";
 import { canManageBilling, roleFor } from "./teams.ts";
@@ -120,9 +121,7 @@ billingRouter.post("/workspaces/:id/portal", async (c) => {
   const portal = await stripe.billingPortal.sessions.create({
     customer: ws.stripe_customer_id,
     return_url: `${c.env.APP_URL}/billing`,
-    ...(c.env.STRIPE_PORTAL_CONFIG_ID
-      ? { configuration: c.env.STRIPE_PORTAL_CONFIG_ID }
-      : {}),
+    ...(c.env.STRIPE_PORTAL_CONFIG_ID ? { configuration: c.env.STRIPE_PORTAL_CONFIG_ID } : {}),
   });
   return ok(c, { url: portal.url });
 });
@@ -174,99 +173,148 @@ export const STRIPE_EVENTS_HANDLED = [
 
 /**
  * Dispatch a parsed Stripe event to the right handler. Exported for tests.
+ *
+ * Idempotency: every event is recorded in `webhook_events` before dispatch.
+ * - If already `processed`, returns immediately (dedup hit — Stripe retry).
+ * - If already `failed`, re-processes so transient failures are recoverable.
+ * - After successful dispatch, marks `processed`; on throw, marks `failed`.
+ *
+ * The caller (POST /stripe/webhook) still catches throws and returns 500 so
+ * Stripe retries on genuine failures.
  */
 export async function handleStripeEvent(
   env: Env,
   event: { id: string; type: string; data: { object: unknown } },
 ): Promise<void> {
-  switch (event.type) {
-    case "checkout.session.completed": {
-      // Session object carries client_reference_id = workspaceId.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const s: any = event.data.object;
-      const workspaceId = s.client_reference_id as string | null;
-      if (!workspaceId) return;
-      const customerId = s.customer as string;
-      await env.DB.prepare(
-        "UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3",
-      )
-        .bind(customerId, Date.now(), workspaceId)
-        .run();
-      return;
-    }
-    case "customer.subscription.created":
-    case "customer.subscription.updated": {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sub: any = event.data.object;
-      const workspaceId = sub.metadata?.workspace_id as string | undefined;
-      if (!workspaceId) return;
-      const plan = (sub.metadata?.plan as PlanId) ?? inferPlanFromItems(sub);
-      const status = (sub.status as SubscriptionStatus) ?? "active";
-      await env.DB.batch([
-        env.DB.prepare(
-          `INSERT INTO subscriptions
-             (workspace_id, stripe_customer_id, stripe_subscription_id, plan, status,
-              current_period_start, current_period_end, cancel_at_period_end, seats, created_at, updated_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
-           ON CONFLICT(workspace_id) DO UPDATE SET
-             stripe_subscription_id = excluded.stripe_subscription_id,
-             plan = excluded.plan,
-             status = excluded.status,
-             current_period_start = excluded.current_period_start,
-             current_period_end = excluded.current_period_end,
-             cancel_at_period_end = excluded.cancel_at_period_end,
-             seats = excluded.seats,
-             updated_at = excluded.updated_at`,
-        ).bind(
-          workspaceId,
-          sub.customer as string,
-          sub.id as string,
-          plan,
-          status,
-          (sub.current_period_start as number) * 1000,
-          (sub.current_period_end as number) * 1000,
-          sub.cancel_at_period_end ? 1 : 0,
-          countSeats(sub),
-          Date.now(),
-        ),
-        env.DB.prepare(
-          `UPDATE workspaces SET plan = ?1, stripe_subscription_id = ?2,
-             subscription_status = ?3, updated_at = ?4 WHERE id = ?5`,
-        ).bind(plan, sub.id as string, status, Date.now(), workspaceId),
-      ]);
-      return;
-    }
-    case "customer.subscription.deleted": {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sub: any = event.data.object;
-      const workspaceId = sub.metadata?.workspace_id as string | undefined;
-      if (!workspaceId) return;
-      await env.DB.batch([
-        env.DB.prepare(
-          `UPDATE subscriptions SET status = 'canceled', updated_at = ?1 WHERE workspace_id = ?2`,
-        ).bind(Date.now(), workspaceId),
-        env.DB.prepare(
-          `UPDATE workspaces SET plan = 'free', subscription_status = 'canceled', updated_at = ?1
-            WHERE id = ?2`,
-        ).bind(Date.now(), workspaceId),
-      ]);
-      return;
-    }
-    case "invoice.payment_failed": {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const inv: any = event.data.object;
-      const customerId = inv.customer as string;
-      await env.DB.prepare(
-        `UPDATE workspaces SET subscription_status = 'past_due', updated_at = ?1
-          WHERE stripe_customer_id = ?2`,
-      )
-        .bind(Date.now(), customerId)
-        .run();
-      return;
-    }
-    default:
-      return; // ignore unknown events
+  // --- Idempotency check ---
+  const existing = await env.DB.prepare("SELECT status FROM webhook_events WHERE event_id = ?1")
+    .bind(event.id)
+    .first<{ status: string }>();
+
+  if (existing?.status === "processed") {
+    // Already handled successfully — silent dedup.
+    return;
   }
+
+  // Record as 'received' (INSERT OR REPLACE so failed retries overwrite).
+  await env.DB.prepare(
+    `INSERT OR REPLACE INTO webhook_events (event_id, type, received_at, status)
+     VALUES (?1, ?2, ?3, 'received')`,
+  )
+    .bind(event.id, event.type, Date.now())
+    .run();
+
+  // --- Dispatch ---
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        // Session object carries client_reference_id = workspaceId.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const s: any = event.data.object;
+        const workspaceId = s.client_reference_id as string | null;
+        if (!workspaceId) break;
+        const customerId = s.customer as string;
+        await env.DB.prepare(
+          "UPDATE workspaces SET stripe_customer_id = ?1, updated_at = ?2 WHERE id = ?3",
+        )
+          .bind(customerId, Date.now(), workspaceId)
+          .run();
+        break;
+      }
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub: any = event.data.object;
+        const workspaceId = sub.metadata?.workspace_id as string | undefined;
+        if (!workspaceId) break;
+        const plan = (sub.metadata?.plan as PlanId) ?? inferPlanFromItems(sub);
+        const status = (sub.status as SubscriptionStatus) ?? "active";
+        await env.DB.batch([
+          env.DB.prepare(
+            `INSERT INTO subscriptions
+               (workspace_id, stripe_customer_id, stripe_subscription_id, plan, status,
+                current_period_start, current_period_end, cancel_at_period_end, seats, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+             ON CONFLICT(workspace_id) DO UPDATE SET
+               stripe_subscription_id = excluded.stripe_subscription_id,
+               plan = excluded.plan,
+               status = excluded.status,
+               current_period_start = excluded.current_period_start,
+               current_period_end = excluded.current_period_end,
+               cancel_at_period_end = excluded.cancel_at_period_end,
+               seats = excluded.seats,
+               updated_at = excluded.updated_at`,
+          ).bind(
+            workspaceId,
+            sub.customer as string,
+            sub.id as string,
+            plan,
+            status,
+            (sub.current_period_start as number) * 1000,
+            (sub.current_period_end as number) * 1000,
+            sub.cancel_at_period_end ? 1 : 0,
+            countSeats(sub),
+            Date.now(),
+          ),
+          env.DB.prepare(
+            `UPDATE workspaces SET plan = ?1, stripe_subscription_id = ?2,
+               subscription_status = ?3, updated_at = ?4 WHERE id = ?5`,
+          ).bind(plan, sub.id as string, status, Date.now(), workspaceId),
+        ]);
+        break;
+      }
+      case "customer.subscription.deleted": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub: any = event.data.object;
+        const workspaceId = sub.metadata?.workspace_id as string | undefined;
+        if (!workspaceId) break;
+        await env.DB.batch([
+          env.DB.prepare(
+            `UPDATE subscriptions SET status = 'canceled', updated_at = ?1 WHERE workspace_id = ?2`,
+          ).bind(Date.now(), workspaceId),
+          env.DB.prepare(
+            `UPDATE workspaces SET plan = 'free', subscription_status = 'canceled', updated_at = ?1
+              WHERE id = ?2`,
+          ).bind(Date.now(), workspaceId),
+        ]);
+        // B4: Invalidate KV cache entries for all active keys in this workspace
+        // so the next request re-reads plan='free' instead of serving stale
+        // pool access for up to the 1-hour KV TTL.
+        const keyRows = await env.DB.prepare(
+          "SELECT id, hash FROM api_keys WHERE workspace_id = ?1 AND revoked_at IS NULL",
+        )
+          .bind(workspaceId)
+          .all<{ id: string; hash: string }>();
+        await Promise.all((keyRows.results ?? []).map((k) => env.KEYS.delete(cacheKeyFor(k.hash))));
+        break;
+      }
+      case "invoice.payment_failed": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const inv: any = event.data.object;
+        const customerId = inv.customer as string;
+        await env.DB.prepare(
+          `UPDATE workspaces SET subscription_status = 'past_due', updated_at = ?1
+            WHERE stripe_customer_id = ?2`,
+        )
+          .bind(Date.now(), customerId)
+          .run();
+        break;
+      }
+      default:
+        break; // ignore unknown events
+    }
+  } catch (e) {
+    // Mark failed so the next Stripe retry can re-process.
+    await env.DB.prepare("UPDATE webhook_events SET status = 'failed' WHERE event_id = ?1")
+      .bind(event.id)
+      .run();
+    throw e;
+  }
+
+  // Seal as processed — future retries will be no-ops.
+  await env.DB.prepare("UPDATE webhook_events SET status = 'processed' WHERE event_id = ?1")
+    .bind(event.id)
+    .run();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -360,9 +408,7 @@ export async function emitMeterEventForUsage(
     return { ok: true, skipped: "stub_key" };
   }
   try {
-    const ws = await env.DB.prepare(
-      "SELECT plan, stripe_customer_id FROM workspaces WHERE id = ?1",
-    )
+    const ws = await env.DB.prepare("SELECT plan, stripe_customer_id FROM workspaces WHERE id = ?1")
       .bind(msg.workspaceId)
       .first<{ plan: string | null; stripe_customer_id: string | null }>();
     if (!ws) return { ok: true, skipped: "no_workspace" };

@@ -35,6 +35,7 @@ export function makeD1(): D1Database {
     "0002_indexes.sql",
     "0003_audit_retention.sql",
     "0004_better_auth_alignment.sql",
+    "0005_webhook_events.sql",
   ];
   for (const f of files) {
     const sql = fs.readFileSync(path.join(root, f), "utf8");

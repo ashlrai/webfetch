@@ -15,10 +15,11 @@
  * Hono context so repeated calls inside a single request are free.
  */
 
-import type { Context } from "hono";
 import type { ProviderAuth } from "@webfetch/core";
+import type { Context } from "hono";
 import type { PlanId } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
+import { err } from "../responses.ts";
 
 type HonoEnv = { Bindings: Env; Variables: { ctx: RequestCtx; workspacePlan?: PlanId } };
 
@@ -141,4 +142,51 @@ export async function resolveWorkspacePlan(c: Context<HonoEnv>): Promise<PlanId>
   }
   c.set("workspacePlan", plan);
   return plan;
+}
+
+/**
+ * Per-workspace pool rate limit — protects the shared provider key pool from
+ * one subscriber fanning out across many API keys.
+ *
+ * Only fires for pooled plans (Pro / Team / Enterprise). Free tier users have
+ * no pool access so this gate is irrelevant for them.
+ *
+ * Limit: 300 requests/minute per workspace across all API keys.
+ * KV key: `pool:<workspaceId>:<minute>` on the RATELIMIT namespace.
+ * TTL: 120 s (same as the per-key rate-limit — slightly longer than the 60 s
+ * window to avoid thundering expirations, matching middleware.ts:141).
+ *
+ * Fail-open on KV errors so a KV outage never blocks legitimate traffic.
+ *
+ * Call this right after `resolveProviderAuth` in every route that uses the
+ * platform pool. Returns a Response on 429, null when the request may proceed.
+ */
+export const POOL_RATE_LIMIT = 300; // requests per minute per workspace
+
+export async function enforcePoolRateLimit(
+  c: Context<HonoEnv>,
+  plan: PlanId,
+): Promise<Response | null> {
+  if (!isPooledPlan(plan)) return null;
+
+  const ctx = c.get("ctx");
+  if (!ctx?.workspaceId) return null;
+
+  const minute = Math.floor(Date.now() / 60_000);
+  const key = `pool:${ctx.workspaceId}:${minute}`;
+
+  try {
+    const raw = await c.env.RATELIMIT.get(key);
+    const current = raw ? Number(raw) : 0;
+    if (current >= POOL_RATE_LIMIT) {
+      c.header("retry-after", "60");
+      c.header("x-ratelimit-reason", "pool-fairness");
+      return err(c, "pool rate limit exceeded; this protects the shared provider pool", 429);
+    }
+    await c.env.RATELIMIT.put(key, String(current + 1), { expirationTtl: 120 });
+  } catch {
+    // KV error — fail open so a KV outage doesn't break all pool requests.
+  }
+
+  return null;
 }

@@ -37,6 +37,15 @@ export async function generateKey(): Promise<{ secret: string; prefix: string; h
   return { secret, prefix: secret.slice(0, 12), hash };
 }
 
+/**
+ * Return the KV cache key for a given token hash. The KV namespace uses the
+ * raw sha256 hex as the key (see `resolveKey`). Exported so the billing layer
+ * can delete entries on plan downgrade without re-deriving the format.
+ */
+export function cacheKeyFor(tokenHash: string): string {
+  return tokenHash;
+}
+
 /** Parse a bearer header value; returns null on any malformed input. */
 export function parseBearer(header: string | null | undefined): string | null {
   if (!header) return null;

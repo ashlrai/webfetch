@@ -5,7 +5,11 @@ import { Hono } from "hono";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
-import { resolveProviderAuth } from "../middleware/platform-keys.ts";
+import {
+  enforcePoolRateLimit,
+  resolveProviderAuth,
+  resolveWorkspacePlan,
+} from "../middleware/platform-keys.ts";
 import { err, ok, parseJson } from "../responses.ts";
 import { probePageSchema } from "../schemas.ts";
 import { assertPublicHttpUrl } from "../ssrf.ts";
@@ -25,6 +29,9 @@ probeRouter.post("/", async (c) => {
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
 
   try {
+    const plan = await resolveWorkspacePlan(c);
+    const poolLimit = await enforcePoolRateLimit(c, plan);
+    if (poolLimit) return poolLimit;
     const auth = await resolveProviderAuth(c);
     const out = await probePage(parsed.data.url, {
       respectRobots: parsed.data.respectRobots,
