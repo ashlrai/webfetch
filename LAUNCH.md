@@ -74,7 +74,7 @@ gh repo create ashlrai/homebrew-webfetch --public --description "Homebrew tap fo
 1. Sign in at https://dashboard.stripe.com.
 2. Open `cloud/shared/pricing.ts` and create the 4 products with matching prices (Free, Pro, Team, Enterprise) in **live mode**. Copy each price ID into `cloud/shared/pricing.ts` if not already populated.
 3. Get `STRIPE_SECRET_KEY` (live mode `sk_live_...`).
-4. Configure a webhook endpoint: `https://api.getwebfetch.com/v1/webhooks/stripe` (will exist after step 4). Capture the signing secret as `STRIPE_WEBHOOK_SECRET`.
+4. Configure a webhook endpoint: `https://api.getwebfetch.com/stripe/webhook` (will exist after step 4). Capture the signing secret as `STRIPE_WEBHOOK_SECRET`.
 
 ### 1.6 SendGrid
 
