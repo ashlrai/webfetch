@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/bun": "^1.1.13",
     "@types/chrome": "^0.0.268"
   }
 }
