@@ -45,9 +45,7 @@ searchRouter.post("/", async (c) => {
 
     const managedBrowserAvailable = Boolean(auth.brightDataApiToken);
     const wantsAutoFallback =
-      !explicitProviders &&
-      candidates.length === 0 &&
-      managedBrowserAvailable;
+      !explicitProviders && candidates.length === 0 && managedBrowserAvailable;
 
     if (wantsAutoFallback) {
       const reserved = await tryReserveManagedBrowserCall(c, plan);

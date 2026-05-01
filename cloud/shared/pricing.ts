@@ -167,9 +167,14 @@ export function projectMonthlyCost(plan: PlanId, unitsUsed: number): ProjectedCo
   };
 }
 
-/** Format cents as a USD currency string (e.g. 1995 → "$19.95"). */
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Format cents as a USD currency string (e.g. 1995 → "$19.95", -150 → "-$1.50"). */
 export function formatCents(cents: number): string {
-  const dollars = Math.floor(cents / 100);
-  const remainder = Math.abs(cents % 100);
-  return `$${dollars.toLocaleString("en-US")}.${remainder.toString().padStart(2, "0")}`;
+  return USD.format(cents / 100);
 }

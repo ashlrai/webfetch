@@ -124,3 +124,15 @@ export function unitsFor(endpoint: string): number {
       return 1;
   }
 }
+
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Format cents as a USD currency string (e.g. 1995 → "$19.95"). */
+export function formatCents(cents: number): string {
+  return USD.format(cents / 100);
+}
