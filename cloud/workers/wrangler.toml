@@ -104,16 +104,16 @@ crons = ["0 3 * * *"]
 APP_URL = "https://app.getwebfetch.com"
 API_URL = "https://api.getwebfetch.com"
 ENVIRONMENT = "production"
-STRIPE_PRICE_PRO = "price_1TMd9qIsCo7Z3L3vRPcU5ADf"
-STRIPE_PRICE_TEAM = "price_1TMd9rIsCo7Z3L3vlDoD5aEq"
-STRIPE_PRICE_TEAM_SEAT = "price_1TMd9rIsCo7Z3L3vTas2tbYY"
-STRIPE_PRICE_OVERAGE_PRO = "price_1TMdALIsCo7Z3L3vESz7Acen"
-STRIPE_PRICE_OVERAGE_TEAM = "price_1TMdALIsCo7Z3L3vZcYck87Y"
-# Customer Portal configuration created via `stripe billing_portal
-# configurations create` (Measurably test mode). Includes Pro/Team plan
-# switching, customer update, payment method update, invoice history,
-# and at-period-end cancellation with reason capture.
-STRIPE_PORTAL_CONFIG_ID = "bpc_1TMdoLIsCo7Z3L3vBZQtxTKN"
+STRIPE_PRICE_PRO = "price_1TSOL2IsCo7Z3L3vc01zRWlF"
+STRIPE_PRICE_TEAM = "price_1TSOL3IsCo7Z3L3vy3wjKMxW"
+STRIPE_PRICE_TEAM_SEAT = "price_1TSOL3IsCo7Z3L3vtmahRgyd"
+STRIPE_PRICE_OVERAGE_PRO = "price_1TSOL2IsCo7Z3L3vDwWOAQCj"
+STRIPE_PRICE_OVERAGE_TEAM = "price_1TSOL3IsCo7Z3L3va7qd6VOV"
+# Customer Portal — Evero LLC LIVE mode. Includes Pro/Team plan switching,
+# customer update, payment method update, invoice history, and
+# at-period-end cancellation with reason capture. Bound to webfetch
+# products prod_URGspK7LvA6aHD (Pro) and prod_URGs1uXTJ6kzQe (Team).
+STRIPE_PORTAL_CONFIG_ID = "bpc_1TSOLoIsCo7Z3L3v91IP14fL"
 
 [env.development.vars]
 APP_URL = "http://localhost:3000"
