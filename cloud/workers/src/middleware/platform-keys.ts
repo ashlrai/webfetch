@@ -35,6 +35,7 @@ export const PLATFORM_PROVIDER_SLUGS = [
   "flickr",
   "smithsonian",
   "europeana",
+  "managed-browser",
 ] as const;
 export type PlatformProviderSlug = (typeof PLATFORM_PROVIDER_SLUGS)[number];
 
@@ -51,6 +52,7 @@ export function platformProvidersConfigured(env: Env): PlatformProviderSlug[] {
   if (env.PLATFORM_FLICKR_API_KEY) out.push("flickr");
   if (env.PLATFORM_SMITHSONIAN_API_KEY) out.push("smithsonian");
   if (env.PLATFORM_EUROPEANA_API_KEY) out.push("europeana");
+  if (env.BRIGHTDATA_API_TOKEN) out.push("managed-browser");
   return out;
 }
 
@@ -106,6 +108,8 @@ export async function resolveProviderAuth(
       flickrApiKey: env.PLATFORM_FLICKR_API_KEY,
       smithsonianApiKey: env.PLATFORM_SMITHSONIAN_API_KEY,
       europeanaApiKey: env.PLATFORM_EUROPEANA_API_KEY,
+      brightDataApiToken: env.BRIGHTDATA_API_TOKEN,
+      brightDataZone: env.BRIGHTDATA_ZONE,
     });
   }
 
@@ -189,4 +193,51 @@ export async function enforcePoolRateLimit(
   }
 
   return null;
+}
+
+/**
+ * Per-workspace daily cap on managed-browser (Bright Data) calls. Bright Data
+ * Web Unlocker is metered separately by the upstream — this cap protects the
+ * platform from a single subscriber blowing the per-day budget.
+ *
+ * Caps:
+ *  - Pro:  200 managed-browser fetches / day
+ *  - Team: 1000 managed-browser fetches / day
+ *  - Enterprise: 5000 / day
+ *  - Free / unknown: 0 (managed-browser is gated to pooled plans anyway)
+ *
+ * Returns true if the request may proceed (and increments the counter),
+ * false if the cap is exhausted. Fails OPEN on KV errors.
+ */
+export const MANAGED_BROWSER_DAILY_CAP: Record<PlanId, number> = {
+  free: 0,
+  pro: 200,
+  team: 1000,
+  enterprise: 5000,
+};
+
+export async function tryReserveManagedBrowserCall(
+  c: Context<HonoEnv>,
+  plan: PlanId,
+): Promise<boolean> {
+  if (!isPooledPlan(plan)) return false;
+  const ctx = c.get("ctx");
+  if (!ctx?.workspaceId) return false;
+  const cap = MANAGED_BROWSER_DAILY_CAP[plan] ?? 0;
+  if (cap <= 0) return false;
+
+  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const key = `bd:${ctx.workspaceId}:${day}`;
+
+  try {
+    const raw = await c.env.RATELIMIT.get(key);
+    const current = raw ? Number(raw) : 0;
+    if (current >= cap) return false;
+    await c.env.RATELIMIT.put(key, String(current + 1), { expirationTtl: 90_000 });
+    return true;
+  } catch {
+    // KV error — fail open. Better to over-serve once than to block legitimate
+    // Pro/Team requests during a transient KV outage.
+    return true;
+  }
 }

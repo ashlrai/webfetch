@@ -124,3 +124,52 @@ export function unitsFor(endpoint: string): number {
       return 1;
   }
 }
+
+export interface ProjectedCost {
+  /** Plan base price in cents (0 for free, 0 for enterprise — "contact us"). */
+  baseCents: number;
+  /** Overage units beyond the included quota. */
+  overageUnits: number;
+  /** Overage charge in cents. 0 for free (hard cap) and enterprise (fair-use). */
+  overageCents: number;
+  /** Total projected charge in cents (base + overage). */
+  totalCents: number;
+}
+
+/**
+ * Project the monthly bill for a workspace, given the units consumed in the
+ * current cycle. Used by the dashboard to surface a "you're on track to bill
+ * $X.YY" warning so paid users aren't surprised by overage.
+ *
+ * Rounding: overage cents round half-up to the nearest whole cent — Stripe
+ * meters bill the same way.
+ */
+export function projectMonthlyCost(plan: PlanId, unitsUsed: number): ProjectedCost {
+  const cfg = planFor(plan);
+  // Free hard-caps at quota — there is no overage to project.
+  // Enterprise is fair-use — handled via contract, not projected here.
+  if (cfg.window !== "monthly" || cfg.overageUsd < 0 || cfg.baseMonthlyUsd < 0) {
+    return {
+      baseCents: cfg.baseMonthlyUsd > 0 ? Math.round(cfg.baseMonthlyUsd * 100) : 0,
+      overageUnits: 0,
+      overageCents: 0,
+      totalCents: cfg.baseMonthlyUsd > 0 ? Math.round(cfg.baseMonthlyUsd * 100) : 0,
+    };
+  }
+  const baseCents = Math.round(cfg.baseMonthlyUsd * 100);
+  const overageUnits = Math.max(0, unitsUsed - cfg.includedFetches);
+  const overageCents = Math.round(overageUnits * cfg.overageUsd * 100);
+  return {
+    baseCents,
+    overageUnits,
+    overageCents,
+    totalCents: baseCents + overageCents,
+  };
+}
+
+/** Format cents as a USD currency string (e.g. 1995 → "$19.95"). */
+export function formatCents(cents: number): string {
+  const dollars = Math.floor(cents / 100);
+  const remainder = Math.abs(cents % 100);
+  return `$${dollars.toLocaleString("en-US")}.${remainder.toString().padStart(2, "0")}`;
+}

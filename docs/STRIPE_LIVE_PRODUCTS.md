@@ -162,10 +162,16 @@ this becomes `STRIPE_WEBHOOK_SECRET` (set via `wrangler secret put STRIPE_WEBHOO
 
 ## 5. Customer Portal Configuration
 
+> **STATUS (as of 2026-05-01):** the value currently in `cloud/workers/wrangler.toml`
+> (`STRIPE_PORTAL_CONFIG_ID = "bpc_1TMdoLIsCo7Z3L3vBZQtxTKN"`) is the
+> **test-mode** config. Live customers cannot open the portal until you
+> recreate it in live mode and update the binding.
+
 The test-mode portal config is `bpc_1TMdoLIsCo7Z3L3vBZQtxTKN`. Recreate an
 equivalent config in live mode.
 
-**Stripe Dashboard → Settings → Billing → Customer portal**
+**Stripe Dashboard → Settings → Billing → Customer portal** (toggle to **Live**
+mode in the upper-left **before** configuring)
 
 Enable the following features to match test-mode config:
 

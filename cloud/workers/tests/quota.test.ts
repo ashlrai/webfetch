@@ -79,4 +79,36 @@ describe("quota", () => {
     expect(snap.included).toBe(pro.includedFetches);
     expect(snap.windowEnd).toBeGreaterThan(snap.windowStart);
   });
+
+  test("usageSnapshot projects $19 base for Pro under quota with no overage", async () => {
+    const { env } = makeEnv();
+    const { workspaceId } = await seedWorkspaceWithKey(env, { plan: "pro" });
+    const pro = planFor("pro");
+    await incrementUsage(env, workspaceId, pro, 5_000);
+    const snap = await usageSnapshot(env, workspaceId, "pro");
+    expect(snap.projectedOverageCents).toBe(0);
+    expect(snap.projectedMonthlyCostCents).toBe(1900); // $19.00
+  });
+
+  test("usageSnapshot projects overage charge for Pro when over included quota", async () => {
+    const { env } = makeEnv();
+    const { workspaceId } = await seedWorkspaceWithKey(env, { plan: "pro" });
+    const pro = planFor("pro");
+    // 1000 units over the 10_000 cap → 1000 * $0.015 = $15.00 overage.
+    await incrementUsage(env, workspaceId, pro, 11_000);
+    const snap = await usageSnapshot(env, workspaceId, "pro");
+    expect(snap.overage).toBe(1000);
+    expect(snap.projectedOverageCents).toBe(1500);
+    expect(snap.projectedMonthlyCostCents).toBe(1900 + 1500);
+  });
+
+  test("usageSnapshot returns 0 projected cost for free plan even at quota", async () => {
+    const { env } = makeEnv();
+    const { workspaceId } = await seedWorkspaceWithKey(env, { plan: "free" });
+    const free = planFor("free");
+    await incrementUsage(env, workspaceId, free, free.includedFetches);
+    const snap = await usageSnapshot(env, workspaceId, "free");
+    expect(snap.projectedMonthlyCostCents).toBe(0);
+    expect(snap.projectedOverageCents).toBe(0);
+  });
 });

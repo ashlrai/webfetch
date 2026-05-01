@@ -21,6 +21,7 @@ export default async function UsagePage() {
         dailySeries={overview.dailySeries}
         perEndpoint={overview.perEndpoint}
         perProvider={overview.perProvider}
+        usage={overview.usage}
       />
     </div>
   );

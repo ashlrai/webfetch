@@ -41,6 +41,7 @@ const PROVIDER_ENV: Record<ProviderId, string[]> = {
   rawpixel: [], // RAWPIXEL_API_KEY is optional; only enforced if upstream starts requiring it
   burst: [],
   "europeana-archival": ["EUROPEANA_API_KEY"],
+  "managed-browser": ["BRIGHTDATA_API_TOKEN"],
 };
 
 export function authFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderAuth {
@@ -53,6 +54,8 @@ export function authFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderAuth 
     serpApiKey: env.SERPAPI_KEY,
     spotifyClientId: env.SPOTIFY_CLIENT_ID,
     spotifyClientSecret: env.SPOTIFY_CLIENT_SECRET,
+    brightDataApiToken: env.BRIGHTDATA_API_TOKEN,
+    brightDataZone: env.BRIGHTDATA_ZONE,
     userAgent: env.WEBFETCH_USER_AGENT ?? "webfetch-cli/0.1 (+https://github.com/)",
   };
 }

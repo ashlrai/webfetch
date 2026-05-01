@@ -82,6 +82,39 @@ gh repo create ashlrai/homebrew-webfetch --public --description "Homebrew tap fo
 2. Authenticate the `getwebfetch.com` sender domain (Settings → Sender Authentication → DKIM + SPF + DMARC records in Cloudflare DNS).
 3. Create an API key (Settings → API Keys → Restricted Access with **Mail Send** permission only), store as `SENDGRID_API_KEY`.
 
+### 1.6a Platform provider keys (Pro+ pooled access)
+
+These power the "pooled keys" Pro/Team feature so subscribers don't have to BYOK.
+All are optional — a missing key just removes that provider from the pool. Sign
+up for the ones you want to include in the pool, then `wrangler secret put` each
+one in section 4.3.
+
+| Key | Sign up at | Used by |
+| --- | --- | --- |
+| `PLATFORM_SERPAPI_KEY` | https://serpapi.com | Google Images via SerpAPI |
+| `PLATFORM_UNSPLASH_ACCESS_KEY` | https://unsplash.com/developers | Unsplash photo search |
+| `PLATFORM_PEXELS_API_KEY` | https://www.pexels.com/api | Pexels photo search |
+| `PLATFORM_PIXABAY_API_KEY` | https://pixabay.com/api/docs | Pixabay search |
+| `PLATFORM_BRAVE_API_KEY` | https://api.search.brave.com | Brave Image Search |
+| `PLATFORM_SPOTIFY_CLIENT_ID` + `_SECRET` | https://developer.spotify.com | Artist + album art |
+| `PLATFORM_FLICKR_API_KEY` | https://www.flickr.com/services/api | CC-licensed photos |
+| `PLATFORM_SMITHSONIAN_API_KEY` | https://api.data.gov | Smithsonian Open Access |
+| `PLATFORM_EUROPEANA_API_KEY` | https://pro.europeana.eu/page/get-api | EU cultural heritage |
+
+### 1.6b Bright Data (managed-browser fallback for Pro/Team)
+
+The marketing copy promises a "managed browser fallback" on Google Images +
+Pinterest for paid plans — this is implemented via Bright Data's Web Unlocker
+REST API.
+
+1. Sign up at https://brightdata.com.
+2. Products → **Web Unlocker** → create a zone (default name `web_unlocker`).
+3. Account settings → **API tokens** → create a new token with Web Unlocker access.
+4. `wrangler secret put` in section 4.3:
+   - `BRIGHTDATA_API_TOKEN` — the account-level Bearer token
+   - `BRIGHTDATA_ZONE` — only if you renamed your Web Unlocker zone; defaults to `web_unlocker`
+5. Per-workspace daily caps are enforced in code (Pro: 200/day, Team: 1000/day, Enterprise: 5000/day).
+
 ### 1.7 Vercel
 
 ```bash
@@ -253,11 +286,22 @@ npx wrangler d1 execute webfetch-prod --remote --file=../schema/0002_indexes.sql
 ### 4.3 Set Worker secrets
 
 ```bash
+# Required
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 npx wrangler secret put SENDGRID_API_KEY
 npx wrangler secret put BETTER_AUTH_SECRET   # 32+ random bytes
 npx wrangler secret put JWT_SIGNING_KEY      # 32+ random bytes
+
+# Pooled provider keys (Pro+ feature — set whichever you signed up for in 1.6a)
+npx wrangler secret put PLATFORM_SERPAPI_KEY
+npx wrangler secret put PLATFORM_UNSPLASH_ACCESS_KEY
+npx wrangler secret put PLATFORM_PEXELS_API_KEY
+# ...repeat for any other PLATFORM_* keys you have
+
+# Bright Data managed-browser fallback (Pro/Team feature)
+npx wrangler secret put BRIGHTDATA_API_TOKEN
+# BRIGHTDATA_ZONE is optional — only if you renamed your Web Unlocker zone
 ```
 
 Generate random secrets:

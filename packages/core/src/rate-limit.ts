@@ -39,6 +39,7 @@ const DEFAULTS: Record<ProviderId, { capacity: number; perSec: number }> = {
   rawpixel: { capacity: 3, perSec: 3 },
   burst: { capacity: 3, perSec: 3 },
   "europeana-archival": { capacity: 5, perSec: 5 },
+  "managed-browser": { capacity: 1, perSec: 0.5 }, // Bright Data Web Unlocker — 30 req/min ceiling.
 };
 
 const buckets = new Map<ProviderId, Bucket>();

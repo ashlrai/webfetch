@@ -85,8 +85,10 @@ export interface Env {
   PLATFORM_EUROPEANA_API_KEY?: string;
 
   // Optional Bright Data managed-browser credentials (Pro+ gated).
-  BRIGHTDATA_CUSTOMER?: string;
-  BRIGHTDATA_PASSWORD?: string;
+  // Uses Web Unlocker REST API — Workers-friendly, billed per request.
+  // Single account-level Bearer token from Bright Data → Account → API tokens.
+  BRIGHTDATA_API_TOKEN?: string;
+  BRIGHTDATA_ZONE?: string; // defaults to "web_unlocker" if unset
 }
 
 /** Async usage-metering payload queued from request handlers. */

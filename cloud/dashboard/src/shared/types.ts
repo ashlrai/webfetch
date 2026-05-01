@@ -114,6 +114,10 @@ export interface UsageSummary {
   used: number;
   overage: number;
   rateLimitPerMin: number;
+  /** Projected monthly bill in USD cents (base + overage). */
+  projectedMonthlyCostCents?: number;
+  /** Projected overage charge in USD cents. */
+  projectedOverageCents?: number;
 }
 
 /** Subscription plan state a dashboard would render. */

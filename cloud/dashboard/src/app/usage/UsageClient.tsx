@@ -4,6 +4,7 @@ import { AreaChart, BarChart, HBarList } from "@/components/Chart";
 import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { formatInt, formatUsd, toCsv } from "@/lib/format";
+import type { UsageSummary } from "@/shared/types";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -13,9 +14,16 @@ interface Props {
   dailySeries: { day: number; fetches: number; costUsd: number }[];
   perEndpoint: { endpoint: string; fetches: number }[];
   perProvider: { provider: string; fetches: number }[];
+  usage?: UsageSummary;
 }
 
-export default function UsageClient({ dailySeries, perEndpoint, perProvider }: Props) {
+function formatCents(cents: number): string {
+  const dollars = Math.floor(cents / 100);
+  const remainder = Math.abs(cents % 100);
+  return `$${dollars.toLocaleString("en-US")}.${remainder.toString().padStart(2, "0")}`;
+}
+
+export default function UsageClient({ dailySeries, perEndpoint, perProvider, usage }: Props) {
   const [range, setRange] = useState<Range>("30d");
   const [endpointFilter, setEndpointFilter] = useState("all");
 
@@ -81,8 +89,36 @@ export default function UsageClient({ dailySeries, perEndpoint, perProvider }: P
     );
   }
 
+  const projectedOverageCents = usage?.projectedOverageCents ?? 0;
+  const projectedTotalCents = usage?.projectedMonthlyCostCents ?? 0;
+  const showOverageBanner = projectedOverageCents > 0;
+
   return (
     <div className="flex flex-col gap-6">
+      {showOverageBanner && (
+        <div
+          className="surface p-3 flex items-start gap-3"
+          style={{
+            borderColor: "var(--warn)",
+            background: "color-mix(in srgb, var(--warn) 8%, var(--bg-card))",
+          }}
+        >
+          <Icon name="alert" />
+          <div className="flex flex-col gap-0.5">
+            <div className="text-[13px]">
+              You're projected to bill{" "}
+              <strong>{formatCents(projectedTotalCents)}</strong> this cycle —{" "}
+              <strong>{formatCents(projectedOverageCents)}</strong> in overage on top of your plan
+              base.
+            </div>
+            <div className="mono text-[11.5px]" style={{ color: "var(--text-mute)" }}>
+              {formatInt(usage?.overage ?? 0)} fetches over your{" "}
+              {formatInt(usage?.included ?? 0)} included quota. Upgrade or adjust usage to bring
+              this down.
+            </div>
+          </div>
+        </div>
+      )}
       {/* Controls */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div

@@ -12,7 +12,13 @@
  * Free tier hard-rejects with HTTP 402 + Link header to the upgrade page.
  */
 
-import { PLANS, type PlanConfig, type PlanId, planFor } from "../../shared/pricing.ts";
+import {
+  PLANS,
+  type PlanConfig,
+  type PlanId,
+  planFor,
+  projectMonthlyCost,
+} from "../../shared/pricing.ts";
 import type { Env } from "./env.ts";
 
 export interface QuotaDecision {
@@ -159,6 +165,7 @@ export async function usageSnapshot(
   const plan = planFor(planId);
   const { start, end } = plan.window === "daily" ? dailyWindow(now) : monthlyWindow(now);
   const used = await readUsage(env, workspaceId, plan, now);
+  const projection = projectMonthlyCost(plan.id, used);
   return {
     workspaceId,
     plan: plan.id,
@@ -168,6 +175,8 @@ export async function usageSnapshot(
     used,
     overage: Math.max(0, used - plan.includedFetches),
     rateLimitPerMin: plan.rateLimitPerMin,
+    projectedMonthlyCostCents: projection.totalCents,
+    projectedOverageCents: projection.overageCents,
   };
 }
 

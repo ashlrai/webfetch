@@ -8,6 +8,14 @@ main = "src/index.ts"
 compatibility_date = "2024-11-06"
 compatibility_flags = ["nodejs_compat"]
 
+# Bundle @webfetch/core from source so we avoid the node-targeted dist
+# bundle (which uses createRequire(import.meta.url) and breaks Workers
+# even with nodejs_compat).
+[alias]
+"@webfetch/core" = "../../packages/core/src/index.ts"
+"@webfetch/core/providers" = "../../packages/core/src/providers/index.ts"
+"@webfetch/core/hints" = "../../packages/core/src/hints/index.ts"
+
 # -----------------------------------------------------------------------------
 # D1 — primary SQL store for users, workspaces, keys, usage_rows, audit_log.
 # -----------------------------------------------------------------------------
@@ -80,8 +88,17 @@ crons = ["0 3 * * *"]
 
 # -----------------------------------------------------------------------------
 # Environment variables (non-secrets). Secrets set via `wrangler secret put`:
-#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BETTER_AUTH_SECRET,
-#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+#   Required:
+#     STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BETTER_AUTH_SECRET, SENDGRID_API_KEY
+#   OAuth providers (optional, enables social signin):
+#     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+#   Pro+ pooled provider keys (optional, enables platform pool for paid plans):
+#     PLATFORM_SERPAPI_KEY, PLATFORM_UNSPLASH_ACCESS_KEY, PLATFORM_PEXELS_API_KEY,
+#     PLATFORM_PIXABAY_API_KEY, PLATFORM_BRAVE_API_KEY, PLATFORM_BING_API_KEY,
+#     PLATFORM_SPOTIFY_CLIENT_ID, PLATFORM_SPOTIFY_CLIENT_SECRET,
+#     PLATFORM_FLICKR_API_KEY, PLATFORM_SMITHSONIAN_API_KEY, PLATFORM_EUROPEANA_API_KEY
+#   Bright Data managed-browser fallback (Pro/Team feature; gated to pooled plans):
+#     BRIGHTDATA_API_TOKEN, BRIGHTDATA_ZONE (optional, defaults "web_unlocker")
 # -----------------------------------------------------------------------------
 [vars]
 APP_URL = "https://app.getwebfetch.com"

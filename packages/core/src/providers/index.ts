@@ -10,6 +10,7 @@ import { flickr } from "./flickr.ts";
 import { internetArchive } from "./internet-archive.ts";
 import { itunes } from "./itunes.ts";
 import { libraryOfCongress } from "./library-of-congress.ts";
+import { managedBrowser } from "./managed-browser.ts";
 import { metMuseum } from "./met-museum.ts";
 import { musicbrainzCaa } from "./musicbrainz-caa.ts";
 import { nasa } from "./nasa.ts";
@@ -50,6 +51,7 @@ export const ALL_PROVIDERS: Record<ProviderId, Provider> = {
   rawpixel,
   burst,
   "europeana-archival": europeanaArchival,
+  "managed-browser": managedBrowser,
 };
 
 /**
@@ -94,6 +96,7 @@ export {
   internetArchive,
   itunes,
   libraryOfCongress,
+  managedBrowser,
   metMuseum,
   musicbrainzCaa,
   nasa,

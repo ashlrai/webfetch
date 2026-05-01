@@ -40,6 +40,7 @@ export const PROVIDER_IDS = [
   "rawpixel",
   "burst",
   "europeana-archival",
+  "managed-browser",
 ] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
@@ -122,6 +123,9 @@ export interface ProviderAuth {
   smithsonianApiKey?: string;
   europeanaApiKey?: string;
   rawpixelApiKey?: string;
+  /** Bright Data Web Unlocker — single account-level API token, server-side only. */
+  brightDataApiToken?: string;
+  brightDataZone?: string;
 }
 
 export interface SearchResultBundle {
