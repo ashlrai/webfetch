@@ -15,6 +15,7 @@
  * Hono context so repeated calls inside a single request are free.
  */
 
+import type { KVNamespace } from "@cloudflare/workers-types";
 import type { ProviderAuth } from "@webfetch/core";
 import type { Context } from "hono";
 import type { PlanId } from "../../../shared/pricing.ts";
@@ -167,6 +168,32 @@ export async function resolveWorkspacePlan(c: Context<HonoEnv>): Promise<PlanId>
  */
 export const POOL_RATE_LIMIT = 300; // requests per minute per workspace
 
+/**
+ * Read-then-write KV counter with a cap and TTL. Fails OPEN on KV errors —
+ * a transient KV outage shouldn't block legitimate paid traffic.
+ *
+ * Note on the race: KV has no compare-and-swap, so two concurrent requests
+ * can both observe `current = cap-1` and both pass. Burst overflow is
+ * bounded by edge concurrency; for managed-browser the upstream Bright Data
+ * billing is the real backstop.
+ */
+async function bumpKvCounter(
+  kv: KVNamespace,
+  key: string,
+  cap: number,
+  ttlSeconds: number,
+): Promise<{ allowed: boolean; current: number }> {
+  try {
+    const raw = await kv.get(key);
+    const current = raw ? Number(raw) : 0;
+    if (current >= cap) return { allowed: false, current };
+    await kv.put(key, String(current + 1), { expirationTtl: ttlSeconds });
+    return { allowed: true, current: current + 1 };
+  } catch {
+    return { allowed: true, current: 0 };
+  }
+}
+
 export async function enforcePoolRateLimit(
   c: Context<HonoEnv>,
   plan: PlanId,
@@ -178,20 +205,12 @@ export async function enforcePoolRateLimit(
 
   const minute = Math.floor(Date.now() / 60_000);
   const key = `pool:${ctx.workspaceId}:${minute}`;
-
-  try {
-    const raw = await c.env.RATELIMIT.get(key);
-    const current = raw ? Number(raw) : 0;
-    if (current >= POOL_RATE_LIMIT) {
-      c.header("retry-after", "60");
-      c.header("x-ratelimit-reason", "pool-fairness");
-      return err(c, "pool rate limit exceeded; this protects the shared provider pool", 429);
-    }
-    await c.env.RATELIMIT.put(key, String(current + 1), { expirationTtl: 120 });
-  } catch {
-    // KV error — fail open so a KV outage doesn't break all pool requests.
+  const { allowed } = await bumpKvCounter(c.env.RATELIMIT, key, POOL_RATE_LIMIT, 120);
+  if (!allowed) {
+    c.header("retry-after", "60");
+    c.header("x-ratelimit-reason", "pool-fairness");
+    return err(c, "pool rate limit exceeded; this protects the shared provider pool", 429);
   }
-
   return null;
 }
 
@@ -228,16 +247,6 @@ export async function tryReserveManagedBrowserCall(
 
   const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const key = `bd:${ctx.workspaceId}:${day}`;
-
-  try {
-    const raw = await c.env.RATELIMIT.get(key);
-    const current = raw ? Number(raw) : 0;
-    if (current >= cap) return false;
-    await c.env.RATELIMIT.put(key, String(current + 1), { expirationTtl: 90_000 });
-    return true;
-  } catch {
-    // KV error — fail open. Better to over-serve once than to block legitimate
-    // Pro/Team requests during a transient KV outage.
-    return true;
-  }
+  const { allowed } = await bumpKvCounter(c.env.RATELIMIT, key, cap, 90_000);
+  return allowed;
 }

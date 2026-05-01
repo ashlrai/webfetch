@@ -93,11 +93,7 @@ export const managedBrowser: Provider = {
       }
 
       const remaining = limit - results.length;
-      const parsed = parseImagesFromHtml(html, target.site, remaining);
-      for (const cand of parsed) {
-        results.push(cand);
-        if (results.length >= limit) break;
-      }
+      results.push(...parseImagesFromHtml(html, target.site, remaining));
     }
 
     return results;

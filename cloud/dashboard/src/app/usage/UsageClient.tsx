@@ -5,6 +5,7 @@ import EmptyState from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { formatInt, formatUsd, toCsv } from "@/lib/format";
 import type { UsageSummary } from "@/shared/types";
+import { formatCents } from "@/shared/pricing";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -15,12 +16,6 @@ interface Props {
   perEndpoint: { endpoint: string; fetches: number }[];
   perProvider: { provider: string; fetches: number }[];
   usage?: UsageSummary;
-}
-
-function formatCents(cents: number): string {
-  const dollars = Math.floor(cents / 100);
-  const remainder = Math.abs(cents % 100);
-  return `$${dollars.toLocaleString("en-US")}.${remainder.toString().padStart(2, "0")}`;
 }
 
 export default function UsageClient({ dailySeries, perEndpoint, perProvider, usage }: Props) {
