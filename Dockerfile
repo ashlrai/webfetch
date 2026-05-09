@@ -1,5 +1,8 @@
 # Glama-compatible MCP entrypoint.
 # The canonical multi-command production image is built from docker/Dockerfile.
-FROM ghcr.io/ashlrai/webfetch:latest
+FROM node:20-slim
 
-CMD ["mcp"]
+RUN npm install -g getwebfetch-mcp@0.1.5 \
+ && npm cache clean --force
+
+CMD ["getwebfetch-mcp"]
