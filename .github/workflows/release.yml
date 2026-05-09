@@ -107,35 +107,35 @@ jobs:
           test "$(head -n 1 packages/mcp/dist/index.js)" = "#!/usr/bin/env node"
           test "$(head -n 1 packages/server/dist/index.js)" = "#!/usr/bin/env node"
 
-      - name: Publish webfetch-core
-        run: npm publish --access public --provenance
-        working-directory: packages/core
+      - name: Publish npm packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
 
-      - name: Publish getwebfetch
-        run: npm publish --access public --provenance
-        working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          publish_if_missing() {
+            local dir="$1"
+            local name="$2"
 
-      - name: Publish getwebfetch-mcp
-        run: npm publish --access public --provenance
-        working-directory: packages/mcp
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            if npm view "${name}@${VERSION}" version >/dev/null 2>&1; then
+              echo "${name}@${VERSION} is already published; skipping"
+              return
+            fi
 
-      - name: Publish webfetch-server
-        run: npm publish --access public --provenance
-        working-directory: packages/server
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+              echo "NPM_TOKEN is required to publish ${name}@${VERSION}" >&2
+              exit 1
+            fi
 
-      - name: Publish webfetch-browser
-        run: npm publish --access public --provenance
-        working-directory: packages/browser
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            (cd "${dir}" && npm publish --access public --provenance)
+          }
+
+          publish_if_missing packages/core webfetch-core
+          publish_if_missing packages/cli getwebfetch
+          publish_if_missing packages/mcp getwebfetch-mcp
+          publish_if_missing packages/server webfetch-server
+          publish_if_missing packages/browser webfetch-browser
 
       - name: Create GitHub Release + attach built artifacts
         env:
@@ -147,20 +147,38 @@ jobs:
             tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json README.md LICENSE 2>/dev/null || \
               tar -czf "release-artifacts/webfetch-${pkg}-${VERSION}.tgz" -C "packages/${pkg}" dist package.json LICENSE
           done
-          gh release create "v${VERSION}" release-artifacts/*.tgz \
-            --title "webfetch v${VERSION}" \
-            --generate-notes
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            gh release upload "v${VERSION}" release-artifacts/*.tgz --clobber
+          else
+            gh release create "v${VERSION}" release-artifacts/*.tgz \
+              --title "webfetch v${VERSION}" \
+              --generate-notes
+          fi
 
   homebrew-bump:
     name: Bump homebrew-webfetch tap
     needs: publish
     runs-on: ubuntu-latest
+    env:
+      HOMEBREW_GH_TOKEN: ${{ secrets.HOMEBREW_GH_TOKEN }}
     steps:
+      - name: Check Homebrew token
+        id: homebrew-token
+        run: |
+          if [ -n "${HOMEBREW_GH_TOKEN:-}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "HOMEBREW_GH_TOKEN not configured; skipping Homebrew bump"
+          fi
+
       - name: Derive version from tag
         id: version
+        if: steps.homebrew-token.outputs.available == 'true'
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Bump formula in ashlrai/homebrew-webfetch
+        if: steps.homebrew-token.outputs.available == 'true'
         # Opens (or updates) a PR on the tap repo bumping `Formula/webfetch.rb`
         # to point at the freshly published webfetch tarball on npm.
         # Requires HOMEBREW_GH_TOKEN (fine-scoped PAT, contents:write on
