@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "web-fetcher-mcp",
+      "dependencies": {
+        "webfetch-core": "workspace:*",
+      },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
         "@types/bun": "latest",

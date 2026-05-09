@@ -13,6 +13,9 @@
     "lint": "biome check .",
     "lint:ci": "biome check tests/server.test.ts cloud/workers"
   },
+  "dependencies": {
+    "webfetch-core": "workspace:*"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
