@@ -10,6 +10,8 @@ COPY packages/core/package.json packages/core/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/mcp/package.json packages/mcp/package.json
 COPY packages/server/package.json packages/server/package.json
+COPY packages/browser/package.json packages/browser/package.json
+COPY cloud/workers/package.json cloud/workers/package.json
 
 RUN bun install --frozen-lockfile
 
