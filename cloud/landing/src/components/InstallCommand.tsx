@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 const TABS = [
-  { id: "npm", label: "npm", cmd: "npm i -g @webfetch/cli" },
+  { id: "npm", label: "npm", cmd: "npm i -g getwebfetch" },
   { id: "brew", label: "brew", cmd: "brew install ashlrai/webfetch/webfetch" },
   { id: "curl", label: "curl", cmd: "curl -fsSL https://getwebfetch.com/install.sh | bash" },
   { id: "docker", label: "docker", cmd: "docker run ghcr.io/ashlrai/webfetch:latest" },

@@ -1,4 +1,4 @@
-# Smithery submission — @webfetch/mcp
+# Smithery submission — webfetch-mcp
 
 Target registry: https://smithery.ai
 
@@ -38,7 +38,7 @@ startCommand:
     |-
     (config) => ({
       command: 'npx',
-      args: ['-y', '@webfetch/mcp'],
+      args: ['-y', 'webfetch-mcp'],
       env: { ...config }
     })
 ```
@@ -64,7 +64,7 @@ startCommand:
 ## Submission checklist
 
 - [ ] `smithery.yaml` committed at `packages/mcp/smithery.yaml`
-- [ ] `@webfetch/mcp@0.1.0` live on npm
+- [ ] `getwebfetch-mcp@0.1.2` live on npm
 - [ ] README has MCP-specific "Tools" section
 - [ ] Smithery CLI `npx @smithery/cli list` finds the package
 - [ ] Submit via https://smithery.ai/new
@@ -73,5 +73,5 @@ startCommand:
 
 - Copy the Smithery install command into the README's "Quick start (MCP)"
   section.
-- Add the `npx @smithery/cli install @webfetch/mcp` line to the landing
+- Add the `npx @smithery/cli install webfetch-mcp` line to the landing
   install tabs.

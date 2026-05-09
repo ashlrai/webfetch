@@ -1,13 +1,13 @@
 /**
  * Managed-browser provider — server-side fallback that fetches Google Images
  * and Pinterest through Bright Data's Web Unlocker REST API. This is the
- * paid-tier moat: when the 19+ licensed providers all miss, Pro / Team users
+ * paid-tier moat: when direct-source providers all miss, Pro / Team users
  * still get a result, tagged license=UNKNOWN with a sidecar attribution.
  *
  * Why Web Unlocker (not Scraping Browser / residential proxy)?
  *   - Workers `fetch` cannot route through arbitrary HTTP proxies; Web Unlocker
  *     is a plain HTTPS POST that returns the rendered HTML, billed per request.
- *   - No Playwright dependency — keeps @webfetch/core Workers-compatible.
+ *   - No Playwright dependency — keeps webfetch-core Workers-compatible.
  *
  * Auth: requires `auth.brightDataApiToken` (single account-level Bearer token
  * from Bright Data dashboard → Account settings → API tokens). When missing,

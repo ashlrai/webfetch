@@ -1,4 +1,4 @@
-# mcpservers.org submission — @webfetch/mcp
+# mcpservers.org submission — webfetch-mcp
 
 Target registry: https://mcpservers.org (community-curated, PR-based at
 `modelcontextprotocol/servers` or the mirror list).
@@ -7,13 +7,13 @@ Target registry: https://mcpservers.org (community-curated, PR-based at
 
 ```yaml
 name: webfetch
-package: "@webfetch/mcp"
+package: "webfetch-mcp"
 homepage: https://getwebfetch.com
 repository: https://github.com/ashlrai/webfetch
 license: MIT
 category: [search, media, content]
 description: >
-  License-first federated image search for AI agents. 24 providers
+  License-first federated image search for AI agents. 25 providers
   (Wikimedia, Openverse, NASA, Smithsonian, Met Museum, LOC, Europeana,
   Unsplash, Pexels, Pixabay, Flickr-CC, Spotify, YouTube, iTunes,
   MusicBrainz-CAA, Brave, Bing, SerpAPI, and more) ranked license-first.
@@ -21,9 +21,9 @@ description: >
   attribution string.
 install:
   claude_code: |
-    claude mcp add webfetch -- npx -y @webfetch/mcp
+    claude mcp add webfetch -- npx -y getwebfetch-mcp
   cursor_json: |
-    { "webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] } }
+    { "webfetch": { "command": "npx", "args": ["-y", "getwebfetch-mcp"] } }
 env:
   - name: WEBFETCH_API_KEY
     required: false
@@ -37,7 +37,7 @@ env:
     required: false
 tools:
   - name: search_images
-    description: Federated license-aware image search across 24 providers.
+    description: Federated license-aware image search across 25 providers.
   - name: download_image
     description: Content-addressed download with SHA-256 + EXIF/IPTC license extraction.
   - name: list_providers
@@ -56,12 +56,12 @@ tags:
 
 ## PR template
 
-- **Title:** `Add webfetch — license-first image search (24 providers)`
+- **Title:** `Add webfetch — license-first image search (25 providers)`
 - **Body:** paste the YAML above + the one-paragraph description + 1
-  screenshot from `/Users/masonwyatt/Desktop/web-fetcher-mcp/cloud/landing/public/gallery/`.
+  screenshot from `cloud/landing/public/gallery/`.
 - **Checklist before PR:**
-  - [ ] `@webfetch/mcp@0.1.0` published to npm
-  - [ ] `npx -y @webfetch/mcp` returns a valid `tools/list` response
+  - [ ] `getwebfetch-mcp@0.1.2` published to npm
+  - [ ] `npx -y getwebfetch-mcp` returns a valid `tools/list` response
   - [ ] README has "How it works" + "Tools exposed" sections
   - [ ] MIT LICENSE present at package root
 

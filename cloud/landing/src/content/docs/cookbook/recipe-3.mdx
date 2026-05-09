@@ -1,10 +1,10 @@
 ---
 title: "Recipe 3: Verify license of an image you already have"
-description: Someone sent you a URL. You need to know if you can ship it. This is that workflow.
+description: Someone sent you a URL. You need to know what license category it falls into. This is that workflow.
 section: Cookbook
 ---
 
-You didn't fetch this image through webfetch. Someone pasted a URL in Slack, or it's in your DAM from years ago, or a partner sent over an asset. Before you ship, you need a defensible license claim.
+You didn't fetch this image through webfetch. Someone pasted a URL in Slack, or it's in your DAM from years ago, or a partner sent over an asset. Before production use, you need a defensible license claim.
 
 ## One-shot CLI
 
@@ -44,10 +44,10 @@ curl -sS -X POST http://127.0.0.1:7600/license \
 1. The adapter normalizes the URL (strips tracking params, resolves CDN redirects).
 2. It walks upward to the host-level heuristic (e.g., Wikimedia Commons → try `extmetadata` API).
 3. If a metadata API exists, it fetches the structured license + author.
-4. If not, it runs `heuristicLicenseFromUrl` — Unsplash hosts → CC0, Getty hosts → all-rights-reserved, etc.
+4. If not, it runs `heuristicLicenseFromUrl` — Unsplash hosts → `UNSPLASH_LICENSE`, unknown commercial hosts → `UNKNOWN`, etc.
 5. If the page is HTML (not a direct image), it runs `probe_page` logic to find the image in context and infer license from surrounding markup.
 
-The confidence score tells you how much to trust the result. Anything ≥ 0.9 is metadata-backed. Anything ≤ 0.4 is a host heuristic alone — treat as "probably fine, verify before shipping".
+The confidence score tells you how much to trust the result. Anything ≥ 0.9 is metadata-backed. Anything ≤ 0.4 is a host heuristic alone — require review before production use.
 
 ## Probe a whole page
 
@@ -60,10 +60,10 @@ webfetch probe https://blog.example.com/article --json \
 
 That prints every image on the page whose license couldn't be resolved — these are the ones to chase down before republishing.
 
-## Automating a "safe to ship" check
+## Automating a reusable-image check
 
 ```ts
-import { fetchWithLicense } from "@webfetch/core";
+import { fetchWithLicense } from "webfetch-core";
 
 export async function isSafeToShip(url: string): Promise<{ ok: boolean; reason: string; attribution?: string }> {
   const r = await fetchWithLicense(url, { probe: false });

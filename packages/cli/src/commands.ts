@@ -7,13 +7,13 @@
  * failures (thrown) bubble up to the top-level catch in index.ts.
  */
 
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "@webfetch/core";
+import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
-  DEFAULT_BASE_URL,
   type ResolvedConfig,
   type ResolvedDefaults,
   defaultConfigPath,
@@ -24,6 +24,7 @@ import {
 } from "./config.ts";
 import { core } from "./core.ts";
 import { c, formatBytes, licenseColor, renderTable } from "./format.ts";
+import { cloudRequest } from "./http.ts";
 import { promptChoice, renderCandidateTable } from "./picker.ts";
 import { authFromEnv, listProviders, missingAuthWarnings } from "./providers.ts";
 import {
@@ -58,6 +59,8 @@ const DEFAULT_IO: CommandIO = {
 
 function normalizeLicense(v: string | undefined): SearchOptions["licensePolicy"] | undefined {
   if (!v) return undefined;
+  if (v === "open" || v === "open-only") return "open-only";
+  if (v === "context" || v === "context-safe") return "context-safe";
   if (v === "any") return "any";
   if (v === "prefer" || v === "prefer-safe") return "prefer-safe";
   if (v === "safe" || v === "safe-only") return "safe-only";
@@ -125,11 +128,30 @@ function buildSearchOptions(
       minHeight,
       timeoutMs: getInt(args.flags, "timeout-ms"),
       auth: authFromEnv(env),
+      dryRun: getBool(args.flags, "dry-run"),
     },
     limit,
     verbose: getBool(args.flags, "verbose"),
     json: getBool(args.flags, "json"),
     providers,
+  };
+}
+
+function wantsCloud(args: ParsedArgs, env: NodeJS.ProcessEnv): boolean {
+  return getBool(args.flags, "cloud") || env.WEBFETCH_MODE === "cloud";
+}
+
+function searchBody(query: string, opts: SearchOptions): Record<string, unknown> {
+  return {
+    query,
+    providers: opts.providers,
+    safeSearch: opts.safeSearch,
+    licensePolicy: opts.licensePolicy,
+    maxPerProvider: opts.maxPerProvider,
+    minWidth: opts.minWidth,
+    minHeight: opts.minHeight,
+    timeoutMs: opts.timeoutMs,
+    dryRun: opts.dryRun,
   };
 }
 
@@ -250,7 +272,9 @@ export async function cmdSearch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
   if (verbose && opts.providers) {
     for (const w of missingAuthWarnings(opts.providers, env)) io.stderr(c.yellow(`warning: ${w}`));
   }
-  const bundle = await core().searchImages(query, opts);
+  const bundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
   if (shouldPick(args, io)) return maybePick(bundle, args, env, cfg, io, limit);
   return emitBundle(bundle, { json, limit, verbose }, io);
 }
@@ -269,7 +293,9 @@ export async function cmdArtist(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
   }
   const cfg = await resolveCliConfig(args, env);
   const { opts, limit, verbose, json } = buildSearchOptions(args, env, cfg);
-  const bundle = await core().searchArtistImages(name, kind, opts);
+  const bundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/artist", { body: { ...searchBody(name, opts), artist: name, kind } })
+    : await core().searchArtistImages(name, kind, opts);
   if (shouldPick(args, io)) return maybePick(bundle, args, env, cfg, io, limit);
   return emitBundle(bundle, { json, limit, verbose }, io);
 }
@@ -284,7 +310,9 @@ export async function cmdAlbum(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
   const album = args.positional.slice(1).join(" ");
   const cfg = await resolveCliConfig(args, env);
   const { opts, limit, verbose, json } = buildSearchOptions(args, env, cfg);
-  const bundle = await core().searchAlbumCover(artist, album, opts);
+  const bundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/album", { body: { ...searchBody(`${artist} ${album}`, opts), artist, album } })
+    : await core().searchAlbumCover(artist, album, opts);
   if (shouldPick(args, io)) return maybePick(bundle, args, env, cfg, io, limit);
   return emitBundle(bundle, { json, limit, verbose }, io);
 }
@@ -300,6 +328,15 @@ export async function cmdDownload(args: ParsedArgs, io: CommandIO = DEFAULT_IO):
   const out = getString(args.flags, "out", "o");
   const maxBytes = getInt(args.flags, "max-bytes");
   const json = getBool(args.flags, "json");
+
+  if (wantsCloud(args, env)) {
+    const rec = await cloudRequest<Record<string, unknown>>(cfg, "/download", {
+      body: { url, maxBytes, cacheDir: cfg.outDir ? expandHome(cfg.outDir, env) : undefined },
+    });
+    if (json) io.stdout(JSON.stringify(rec, null, 2));
+    else io.stdout(`${c.green("Saved:")} ${String(rec.path ?? rec.cachedPath ?? url)}`);
+    return 0;
+  }
 
   const r = await core().downloadImage(url, { maxBytes });
   let finalPath = r.cachedPath;
@@ -349,13 +386,17 @@ export async function cmdDownload(args: ParsedArgs, io: CommandIO = DEFAULT_IO):
 }
 
 export async function cmdProbe(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
+  const env = io.env ?? process.env;
   const url = args.positional[0];
   if (!url) {
     io.stderr(c.red("usage: webfetch probe <url> [--json]"));
     return 2;
   }
   const json = getBool(args.flags, "json");
-  const r = await core().probePage(url);
+  const cfg = await resolveCliConfig(args, env);
+  const r = wantsCloud(args, env)
+    ? await cloudRequest<any>(cfg, "/probe", { body: { url } })
+    : await core().probePage(url);
   if (json) {
     io.stdout(JSON.stringify(r, null, 2));
     return 0;
@@ -384,11 +425,15 @@ export async function cmdProbe(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
 function shortLicense(lic: string): string {
   return lic
     .replace("PUBLIC_DOMAIN", "PD")
+    .replace("UNSPLASH_LICENSE", "UNSPLASH")
+    .replace("PEXELS_LICENSE", "PEXELS")
+    .replace("PIXABAY_LICENSE", "PIXABAY")
     .replace("EDITORIAL_LICENSED", "EDITORIAL")
     .replace("PRESS_KIT_ALLOWLIST", "PRESSKIT");
 }
 
 export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
+  const env = io.env ?? process.env;
   const url = args.positional[0];
   if (!url) {
     io.stderr(c.red("usage: webfetch license <url> [--probe] [--json]"));
@@ -396,7 +441,10 @@ export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): 
   }
   const probe = getBool(args.flags, "probe");
   const json = getBool(args.flags, "json");
-  const r = await core().fetchWithLicense(url, { probe });
+  const cfg = await resolveCliConfig(args, env);
+  const r = wantsCloud(args, env)
+    ? await cloudRequest<any>(cfg, "/license", { body: { url, probe } })
+    : await core().fetchWithLicense(url, { probe });
   if (json) {
     const { bytes: _bytes, ...rest } = r as any;
     io.stdout(JSON.stringify({ ...rest, byteSize: r.bytes?.byteLength }, null, 2));
@@ -418,6 +466,16 @@ export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): 
 export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
   const env = io.env ?? process.env;
   const json = getBool(args.flags, "json");
+  if (wantsCloud(args, env)) {
+    const cfg = await resolveCliConfig(args, env);
+    const data = await cloudRequest<any>(cfg, "/providers", { method: "GET" });
+    if (json) {
+      io.stdout(JSON.stringify(data, null, 2));
+      return 0;
+    }
+    io.stdout(JSON.stringify(data, null, 2));
+    return 0;
+  }
   const rows = listProviders(env);
   if (json) {
     io.stdout(JSON.stringify(rows, null, 2));
@@ -656,6 +714,9 @@ export async function cmdBatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
   const env = io.env ?? process.env;
   const cfg = await resolveCliConfig(args, env);
   const { opts, limit, json } = buildSearchOptions(args, env, cfg);
+  const jsonl = getBool(args.flags, "jsonl");
+  const continueOnError = getBool(args.flags, "continue-on-error");
+  const candidatesLimit = getInt(args.flags, "candidates") ?? limit;
   const concurrencyRaw = getInt(args.flags, "concurrency") ?? 3;
   const concurrency = Math.max(1, Math.min(8, concurrencyRaw));
   const downloadBest = getBool(args.flags, "download-best");
@@ -678,32 +739,67 @@ export async function cmdBatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
     return 2;
   }
 
-  const results = await runWithConcurrency(entries, concurrency, async (entry) => {
-    const perOpts: SearchOptions = { ...opts, providers: entry.providers ?? opts.providers };
-    const bundle = await core().searchImages(entry.query, perOpts);
-    const top = bundle.candidates[0];
-    let downloadedPath: string | undefined;
-    if (downloadBest && top) {
-      const r = await core().downloadImage(top.url, {});
-      downloadedPath = r.cachedPath;
-      if (cfg.sidecar !== false && !getBool(args.flags, "no-sidecar")) {
-        await writeSidecar(r.cachedPath, top);
+  const results = await runWithConcurrency(entries, concurrency, async (entry, index) => {
+    try {
+      const perOpts: SearchOptions = { ...opts, providers: entry.providers ?? opts.providers };
+      const bundle = wantsCloud(args, env)
+        ? await cloudRequest<SearchResultBundle>(cfg, "/search", {
+            body: searchBody(entry.query, perOpts),
+          })
+        : await core().searchImages(entry.query, perOpts);
+      const candidates = bundle.candidates.slice(0, candidatesLimit);
+      const top = candidates[0];
+      const downloads: Array<{ url: string; path: string; sha256: string; sidecar?: string }> = [];
+      if (downloadBest && top) {
+        const r = await core().downloadImage(top.url, {});
+        let sidecar: string | undefined;
+        if (cfg.sidecar !== false && !getBool(args.flags, "no-sidecar")) {
+          sidecar = await writeSidecar(r.cachedPath, top);
+        }
+        downloads.push({ url: top.url, path: r.cachedPath, sha256: r.sha256, sidecar });
       }
+      return {
+        index,
+        query: entry.query,
+        status: "ok" as const,
+        candidateCount: bundle.candidates.length,
+        candidates,
+        top: top ?? null,
+        downloads,
+        downloadedPath: downloads[0]?.path,
+        providerReports: bundle.providerReports,
+        warnings: bundle.warnings,
+      };
+    } catch (e) {
+      if (!continueOnError) throw e;
+      return {
+        index,
+        query: entry.query,
+        status: "error" as const,
+        error: (e as Error).message,
+        candidateCount: 0,
+        candidates: [],
+        top: null,
+        downloads: [],
+      };
     }
-    return {
-      query: entry.query,
-      candidateCount: bundle.candidates.length,
-      top: top ?? null,
-      downloadedPath,
-    };
   });
+
+  if (jsonl) {
+    for (const r of results) io.stdout(JSON.stringify(r));
+    return results.some((r: any) => r.status === "error") ? 1 : 0;
+  }
 
   if (json) {
     io.stdout(JSON.stringify(results, null, 2));
-    return 0;
+    return results.some((r: any) => r.status === "error") ? 1 : 0;
   }
 
   for (const r of results) {
+    if ((r as any).status === "error") {
+      io.stdout(`${c.bold(r.query)}  ${c.red("error:")} ${(r as any).error}`);
+      continue;
+    }
     const topPart = r.top
       ? `${c.dim("top:")} ${r.top.source} ${licenseColor(r.top.license)(shortLicense(r.top.license))} ${r.top.url}`
       : c.yellow("(no results)");
@@ -712,8 +808,7 @@ export async function cmdBatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
     );
   }
   io.stdout(c.dim(`\n${results.length} queries (concurrency ${concurrency}).`));
-  void limit;
-  return 0;
+  return results.some((r: any) => r.status === "error") ? 1 : 0;
 }
 
 // ---------- `webfetch watch` ----------------------------------------------
@@ -792,11 +887,20 @@ export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
 }
 
 export function cmdVersion(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
-  io.stdout("webfetch 0.1.0");
+  io.stdout(`webfetch ${readPackageVersion()}`);
   return 0;
 }
 
-export const USAGE = `${c.bold("webfetch")} — license-aware federated image search (CLI for @webfetch/core)
+function readPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+    return String(pkg.version ?? "0.0.0");
+  } catch {
+    return "0.0.0";
+  }
+}
+
+export const USAGE = `${c.bold("webfetch")} — license-aware federated image search (CLI for webfetch-core)
 
 ${c.bold("USAGE")}
   webfetch <command> [args] [flags]
@@ -818,12 +922,13 @@ ${c.bold("COMMANDS")}
 
 ${c.bold("COMMON SEARCH FLAGS")}
   --providers a,b       Comma-separated provider ids (default: safe set; see 'webfetch providers')
-  --license MODE        safe (default) | prefer | any
+  --license MODE        open | safe (default) | context | prefer | any
   --max-per-provider N  Cap results per provider
   --min-width W         Minimum pixel width
   --min-height H        Minimum pixel height
   --limit N             Max rows to print (default 20)
   --json                Emit raw JSON array of ImageCandidate
+  --cloud               Use hosted API via WEBFETCH_API_KEY and WEBFETCH_BASE_URL
   --verbose             Print provider reports + warnings to stderr
   --profile NAME        Activate a profile from ~/.webfetchrc
   --pick                Interactive picker (TTY only); choose a candidate to download
@@ -833,7 +938,7 @@ ${c.bold("EXAMPLES")}
   webfetch search "drake portrait" --json --limit 5
   webfetch search "drake" --pick
   webfetch artist "Taylor Swift" --kind portrait --min-width 1200 --profile musicians
-  echo -e "drake portrait\\nradiohead album" | webfetch batch --concurrency 2 --json
+  echo -e "drake portrait\\nradiohead album" | webfetch batch --concurrency 2 --jsonl --continue-on-error
   webfetch watch "weekly artist photos" --interval 6h --webhook https://hooks.example
   webfetch config init
   webfetch config show --profile editorial

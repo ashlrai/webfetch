@@ -1,11 +1,11 @@
 /**
- * /v1/search — federated image search. Thin wrapper over @webfetch/core's
+ * /v1/search — federated image search. Thin wrapper over webfetch-core's
  * `searchImages`. The moat (provider federation, license ranking, dedupe)
  * lives in core; this file only handles HTTP framing + metering hooks.
  */
 
-import { searchImages } from "@webfetch/core";
 import { Hono } from "hono";
+import { searchImages } from "webfetch-core";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";
@@ -60,7 +60,7 @@ searchRouter.post("/", async (c) => {
         warnings.push(...fallback.warnings);
         if (candidates.length > 0) {
           warnings.push(
-            "managed-browser fallback used: results are license: UNKNOWN; not safe to ship without review",
+            "managed-browser fallback used: results are license: UNKNOWN; require review before production use",
           );
         }
       } else {

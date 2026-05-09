@@ -1,5 +1,5 @@
 /**
- * Opt-in, privacy-first telemetry for @webfetch/core.
+ * Opt-in, privacy-first telemetry for webfetch-core.
  *
  * Defaults: OFF. Nothing is sent unless the user explicitly opts in via:
  *   1. Environment variable:  WEBFETCH_TELEMETRY=1

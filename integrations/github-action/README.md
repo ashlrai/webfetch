@@ -28,7 +28,7 @@ After publishing to the GitHub Action marketplace this reduces to:
 | ------------------ | -------- | ---------------- | --------------------------------------------------------- |
 | `query`            | yes      | —                | Free-text search query.                                   |
 | `out-dir`          | yes      | —                | Directory to write downloaded images + sidecars into.     |
-| `license`          | no       | `safe-only`      | `safe-only` \| `prefer-safe` \| `any`.                    |
+| `license`          | no       | `safe-only`      | `open-only` \| `safe-only` \| `context-safe` \| `prefer-safe` \| `any`. |
 | `providers`        | no       | (safe defaults)  | Comma-separated provider allowlist.                       |
 | `max-per-provider` | no       | `3`              | Cap per provider.                                         |
 | `limit`            | no       | `10`             | Total download cap.                                       |
@@ -41,7 +41,7 @@ After publishing to the GitHub Action marketplace this reduces to:
 
 | Name       | Description                                                       |
 | ---------- | ----------------------------------------------------------------- |
-| `manifest` | Path to the `_manifest.json` with `{file, sha256, candidate}[]`.  |
+| `manifest` | Path to the `_manifest.json` with `file`, `path`, `sha256`, `mime`, `byteSize`, `cachedPath`, `sidecar`, `attributionPath`, and `candidate` metadata. |
 | `count`    | Number of images successfully downloaded.                         |
 
 ## Provider auth

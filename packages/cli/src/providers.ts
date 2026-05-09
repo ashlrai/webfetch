@@ -4,7 +4,7 @@
  * used by `webfetch providers`.
  */
 
-import type { ProviderAuth, ProviderId } from "@webfetch/core";
+import type { ProviderAuth, ProviderId } from "webfetch-core";
 import { core } from "./core.ts";
 
 export interface ProviderEnvRow {
@@ -16,7 +16,7 @@ export interface ProviderEnvRow {
   authed: boolean;
 }
 
-const PROVIDER_ENV: Record<ProviderId, string[]> = {
+const FALLBACK_PROVIDER_ENV: Record<ProviderId, string[]> = {
   wikimedia: [],
   openverse: [],
   unsplash: ["UNSPLASH_ACCESS_KEY"],
@@ -54,6 +54,10 @@ export function authFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderAuth 
     serpApiKey: env.SERPAPI_KEY,
     spotifyClientId: env.SPOTIFY_CLIENT_ID,
     spotifyClientSecret: env.SPOTIFY_CLIENT_SECRET,
+    flickrApiKey: env.FLICKR_API_KEY,
+    smithsonianApiKey: env.SMITHSONIAN_API_KEY,
+    europeanaApiKey: env.EUROPEANA_API_KEY,
+    rawpixelApiKey: env.RAWPIXEL_API_KEY,
     brightDataApiToken: env.BRIGHTDATA_API_TOKEN,
     brightDataZone: env.BRIGHTDATA_ZONE,
     userAgent: env.WEBFETCH_USER_AGENT ?? "webfetch-cli/0.1 (+https://github.com/)",
@@ -66,7 +70,7 @@ export function listProviders(env: NodeJS.ProcessEnv = process.env): ProviderEnv
   const rows: ProviderEnvRow[] = [];
   for (const id of Object.keys(ALL_PROVIDERS) as ProviderId[]) {
     const p = ALL_PROVIDERS[id];
-    const envVars = PROVIDER_ENV[id] ?? [];
+    const envVars = ((p as any).auth?.env as string[] | undefined) ?? FALLBACK_PROVIDER_ENV[id] ?? [];
     const authed = envVars.length === 0 ? true : envVars.every((v) => !!env[v]);
     rows.push({
       id,
@@ -86,7 +90,10 @@ export function missingAuthWarnings(
 ): string[] {
   const warnings: string[] = [];
   for (const id of requested) {
-    const vars = PROVIDER_ENV[id] ?? [];
+    const vars =
+      (((core().ALL_PROVIDERS[id] as any)?.auth?.env as string[] | undefined) ??
+        FALLBACK_PROVIDER_ENV[id] ??
+        []);
     const missing = vars.filter((v) => !env[v]);
     if (missing.length > 0) {
       warnings.push(`provider ${id}: missing env ${missing.join(", ")} — will be skipped`);

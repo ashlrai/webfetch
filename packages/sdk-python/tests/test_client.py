@@ -29,7 +29,7 @@ def _client() -> WebfetchClient:
 
 @respx.mock
 def test_search_sync_happy_path():
-    route = respx.post(f"{BASE}/search").mock(
+    route = respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(200, json=SEARCH_FIXTURE)
     )
     with _client() as c:
@@ -48,7 +48,7 @@ def test_search_sync_happy_path():
 
 @respx.mock
 def test_search_artist_images():
-    respx.post(f"{BASE}/artist").mock(
+    respx.post(f"{BASE}/v1/artist").mock(
         return_value=httpx.Response(200, json=SEARCH_FIXTURE)
     )
     with _client() as c:
@@ -58,7 +58,7 @@ def test_search_artist_images():
 
 @respx.mock
 def test_search_album_cover():
-    respx.post(f"{BASE}/album").mock(
+    respx.post(f"{BASE}/v1/album").mock(
         return_value=httpx.Response(200, json=SEARCH_FIXTURE)
     )
     with _client() as c:
@@ -68,7 +68,7 @@ def test_search_album_cover():
 
 @respx.mock
 def test_download_returns_model():
-    respx.post(f"{BASE}/download").mock(
+    respx.post(f"{BASE}/v1/download").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -92,7 +92,7 @@ def test_download_returns_model():
 
 @respx.mock
 def test_probe():
-    respx.post(f"{BASE}/probe").mock(
+    respx.post(f"{BASE}/v1/probe").mock(
         return_value=httpx.Response(
             200,
             json={"ok": True, "data": {"url": "https://x", "images": [], "allowed": True}},
@@ -105,7 +105,7 @@ def test_probe():
 
 @respx.mock
 def test_fetch_with_license():
-    respx.post(f"{BASE}/license").mock(
+    respx.post(f"{BASE}/v1/license").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -132,7 +132,7 @@ def test_fetch_with_license():
 
 @respx.mock
 def test_find_similar():
-    respx.post(f"{BASE}/similar").mock(
+    respx.post(f"{BASE}/v1/similar").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -151,7 +151,7 @@ def test_find_similar():
 
 @respx.mock
 def test_providers_get():
-    respx.get(f"{BASE}/providers").mock(
+    respx.get(f"{BASE}/v1/providers").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -159,7 +159,7 @@ def test_providers_get():
                 "data": {
                     "all": ["wikimedia", "openverse"],
                     "defaults": ["wikimedia"],
-                    "endpoints": ["/search"],
+                    "endpoints": ["/v1/search"],
                 },
             },
         )
@@ -171,7 +171,7 @@ def test_providers_get():
 
 @respx.mock
 def test_auth_error_on_401():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(401, json={"ok": False, "error": "bad key"})
     )
     with _client() as c, pytest.raises(AuthError) as exc_info:
@@ -181,7 +181,7 @@ def test_auth_error_on_401():
 
 @respx.mock
 def test_quota_error_on_402_with_upgrade_url():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(
             402,
             json={
@@ -198,7 +198,7 @@ def test_quota_error_on_402_with_upgrade_url():
 
 @respx.mock
 def test_rate_limit_error_on_429_with_retry_after():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(
             429,
             headers={"retry-after": "12"},
@@ -212,7 +212,7 @@ def test_rate_limit_error_on_429_with_retry_after():
 
 @respx.mock
 def test_500_raises_webfetch_error():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(500, json={"ok": False, "error": "boom"})
     )
     with _client() as c, pytest.raises(WebfetchError) as exc_info:
@@ -222,7 +222,7 @@ def test_500_raises_webfetch_error():
 
 @respx.mock
 def test_network_error_wrapped():
-    respx.post(f"{BASE}/search").mock(side_effect=httpx.ConnectError("no net"))
+    respx.post(f"{BASE}/v1/search").mock(side_effect=httpx.ConnectError("no net"))
     with _client() as c, pytest.raises(WebfetchError):
         c.search("x")
 
@@ -236,13 +236,24 @@ def test_api_key_from_env(monkeypatch):
         c.close()
 
 
+@respx.mock
+def test_local_base_url_uses_unversioned_compat_routes():
+    local = "http://127.0.0.1:8787"
+    route = respx.post(f"{local}/search").mock(
+        return_value=httpx.Response(200, json=SEARCH_FIXTURE)
+    )
+    with WebfetchClient(api_key="local-token", base_url=local) as c:
+        c.search("x")
+    assert route.called
+
+
 # --- async ---------------------------------------------------------------
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_async_search_happy_path():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(200, json=SEARCH_FIXTURE)
     )
     async with AsyncWebfetchClient(api_key="wf_test", base_url=BASE) as c:
@@ -253,7 +264,7 @@ async def test_async_search_happy_path():
 @respx.mock
 @pytest.mark.asyncio
 async def test_async_download():
-    respx.post(f"{BASE}/download").mock(
+    respx.post(f"{BASE}/v1/download").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -274,7 +285,7 @@ async def test_async_download():
 @respx.mock
 @pytest.mark.asyncio
 async def test_async_auth_error():
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/v1/search").mock(
         return_value=httpx.Response(401, json={"ok": False, "error": "nope"})
     )
     async with AsyncWebfetchClient(api_key="wf_test", base_url=BASE) as c:

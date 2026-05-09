@@ -1,5 +1,5 @@
 /**
- * @webfetch/core public API surface.
+ * webfetch-core public API surface.
  *
  * Zero MCP concerns live here — this is a pure TypeScript library that an
  * agent, CLI, or any other runtime can use directly.
@@ -32,6 +32,7 @@ export {
   requiresAttribution,
   CONTEXT_SAFE_LICENSES,
   OPEN_LICENSES,
+  PLATFORM_LICENSES,
   SAFE_LICENSES,
   LICENSE_RANK,
 } from "./license.ts";

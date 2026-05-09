@@ -5,7 +5,7 @@ const QA = [
   },
   {
     q: "Is this commercial safe?",
-    a: "Yes, when you stay on the default license policy (safe-only). Results are ranked CC0 > PUBLIC_DOMAIN > CC_BY > CC_BY_SA > EDITORIAL_LICENSED, and UNKNOWN is rejected. Attribution strings are pre-built so you can ship directly. Browser-sourced images always get a sidecar and require opt-in.",
+    a: "The default license policy rejects UNKNOWN and distinguishes open, platform-license, and editorial categories. Attribution strings are pre-built, and browser-sourced images require opt-in plus review.",
   },
   {
     q: "Can I self-host?",
@@ -17,7 +17,7 @@ const QA = [
   },
   {
     q: "How is this different from Unsplash or Google Images?",
-    a: "Unsplash is one source under one license. Google Images has no usable API and zero license metadata. webfetch federates 19+ licensed sources, ranks them license-first, and falls through to a human-like browser only when you opt in — with attribution sidecars on everything it returns.",
+    a: "Unsplash is one source under one platform license. Google Images has no usable API and zero license metadata. webfetch federates 24 sources, ranks them license-first, and falls through to a human-like browser only when you opt in — with attribution sidecars on everything it returns.",
   },
   {
     q: "What about copyright on browser-sourced images?",

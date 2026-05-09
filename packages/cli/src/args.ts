@@ -28,6 +28,9 @@ const BOOLEAN_FLAGS = new Set([
   "no-sidecar",
   "download-best",
   "dry-run",
+  "cloud",
+  "jsonl",
+  "continue-on-error",
 ]);
 
 export function parseArgs(argv: string[]): ParsedArgs {

@@ -11,11 +11,14 @@ export type License =
   | "PUBLIC_DOMAIN"
   | "CC_BY"
   | "CC_BY_SA"
+  | "UNSPLASH_LICENSE"
+  | "PEXELS_LICENSE"
+  | "PIXABAY_LICENSE"
   | "EDITORIAL_LICENSED"
   | "PRESS_KIT_ALLOWLIST"
   | "UNKNOWN";
 
-export type LicensePolicy = "safe-only" | "prefer-safe" | "any";
+export type LicensePolicy = "open-only" | "safe-only" | "context-safe" | "prefer-safe" | "any";
 
 export type ProviderId =
   | "wikimedia"
@@ -36,7 +39,13 @@ export type ProviderId =
   | "smithsonian"
   | "nasa"
   | "met-museum"
-  | "europeana";
+  | "europeana"
+  | "library-of-congress"
+  | "wellcome-collection"
+  | "rawpixel"
+  | "burst"
+  | "europeana-archival"
+  | "managed-browser";
 
 export interface ImageCandidate {
   url: string;

@@ -8,7 +8,7 @@ section: Operations
 
 Initial public release.
 
-### Federated search across 24 providers
+### Federated search across 25 providers
 
 - Public-domain / CC sources: `wikimedia`, `openverse`, `flickr`, `internet-archive`, `smithsonian`, `nasa`, `met-museum`, `europeana`, `library-of-congress`, `wellcome-collection`, `rawpixel`, `burst`, `europeana-archival`.
 - Stock photography: `unsplash`, `pexels`, `pixabay`.
@@ -20,14 +20,14 @@ Default set is 19 providers, auto-skipping any without auth. Five opt-in for ToS
 
 ### License-first ranking
 
-Canonical tags: `CC0`, `PUBLIC_DOMAIN`, `CC_BY`, `CC_BY_SA`, `EDITORIAL_LICENSED`, `PRESS_KIT_ALLOWLIST`, `UNKNOWN`. Ranking by license, then confidence, then resolution. Default `licensePolicy: "safe-only"` rejects `UNKNOWN` entirely.
+Canonical tags: `CC0`, `PUBLIC_DOMAIN`, `CC_BY`, `CC_BY_SA`, `UNSPLASH_LICENSE`, `PEXELS_LICENSE`, `PIXABAY_LICENSE`, `EDITORIAL_LICENSED`, `PRESS_KIT_ALLOWLIST`, `UNKNOWN`. Ranking by license, then confidence, then resolution. Default `licensePolicy: "safe-only"` rejects `UNKNOWN` entirely.
 
 ### Attribution machinery
 
 - `attributionLine` — single-string credit, rendered-ready.
 - XMP sidecars on `webfetch download` (ExifTool / Photoshop compatible).
 - JSON sidecars with full `ImageCandidate` provenance.
-- `buildAttribution()` exported from `@webfetch/core` for custom rendering.
+- `buildAttribution()` exported from `webfetch-core` for custom rendering.
 
 ### Four front doors
 
@@ -55,7 +55,7 @@ Consent-gated headless Chromium, four-tier fallback ladder (Bright Data → Camo
 
 - GitHub Action for build-time asset fetching.
 - Homebrew tap: `brew tap ashlrai/webfetch && brew install webfetch`.
-- npm: `npm install -g @webfetch/cli`.
+- npm: `npm install -g getwebfetch`.
 - Docker: `ghcr.io/ashlrai/webfetch` image with `cli`, `server`, and `mcp` subcommands.
 - Curl installer: `curl -fsSL .../install.sh | bash`.
 

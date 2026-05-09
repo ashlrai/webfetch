@@ -13,7 +13,7 @@ export function Hero() {
               <div className="relative inline-flex items-center gap-2 text-[11px] font-mono text-[var(--color-fg-dim)] border border-[var(--color-border)] rounded-full pl-3 pr-10 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-green)] wf-live-dot" />
                 <span className="uppercase tracking-wider">v1.0</span>
-                <span>24 providers · 241 tests · MIT</span>
+                <span>25 providers · 300+ tests · MIT</span>
                 <span className="wf-stamp" style={{ top: -10, right: -14, fontSize: 8 }}>
                   LICENSED
                 </span>

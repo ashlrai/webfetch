@@ -1,7 +1,7 @@
 /** /v1/license — license heuristics for an arbitrary URL. */
 
-import { fetchWithLicense } from "@webfetch/core";
 import { Hono } from "hono";
+import { fetchWithLicense } from "webfetch-core";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";

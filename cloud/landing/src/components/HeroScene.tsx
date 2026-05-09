@@ -89,7 +89,7 @@ const GALLERY_ITEMS = [
 
 // Phases:
 // 0 typing  · CLI types the command
-// 1 search  · "federating 24 sources..."
+// 1 search  · "federating 25 sources..."
 // 2 results · result tiles cascade in
 // 3 handoff · "rendering site..." pill, browser frame slides up
 // 4 site    · polished site materializes
@@ -261,7 +261,7 @@ export function HeroScene() {
           {phase >= 1 && (
             <div className="mt-2.5 flex items-center gap-2 text-[12px]" style={{ color: ink.fgDim }}>
               <span className="wf-spinner" aria-hidden />
-              <span>federating 24 providers · ranking by license + relevance</span>
+              <span>federating 25 providers · ranking by license + relevance</span>
             </div>
           )}
 

@@ -12,6 +12,9 @@ class License(str, Enum):
     PUBLIC_DOMAIN = "PUBLIC_DOMAIN"
     CC_BY = "CC_BY"
     CC_BY_SA = "CC_BY_SA"
+    UNSPLASH_LICENSE = "UNSPLASH_LICENSE"
+    PEXELS_LICENSE = "PEXELS_LICENSE"
+    PIXABAY_LICENSE = "PIXABAY_LICENSE"
     EDITORIAL_LICENSED = "EDITORIAL_LICENSED"
     PRESS_KIT_ALLOWLIST = "PRESS_KIT_ALLOWLIST"
     UNKNOWN = "UNKNOWN"
@@ -37,9 +40,15 @@ ProviderId = Literal[
     "nasa",
     "met-museum",
     "europeana",
+    "library-of-congress",
+    "wellcome-collection",
+    "rawpixel",
+    "burst",
+    "europeana-archival",
+    "managed-browser",
 ]
 
-LicensePolicy = Literal["safe-only", "prefer-safe", "any"]
+LicensePolicy = Literal["open-only", "safe-only", "context-safe", "prefer-safe", "any"]
 SafeSearchMode = Literal["strict", "moderate", "off"]
 
 

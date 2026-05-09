@@ -2,7 +2,7 @@
 
 ## 0.1.0 — Initial release
 
-- Activity-bar side panel with federated search across 19 providers.
+- Activity-bar side panel with federated search across 25 providers.
 - License color badges, provider chips, license-policy filter.
 - Click to download + insert; drag to drop into any editor.
 - Right-click in markdown to insert a licensed image with attribution.

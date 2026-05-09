@@ -13,7 +13,7 @@ import {
   searchAlbumCover,
   searchArtistImages,
   searchImages,
-} from "@webfetch/core";
+} from "webfetch-core";
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
@@ -39,7 +39,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "search_images",
     description:
-      "Federated image search across license-aware providers (Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, iTunes, MusicBrainz CAA, Spotify, Brave). Returns ranked candidates with license + attribution. Does NOT auto-download — call `download_image` after. Use this instead of manually browsing Google Images. By default uses safe-only license policy (CC0/CC-BY/CC-BY-SA/editorial/press). Pass providers: ['serpapi'] or ['browser'] only if direct-source APIs fail.",
+      "Federated image search across license-aware providers (Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, iTunes, MusicBrainz CAA, Spotify, Brave). Returns concise ranked candidates with license + attribution. Does NOT auto-download — call `download_image` after. Default safe-only policy includes open, platform-license, editorial/press tags and rejects UNKNOWN. Use open-only for CC/public-domain only. For large batches, prefer CLI: webfetch batch --jsonl --continue-on-error.",
     inputSchema: searchImagesSchema,
     async handler(args) {
       const out = await searchImages(args.query, args);

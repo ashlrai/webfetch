@@ -15,18 +15,30 @@ export const LICENSE_RANK: Record<License, number> = {
   PUBLIC_DOMAIN: 2,
   CC_BY: 3,
   CC_BY_SA: 4,
-  EDITORIAL_LICENSED: 5,
-  PRESS_KIT_ALLOWLIST: 6,
+  UNSPLASH_LICENSE: 5,
+  PEXELS_LICENSE: 6,
+  PIXABAY_LICENSE: 7,
+  EDITORIAL_LICENSED: 8,
+  PRESS_KIT_ALLOWLIST: 9,
   UNKNOWN: 99,
 };
 
 export const OPEN_LICENSES: readonly License[] = ["CC0", "PUBLIC_DOMAIN", "CC_BY", "CC_BY_SA"];
+
+export const PLATFORM_LICENSES: readonly License[] = [
+  "UNSPLASH_LICENSE",
+  "PEXELS_LICENSE",
+  "PIXABAY_LICENSE",
+];
 
 export const CONTEXT_SAFE_LICENSES: readonly License[] = [
   "CC0",
   "PUBLIC_DOMAIN",
   "CC_BY",
   "CC_BY_SA",
+  "UNSPLASH_LICENSE",
+  "PEXELS_LICENSE",
+  "PIXABAY_LICENSE",
   "EDITORIAL_LICENSED",
   "PRESS_KIT_ALLOWLIST",
 ];
@@ -97,6 +109,12 @@ export function prettyLicenseName(tag: License): string {
       return "CC BY 4.0";
     case "CC_BY_SA":
       return "CC BY-SA 4.0";
+    case "UNSPLASH_LICENSE":
+      return "Unsplash License";
+    case "PEXELS_LICENSE":
+      return "Pexels License";
+    case "PIXABAY_LICENSE":
+      return "Pixabay License";
     case "EDITORIAL_LICENSED":
       return "Editorial Use (platform-licensed)";
     case "PRESS_KIT_ALLOWLIST":
@@ -127,6 +145,9 @@ export function coerceLicense(raw: string | undefined | null): License {
     return "CC_BY";
   if (s.includes("editorial") || s.includes("spotify") || s.includes("caa") || s.includes("itunes"))
     return "EDITORIAL_LICENSED";
+  if (s.includes("unsplash")) return "UNSPLASH_LICENSE";
+  if (s.includes("pexels")) return "PEXELS_LICENSE";
+  if (s.includes("pixabay")) return "PIXABAY_LICENSE";
   if (s.includes("press") || s.includes("promo")) return "PRESS_KIT_ALLOWLIST";
   // NC / ND / proprietary / all-rights-reserved are not safe for our use case.
   return "UNKNOWN";
@@ -145,11 +166,11 @@ export function heuristicLicenseFromUrl(url: string): { license: License; confid
   if (host.endsWith("flickr.com") || host.endsWith("staticflickr.com"))
     return { license: "UNKNOWN", confidence: 0.1 };
   if (host.endsWith("unsplash.com") || host.endsWith("images.unsplash.com"))
-    return { license: "CC0", confidence: 0.8 }; // Unsplash license is CC0-like
+    return { license: "UNSPLASH_LICENSE", confidence: 0.9 };
   if (host.endsWith("pexels.com") || host.endsWith("images.pexels.com"))
-    return { license: "CC0", confidence: 0.8 };
+    return { license: "PEXELS_LICENSE", confidence: 0.9 };
   if (host.endsWith("pixabay.com") || host.endsWith("cdn.pixabay.com"))
-    return { license: "CC0", confidence: 0.8 };
+    return { license: "PIXABAY_LICENSE", confidence: 0.9 };
   if (host.endsWith("openverse.org")) return { license: "CC_BY", confidence: 0.4 };
   if (host.endsWith("coverartarchive.org") || host.endsWith("archive.org"))
     return { license: "EDITORIAL_LICENSED", confidence: 0.6 };

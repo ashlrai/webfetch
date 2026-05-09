@@ -1,10 +1,10 @@
 /**
  * Seam for injecting a stubbed core in tests. Re-exports everything we use
- * from @webfetch/core behind a mutable binding so `cli.test.ts` can swap
+ * from webfetch-core behind a mutable binding so `cli.test.ts` can swap
  * implementations without touching the network.
  */
 
-import * as realCore from "@webfetch/core";
+import * as realCore from "webfetch-core";
 
 export type CoreApi = {
   searchImages: typeof realCore.searchImages;

@@ -1,7 +1,7 @@
 /** /v1/album — album cover search. */
 
-import { searchAlbumCover } from "@webfetch/core";
 import { Hono } from "hono";
+import { searchAlbumCover } from "webfetch-core";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";

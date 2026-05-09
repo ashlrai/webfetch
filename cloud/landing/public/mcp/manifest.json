@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "License-first federated image search MCP server",
   "homepage": "https://getwebfetch.com",
-  "repository": "https://github.com/ashlrai/web-fetcher-mcp",
+  "repository": "https://github.com/ashlrai/webfetch",
   "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "@webfetch/mcp"],
+  "args": ["-y", "getwebfetch-mcp"],
   "tools": [
     {
       "name": "search_images",
-      "description": "Search 19+ licensed image providers, ranked license-first."
+      "description": "Search 25 image providers, ranked license-first."
     },
     {
       "name": "search_artist_images",

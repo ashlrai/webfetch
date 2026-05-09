@@ -261,7 +261,7 @@ export function ClaudeCodeDemo() {
               one-line install
             </div>
             <pre className="bg-[var(--color-code-bg)] rounded-lg p-3 text-[12px] font-mono text-[var(--color-fg-muted)] overflow-x-auto border border-[var(--color-border)]">
-{`claude mcp add webfetch -- npx -y @webfetch/mcp`}
+{`claude mcp add webfetch -- npx -y getwebfetch-mcp`}
             </pre>
             <div className="mt-3 text-[12px] text-[var(--color-fg-dim)] leading-relaxed">
               Also works with Cursor, Cline, Continue, Roo Code, and Codex — same command, different
@@ -275,7 +275,7 @@ export function ClaudeCodeDemo() {
             </div>
             <ul className="flex flex-col gap-2 text-[13px] font-mono">
               {[
-                ["search_images", "federated search across 24 providers"],
+                ["search_images", "federated search across 25 providers"],
                 ["fetch_image", "download + write XMP sidecar"],
                 ["get_license", "resolve license tag for any URL"],
                 ["list_providers", "capability + rate introspection"],

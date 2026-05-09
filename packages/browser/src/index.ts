@@ -1,5 +1,5 @@
 /**
- * @webfetch/browser — "like a human" browser-fetch layer.
+ * webfetch-browser — "like a human" browser-fetch layer.
  *
  * Public API:
  *   - createBrowserProvider(opts) → BrowserProvider  (full hybrid router)
@@ -14,7 +14,7 @@
  *   - Every candidate is tagged viaBrowserFallback + license:"UNKNOWN" by default.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 
 import { tagCandidate } from "./attribution.ts";
 import { detectCaptcha } from "./captcha/capsolver.ts";

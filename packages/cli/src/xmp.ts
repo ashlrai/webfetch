@@ -7,7 +7,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 
 export function xmpEscape(s: string): string {
   return s

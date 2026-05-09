@@ -34,7 +34,7 @@ describe("api client (fixtures)", () => {
     expect(b.status).toBeTruthy();
   });
 
-  test("getProviders returns the 19 providers", async () => {
+  test("getProviders returns the default provider set", async () => {
     const p = await getProviders();
     expect(p.length).toBe(19);
   });

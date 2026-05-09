@@ -7,7 +7,7 @@
  * least works on a rendered tweet URL via the generic stack.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import type { ExtractContext, ExtractResult } from "./types.ts";
 
 export function extractTwitter(ctx: ExtractContext): ExtractResult {

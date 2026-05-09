@@ -45,6 +45,7 @@ const FAKE_BUNDLE = {
 
 let calls: Record<string, any[]> = {};
 const originalCore = { ...core() };
+const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   calls = {
@@ -90,6 +91,7 @@ beforeEach(() => {
 
 afterEach(() => {
   __setCoreForTests(originalCore);
+  globalThis.fetch = originalFetch;
 });
 
 describe("parseArgs", () => {
@@ -156,6 +158,44 @@ describe("search dispatch", () => {
     expect(code).toBe(0);
     expect(calls.searchImages![0].o.providers).toEqual(["wikimedia", "openverse"]);
     expect(calls.searchImages![0].o.licensePolicy).toBe("any");
+  });
+
+  test("search passes --dry-run into core options", async () => {
+    const cap = captureIO();
+    const code = await run(["search", "x", "--dry-run", "--json"], cap.io);
+    expect(code).toBe(0);
+    expect(calls.searchImages![0].o.dryRun).toBe(true);
+  });
+
+  test("search --cloud calls /v1/search with bearer auth", async () => {
+    const cap = captureIO();
+    cap.io.env = {
+      ...cap.io.env,
+      WEBFETCH_API_KEY: "wf_test",
+      WEBFETCH_BASE_URL: "https://api.example.test",
+    };
+    const requests: Request[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      requests.push(req);
+      return new Response(JSON.stringify({ ok: true, data: FAKE_BUNDLE }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    const code = await run(["search", "cloud", "query", "--cloud", "--json"], cap.io);
+    expect(code).toBe(0);
+    expect(calls.searchImages!.length).toBe(0);
+    expect(requests[0]!.url).toBe("https://api.example.test/v1/search");
+    expect(requests[0]!.headers.get("authorization")).toBe("Bearer wf_test");
+    const body = await requests[0]!.json();
+    expect(body.query).toBe("cloud query");
+  });
+
+  test("search --cloud requires an API key", async () => {
+    const cap = captureIO();
+    await expect(run(["search", "x", "--cloud"], cap.io)).rejects.toThrow("cloud mode requires");
   });
 
   test("artist dispatches with kind", async () => {
@@ -255,7 +295,7 @@ describe("providers / probe / license / help / version", () => {
     const cap = captureIO();
     const code = await run(["version"], cap.io);
     expect(code).toBe(0);
-    expect(cap.stdout()).toContain("0.1.0");
+    expect(cap.stdout()).toMatch(/^webfetch \d+\.\d+\.\d+/);
   });
 
   test("unknown command exits 2", async () => {

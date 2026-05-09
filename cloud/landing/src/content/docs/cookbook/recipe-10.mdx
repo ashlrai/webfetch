@@ -11,7 +11,7 @@ webfetch's 24 built-in providers cover public sources. When you have a proprieta
 Every provider implements the same interface:
 
 ```ts
-import type { Provider, ImageCandidate, SearchContext } from "@webfetch/core";
+import type { Provider, ImageCandidate, SearchContext } from "webfetch-core";
 
 export const internalDam: Provider = {
   id: "internal-dam",
@@ -77,10 +77,10 @@ Two ways:
 
 ### A — In-process (same runtime as your code)
 
-If you call `@webfetch/core` directly, register before the first search:
+If you call `webfetch-core` directly, register before the first search:
 
 ```ts
-import { registerProvider, searchImages } from "@webfetch/core";
+import { registerProvider, searchImages } from "webfetch-core";
 import { internalDam } from "./providers/internal-dam";
 
 registerProvider(internalDam);
@@ -92,12 +92,12 @@ const r = await searchImages("corporate keynote", {
 
 ### B — Out-of-process (CLI / MCP / HTTP server)
 
-Create a tiny package that depends on `@webfetch/server` and your adapter, then registers it at startup. Ship the bundle as your deployment:
+Create a tiny package that depends on `webfetch-server` and your adapter, then registers it at startup. Ship the bundle as your deployment:
 
 ```ts
 // my-webfetch-server/index.ts
-import { startServer } from "@webfetch/server";
-import { registerProvider } from "@webfetch/core";
+import { startServer } from "webfetch-server";
+import { registerProvider } from "webfetch-core";
 import { internalDam } from "./internal-dam";
 
 registerProvider(internalDam);

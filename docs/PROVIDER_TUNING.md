@@ -1,6 +1,6 @@
 # Provider tuning
 
-`DEFAULT_PROVIDERS` is optimized for "ship a safe image without human review"
+`DEFAULT_PROVIDERS` is optimized for reviewable results with clear provenance
 across a broad set of queries. For specific use cases, a narrower list is
 usually cheaper, faster, and higher-precision.
 
@@ -31,8 +31,8 @@ collections. Unsplash fills stylistic gaps.
 --providers unsplash,pexels,pixabay
 ```
 
-Rationale: CC0-equivalent platform licenses, no attribution required, high
-consistency. Fastest pipeline of the three.
+Rationale: proprietary platform licenses, no attribution required by those
+platforms, high consistency. Fastest pipeline of the three.
 
 ### Science / nature / reference
 
@@ -49,7 +49,8 @@ Rationale: structured metadata, expert curation, diagrams + species photos.
 ```
 
 `prefer-safe` keeps unknown-license results in the output but pushes them
-past the license-safe ones. Useful for exploration; never use for shipping.
+past the open, platform-license, and editorial/context-safe ones. Use it for
+exploration workflows where a human still checks provenance.
 
 ### Reverse image lookup / "who is this"
 
@@ -80,6 +81,7 @@ Requires `SERPAPI_KEY`. Most other providers don't support reverse lookup.
 | bing     | Query is English-web-heavy and Brave coverage is thin.           |
 | serpapi  | You need Google-quality recall and accept per-query cost.        |
 | browser  | You explicitly accept ToS risk and have `playwright` installed.  |
+| managed-browser | You explicitly want hosted browser fallback results for review. |
 
 Opt-in providers only run when the `providers:` list mentions them AND (for
 `browser`) `WEBFETCH_ENABLE_BROWSER=1` is set.

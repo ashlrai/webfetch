@@ -158,7 +158,15 @@ class _ClientBase:
     ) -> None:
         self.api_key = _resolve_api_key(api_key)
         self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
+        self._versioned_paths = self.base_url == DEFAULT_BASE_URL
         self.timeout = timeout
+
+    def _path(self, path: str) -> str:
+        if path.startswith("/v1/"):
+            return path
+        if self._versioned_paths:
+            return f"/v1{path}"
+        return path
 
 
 class WebfetchClient(_ClientBase, AbstractContextManager["WebfetchClient"]):
@@ -218,7 +226,7 @@ class WebfetchClient(_ClientBase, AbstractContextManager["WebfetchClient"]):
         min_height: int = 0,
     ) -> SearchResponse:
         data = self._post(
-            "/search",
+            self._path("/search"),
             _search_payload(
                 query,
                 providers=providers,
@@ -233,11 +241,11 @@ class WebfetchClient(_ClientBase, AbstractContextManager["WebfetchClient"]):
     def search_artist_images(
         self, artist: str, *, kind: str = "portrait"
     ) -> SearchResponse:
-        data = self._post("/artist", {"artist": artist, "kind": kind})
+        data = self._post(self._path("/artist"), {"artist": artist, "kind": kind})
         return _model(SearchResponse, data)
 
     def search_album_cover(self, artist: str, album: str) -> SearchResponse:
-        data = self._post("/album", {"artist": artist, "album": album})
+        data = self._post(self._path("/album"), {"artist": artist, "album": album})
         return _model(SearchResponse, data)
 
     def download(
@@ -252,7 +260,7 @@ class WebfetchClient(_ClientBase, AbstractContextManager["WebfetchClient"]):
             body["maxBytes"] = max_bytes
         if out_dir is not None:
             body["cacheDir"] = out_dir
-        data = self._post("/download", body)
+        data = self._post(self._path("/download"), body)
         resp = _model(DownloadResponse, data)
         if out_dir and not resp.cached_path:
             # Server didn't cache; fetch bytes directly and write locally.
@@ -269,31 +277,31 @@ class WebfetchClient(_ClientBase, AbstractContextManager["WebfetchClient"]):
         return resp
 
     def probe(self, url: str) -> ProbeResponse:
-        data = self._post("/probe", {"url": url})
+        data = self._post(self._path("/probe"), {"url": url})
         return _model(ProbeResponse, data)
 
     def fetch_with_license(
         self, url: str, *, probe: bool = False
     ) -> FetchWithLicenseResponse:
-        data = self._post("/license", {"url": url, "probe": probe})
+        data = self._post(self._path("/license"), {"url": url, "probe": probe})
         return _model(FetchWithLicenseResponse, data)
 
     def find_similar(self, url: str) -> List[ImageCandidate]:
-        data = self._post("/similar", {"url": url})
+        data = self._post(self._path("/similar"), {"url": url})
         if isinstance(data, dict) and "candidates" in data:
             data = data["candidates"]
         return [ImageCandidate.model_validate(x) for x in (data or [])]
 
     def providers(self) -> ProvidersResponse:
-        data = self._get("/providers")
+        data = self._get(self._path("/providers"))
         return _model(ProvidersResponse, data)
 
     def usage(self) -> UsageResponse:
-        data = self._get("/v1/usage")
+        data = self._get(self._path("/usage"))
         return _model(UsageResponse, data)
 
     def keys(self) -> KeysResponse:
-        data = self._get("/v1/keys")
+        data = self._get(self._path("/keys"))
         return _model(KeysResponse, data)
 
 
@@ -352,7 +360,7 @@ class AsyncWebfetchClient(_ClientBase, AbstractAsyncContextManager["AsyncWebfetc
         min_height: int = 0,
     ) -> SearchResponse:
         data = await self._post(
-            "/search",
+            self._path("/search"),
             _search_payload(
                 query,
                 providers=providers,
@@ -367,11 +375,11 @@ class AsyncWebfetchClient(_ClientBase, AbstractAsyncContextManager["AsyncWebfetc
     async def search_artist_images(
         self, artist: str, *, kind: str = "portrait"
     ) -> SearchResponse:
-        data = await self._post("/artist", {"artist": artist, "kind": kind})
+        data = await self._post(self._path("/artist"), {"artist": artist, "kind": kind})
         return _model(SearchResponse, data)
 
     async def search_album_cover(self, artist: str, album: str) -> SearchResponse:
-        data = await self._post("/album", {"artist": artist, "album": album})
+        data = await self._post(self._path("/album"), {"artist": artist, "album": album})
         return _model(SearchResponse, data)
 
     async def download(
@@ -386,7 +394,7 @@ class AsyncWebfetchClient(_ClientBase, AbstractAsyncContextManager["AsyncWebfetc
             body["maxBytes"] = max_bytes
         if out_dir is not None:
             body["cacheDir"] = out_dir
-        data = await self._post("/download", body)
+        data = await self._post(self._path("/download"), body)
         resp = _model(DownloadResponse, data)
         if out_dir and not resp.cached_path:
             target_dir = pathlib.Path(out_dir).expanduser()
@@ -402,31 +410,31 @@ class AsyncWebfetchClient(_ClientBase, AbstractAsyncContextManager["AsyncWebfetc
         return resp
 
     async def probe(self, url: str) -> ProbeResponse:
-        data = await self._post("/probe", {"url": url})
+        data = await self._post(self._path("/probe"), {"url": url})
         return _model(ProbeResponse, data)
 
     async def fetch_with_license(
         self, url: str, *, probe: bool = False
     ) -> FetchWithLicenseResponse:
-        data = await self._post("/license", {"url": url, "probe": probe})
+        data = await self._post(self._path("/license"), {"url": url, "probe": probe})
         return _model(FetchWithLicenseResponse, data)
 
     async def find_similar(self, url: str) -> List[ImageCandidate]:
-        data = await self._post("/similar", {"url": url})
+        data = await self._post(self._path("/similar"), {"url": url})
         if isinstance(data, dict) and "candidates" in data:
             data = data["candidates"]
         return [ImageCandidate.model_validate(x) for x in (data or [])]
 
     async def providers(self) -> ProvidersResponse:
-        data = await self._get("/providers")
+        data = await self._get(self._path("/providers"))
         return _model(ProvidersResponse, data)
 
     async def usage(self) -> UsageResponse:
-        data = await self._get("/v1/usage")
+        data = await self._get(self._path("/usage"))
         return _model(UsageResponse, data)
 
     async def keys(self) -> KeysResponse:
-        data = await self._get("/v1/keys")
+        data = await self._get(self._path("/keys"))
         return _model(KeysResponse, data)
 
 

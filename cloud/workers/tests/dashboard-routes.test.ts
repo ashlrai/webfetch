@@ -79,4 +79,13 @@ describe("dashboard (cookie auth) routes", () => {
     const body = (await res.json()) as { data: { endpoints: string[] } };
     expect(body.data.endpoints).toContain("/v1/search");
   });
+
+  test("GET /v1/providers compatibility route returns provider list", async () => {
+    const { env } = makeEnv();
+    const res = await app.fetch(new Request("http://x/v1/providers"), env, makeExecCtx());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { all: string[]; endpoints: string[] } };
+    expect(body.data.all).toContain("wikimedia");
+    expect(body.data.endpoints).toContain("/v1/search");
+  });
 });

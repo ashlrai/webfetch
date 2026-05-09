@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @webfetch/cli entrypoint.
+ * webfetch entrypoint.
  *
  * Keep this file thin: argv parsing + dispatch lives in commands.ts so tests
  * can exercise the surface without spawning a subprocess.

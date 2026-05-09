@@ -11,10 +11,23 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { readFileSync } from "node:fs";
 import { TOOLS } from "./tools.ts";
 import { zodToJsonSchema } from "./zod-json.ts";
 
-const server = new Server({ name: "webfetch", version: "0.1.0" }, { capabilities: { tools: {} } });
+function packageVersion(): string {
+  try {
+    const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+    return typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+const server = new Server(
+  { name: "webfetch", version: packageVersion() },
+  { capabilities: { tools: {} } },
+);
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOLS.map((t) => ({

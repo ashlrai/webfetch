@@ -5,7 +5,7 @@
  * for enterprise legal-indemnification.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import type { ExtractorId } from "./types.ts";
 
 export interface AttributionSidecar {

@@ -45,7 +45,7 @@ So this has to be clicked through the console once. Project
 6. From `cloud/workers/`, wire the secrets and redeploy:
 
    ```bash
-   cd /Users/masonwyatt/Desktop/web-fetcher-mcp/cloud/workers
+   cd /Users/masonwyatt/Desktop/github/dev-tools/webfetch/cloud/workers
    printf '%s' 'PASTE_CLIENT_ID'     | npx wrangler secret put GOOGLE_CLIENT_ID
    printf '%s' 'PASTE_CLIENT_SECRET' | npx wrangler secret put GOOGLE_CLIENT_SECRET
    npx wrangler deploy

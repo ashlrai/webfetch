@@ -1,6 +1,6 @@
 ---
 title: "Recipe 7: Self-host the MCP server for an internal AI agent"
-description: Run @webfetch/server behind your VPN, expose it over HTTP to a team of agents, BYOK for provider auth.
+description: Run webfetch-server behind your VPN, expose it over HTTP to a team of agents, BYOK for provider auth.
 section: Cookbook
 ---
 
@@ -52,12 +52,12 @@ curl -sS -X POST http://webfetch.internal:7600/search \
   -d '{"query":"architecture diagram","licensePolicy":"safe-only"}'
 ```
 
-For MCP-native IDEs, run `@webfetch/mcp` as a local stdio server in the IDE
+For MCP-native IDEs, run `getwebfetch-mcp` as a local stdio server in the IDE
 and give that process the same provider keys. The current MCP package does not
 proxy to a remote HTTP server.
 
 ```bash
-npx -y @webfetch/mcp
+npx -y getwebfetch-mcp
 ```
 
 ## Locking down the network

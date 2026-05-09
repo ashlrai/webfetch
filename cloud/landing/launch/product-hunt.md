@@ -4,17 +4,17 @@
 webfetch
 
 ## Tagline (60 char max)
-License-first image search for AI agents. One MCP. 24 sources.
+License-first image search for AI agents. One MCP. 25 sources.
 
 ## Description (260 char)
-webfetch is the license-aware image fetching layer your AI agent is missing. One CLI + MCP server federates 24 providers (Wikimedia, Unsplash, NASA, Smithsonian, Met, LOC, and more), ranks results license-first, and ships attribution on every image. Apache-2.0 core.
+webfetch is the license-aware image fetching layer your AI agent is missing. One CLI + MCP server federates 25 providers (Wikimedia, Unsplash, NASA, Smithsonian, Met, LOC, and more), ranks results license-first, and ships attribution on every image. Apache-2.0 core.
 
 ## Gallery (order)
 1. Hero screenshot — dark landing with install command (`cloud/landing/public/og-image.png`)
 2. Demo GIF — landing scroll-through (`cloud/landing/public/demo-hero.gif`)
 3. CLI demo GIF — `webfetch search "drake portrait"` returning 5 license-tagged candidates
 4. MCP in Claude Code — agent calling `search_images` + shipping the result into a project
-5. Provider matrix — the 24-row table
+5. Provider matrix — the 25-row table
 6. Pricing page — Free / Pro / Team / Enterprise
 7. Architecture diagram — CLI/MCP/ext → core → providers + browser + cloud (`cloud/landing/public/diagram-architecture.svg`)
 8. Chrome extension — shadow-DOM sidebar with license-ranked results
@@ -36,7 +36,7 @@ Two weeks later, it's a product:
 
 OSS is unlimited on your machine forever. Cloud is usage-based ($19/mo Pro, $79/mo Team, Enterprise custom).
 
-If you've ever had a content team or an AI pipeline get blocked on "is this image safe to ship?" — webfetch is the protocol layer that unblocks it.
+If you've ever had a content team or an AI pipeline get blocked on "what license category is this image?" — webfetch is the protocol layer that unblocks it.
 
 Feedback very welcome. I'm also around all day in the comments.
 

@@ -1,7 +1,7 @@
-"""Minimal CLI wrapper: `python -m webfetch <cmd>`.
+"""Minimal CLI wrapper: `python -m webfetch <cmd>` or `webfetch-py <cmd>`.
 
 Supports: search, providers, download. Kept intentionally thin; for full
-features use the TypeScript CLI (`npm i -g @webfetch/cli`).
+features use the TypeScript CLI (`npm i -g getwebfetch`).
 """
 from __future__ import annotations
 
@@ -60,10 +60,38 @@ def _cmd_download(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_artist(args: argparse.Namespace) -> int:
+    with _client(args) as c:
+        _print(c.search_artist_images(args.artist, kind=args.kind))
+    return 0
+
+
+def _cmd_album(args: argparse.Namespace) -> int:
+    with _client(args) as c:
+        _print(c.search_album_cover(args.artist, args.album))
+    return 0
+
+
+def _cmd_probe(args: argparse.Namespace) -> int:
+    with _client(args) as c:
+        _print(c.probe(args.url))
+    return 0
+
+
+def _cmd_license(args: argparse.Namespace) -> int:
+    with _client(args) as c:
+        _print(c.fetch_with_license(args.url, probe=args.probe))
+    return 0
+
+
+def _cmd_similar(args: argparse.Namespace) -> int:
+    with _client(args) as c:
+        _print(c.find_similar(args.url))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="webfetch", description="webfetch Python SDK CLI"
-    )
+    p = argparse.ArgumentParser(prog="webfetch-py", description="webfetch Python SDK CLI")
     p.add_argument("--api-key", default=None, help="API key (defaults to $WEBFETCH_API_KEY)")
     p.add_argument("--base-url", default=None, help="Override API base URL (self-hosted)")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -71,7 +99,11 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("search", help="Search images")
     s.add_argument("query")
     s.add_argument("--providers", default=None, help="Comma-separated provider ids")
-    s.add_argument("--license", default="safe-only", choices=["safe-only", "prefer-safe", "any"])
+    s.add_argument(
+        "--license",
+        default="safe-only",
+        choices=["open-only", "safe-only", "context-safe", "prefer-safe", "any"],
+    )
     s.add_argument("--limit", type=int, default=10)
     s.add_argument("--min-width", type=int, default=0)
     s.add_argument("--min-height", type=int, default=0)
@@ -85,6 +117,29 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--out-dir", default=None)
     d.add_argument("--max-bytes", type=int, default=None)
     d.set_defaults(func=_cmd_download)
+
+    a = sub.add_parser("artist", help="Search artist images")
+    a.add_argument("artist")
+    a.add_argument("--kind", default="portrait", choices=["portrait", "album", "logo", "performing"])
+    a.set_defaults(func=_cmd_artist)
+
+    al = sub.add_parser("album", help="Search album artwork")
+    al.add_argument("artist")
+    al.add_argument("album")
+    al.set_defaults(func=_cmd_album)
+
+    pr = sub.add_parser("probe", help="Probe a webpage for images")
+    pr.add_argument("url")
+    pr.set_defaults(func=_cmd_probe)
+
+    lic = sub.add_parser("license", help="Fetch license metadata for a URL")
+    lic.add_argument("url")
+    lic.add_argument("--probe", action="store_true")
+    lic.set_defaults(func=_cmd_license)
+
+    sim = sub.add_parser("similar", help="Find similar images")
+    sim.add_argument("url")
+    sim.set_defaults(func=_cmd_similar)
 
     return p
 

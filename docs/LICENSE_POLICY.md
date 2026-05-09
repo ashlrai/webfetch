@@ -8,8 +8,11 @@
 | 2 | PUBLIC_DOMAIN         | Expired copyright / gov work                            |
 | 3 | CC_BY                 | Commercial OK, attribution required                     |
 | 4 | CC_BY_SA              | Commercial OK, attribution + sharealike                 |
-| 5 | EDITORIAL_LICENSED    | Platform ToS allows editorial display (Spotify/CAA/iTunes) |
-| 6 | PRESS_KIT_ALLOWLIST   | Official press kit from an allowlisted URL              |
+| 5 | UNSPLASH_LICENSE      | Unsplash platform license; not CC0                      |
+| 6 | PEXELS_LICENSE        | Pexels platform license; not CC0                        |
+| 7 | PIXABAY_LICENSE       | Pixabay platform license; not CC0                       |
+| 8 | EDITORIAL_LICENSED    | Platform ToS allows editorial display (Spotify/CAA/iTunes) |
+| 9 | PRESS_KIT_ALLOWLIST   | Official press kit from an allowlisted URL              |
 |99 | UNKNOWN               | **REJECTED** by default                                 |
 
 ## Why license-first, not relevance-first
@@ -29,6 +32,28 @@ all-rights-reserved by default under the Berne Convention. If we guessed
 "safe" we'd ship infringing images. Better: we surface structured coverage
 gaps so the caller can make an explicit call (e.g. pay for a press photo,
 email the photographer, or drop the feature).
+
+## Migration from CC0 stock tags
+
+Unsplash, Pexels, and Pixabay are useful for commercial-friendly stock imagery,
+but their terms are platform licenses, not Creative Commons or public-domain
+dedications. Current webfetch releases therefore use dedicated tags:
+
+| Provider | Old behavior | Current tag |
+|---|---|---|
+| Unsplash | `CC0` | `UNSPLASH_LICENSE` |
+| Pexels | `CC0` | `PEXELS_LICENSE` |
+| Pixabay | `CC0` | `PIXABAY_LICENSE` |
+
+Migration checklist:
+
+- Replace checks like `candidate.license === "CC0"` for these providers with
+  explicit platform-license handling.
+- Keep `licensePolicy: "safe-only"` if platform licenses are acceptable.
+- Switch to `licensePolicy: "open-only"` when only `CC0`, `PUBLIC_DOMAIN`,
+  `CC_BY`, or `CC_BY_SA` may pass.
+- Re-render stored attribution or sidecar data for cached stock results so the
+  persisted license tag matches the current taxonomy.
 
 ## Attribution
 

@@ -1,5 +1,5 @@
 /**
- * Pexels — free key. Pexels License is CC0-like; commercial OK, no attribution required.
+ * Pexels — free key. Results use the proprietary Pexels License, not CC0.
  */
 
 import { getBucket } from "../rate-limit.ts";
@@ -7,7 +7,7 @@ import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
 
 export const pexels: Provider = {
   id: "pexels",
-  defaultLicense: "CC0",
+  defaultLicense: "PEXELS_LICENSE",
   requiresAuth: true,
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     const key = opts.auth?.pexelsApiKey ?? process.env.PEXELS_API_KEY;
@@ -28,7 +28,7 @@ export const pexels: Provider = {
         sourcePageUrl: p.url,
         title: p.alt,
         author: p.photographer,
-        license: "CC0",
+        license: "PEXELS_LICENSE",
         licenseUrl: "https://www.pexels.com/license/",
         confidence: 0.85,
       }),

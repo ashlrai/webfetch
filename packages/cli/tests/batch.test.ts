@@ -112,6 +112,37 @@ describe("batch dispatch", () => {
     expect(downloads.length).toBe(2);
   });
 
+  test("--jsonl emits one stable status record per query", async () => {
+    const o = io(["x", "y"]);
+    const code = await run(["batch", "--jsonl", "--candidates", "1"], o.io);
+    expect(code).toBe(0);
+    const lines = o.stdout().split("\n");
+    expect(lines.length).toBe(2);
+    const first = JSON.parse(lines[0]!);
+    expect(first.status).toBe("ok");
+    expect(first.index).toBe(0);
+    expect(first.candidates.length).toBe(1);
+  });
+
+  test("--continue-on-error keeps later records", async () => {
+    __setCoreForTests({
+      searchImages: (async (q: string) => {
+        if (q === "bad") throw new Error("boom");
+        return {
+          candidates: [{ url: `https://a/${q}.jpg`, source: "wikimedia", license: "CC0" as const }],
+          providerReports: [],
+          warnings: [],
+        };
+      }) as any,
+    });
+    const o = io(["bad", "good"]);
+    const code = await run(["batch", "--jsonl", "--continue-on-error"], o.io);
+    expect(code).toBe(1);
+    const lines = o.stdout().split("\n").map((line) => JSON.parse(line));
+    expect(lines[0].status).toBe("error");
+    expect(lines[1].status).toBe("ok");
+  });
+
   test("empty stdin returns exit 2", async () => {
     const o = io([]);
     const code = await run(["batch", "--json"], o.io);

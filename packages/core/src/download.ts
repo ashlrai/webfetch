@@ -21,7 +21,13 @@ const HOST_BLOCKLIST = new Set<string>([
 export class DownloadError extends Error {
   constructor(
     message: string,
-    public readonly kind: "too-large" | "bad-type" | "blocked-host" | "network" | "aborted",
+    public readonly kind:
+      | "too-large"
+      | "bad-type"
+      | "blocked-host"
+      | "network"
+      | "aborted"
+      | "redirect",
   ) {
     super(message);
     this.name = "DownloadError";
@@ -40,6 +46,7 @@ export interface DownloadOptions {
   signal?: AbortSignal;
   allowNonImage?: boolean;
   userAgent?: string;
+  maxRedirects?: number;
 }
 
 export interface DownloadResult {
@@ -64,7 +71,8 @@ export async function downloadImage(
   // metadata endpoints (e.g. 169.254.169.254). See SECURITY-AUDIT-REPORT.md.
   const publicUrl = assertPublicHttpUrl(url);
   if (!publicUrl.ok) throw new DownloadError(publicUrl.error, "blocked-host");
-  const host = safeHost(url);
+  let currentUrl = url;
+  const host = safeHost(currentUrl);
   if (!host) throw new DownloadError(`invalid url: ${url}`, "network");
   if (HOST_BLOCKLIST.has(host)) throw new DownloadError(`host blocked: ${host}`, "blocked-host");
   for (const extra of (process.env.WEBFETCH_BLOCKLIST ?? "")
@@ -83,9 +91,14 @@ export async function downloadImage(
 
   let resp: Response;
   try {
-    resp = await fetcher(url, { headers, signal: opts.signal, redirect: "follow" });
+    resp = await fetchWithValidatedRedirects(currentUrl, fetcher, {
+      headers,
+      signal: opts.signal,
+      maxRedirects: opts.maxRedirects ?? 5,
+    });
   } catch (e) {
     if ((e as any)?.name === "AbortError") throw new DownloadError("aborted", "aborted");
+    if (e instanceof DownloadError) throw e;
     throw new DownloadError(`fetch failed: ${(e as Error).message}`, "network");
   }
   if (!resp.ok) throw new DownloadError(`http ${resp.status}`, "network");
@@ -126,6 +139,55 @@ export async function downloadImage(
     : await writeCache(sha256, bytes, cacheDir);
 
   return { bytes, mime, sha256, cachedPath };
+}
+
+async function fetchWithValidatedRedirects(
+  url: string,
+  fetcher: Fetcher,
+  opts: { headers: Record<string, string>; signal?: AbortSignal; maxRedirects: number },
+): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop <= opts.maxRedirects; hop++) {
+    const check = assertPublicHttpUrl(current);
+    if (!check.ok) throw new DownloadError(`redirect blocked: ${check.error}`, "blocked-host");
+    assertNotBlockedByEnv(current);
+    const resp = await fetcher(current, {
+      headers: opts.headers,
+      signal: opts.signal,
+      redirect: "manual",
+    });
+    const finalUrl = (resp as Response).url;
+    if (finalUrl && finalUrl !== current) {
+      const finalCheck = assertPublicHttpUrl(finalUrl);
+      if (!finalCheck.ok) {
+        throw new DownloadError(`final url blocked: ${finalCheck.error}`, "blocked-host");
+      }
+      assertNotBlockedByEnv(finalUrl);
+    }
+    if (!isRedirectStatus(resp.status)) return resp;
+    const location = resp.headers.get("location");
+    if (!location) throw new DownloadError(`redirect ${resp.status} without location`, "redirect");
+    current = new URL(location, current).toString();
+  }
+  throw new DownloadError(`too many redirects (>${opts.maxRedirects})`, "redirect");
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function assertNotBlockedByEnv(url: string): void {
+  const host = safeHost(url);
+  if (!host) throw new DownloadError(`invalid url: ${url}`, "network");
+  if (HOST_BLOCKLIST.has(host)) throw new DownloadError(`host blocked: ${host}`, "blocked-host");
+  for (const extra of (process.env.WEBFETCH_BLOCKLIST ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
+    if (host === extra || host.endsWith(`.${extra}`)) {
+      throw new DownloadError(`host blocked by env: ${host}`, "blocked-host");
+    }
+  }
 }
 
 function concat(chunks: Uint8Array[], total: number): Uint8Array {

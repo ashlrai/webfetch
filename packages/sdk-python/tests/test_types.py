@@ -19,6 +19,7 @@ FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "search_response.json"
 
 def test_license_enum_values():
     assert License.CC0.value == "CC0"
+    assert License.UNSPLASH_LICENSE.value == "UNSPLASH_LICENSE"
     assert License("UNKNOWN") is License.UNKNOWN
 
 

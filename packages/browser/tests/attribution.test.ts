@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import { buildSidecar, tagCandidate } from "../src/index.ts";
 
 const base: ImageCandidate = {

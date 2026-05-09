@@ -1,7 +1,7 @@
 # MCP Registry Submission
 
 Copy-paste artifacts for submitting webfetch to the two main MCP registries.
-Do not submit until `@webfetch/mcp` is published to npm (see blocker note at bottom).
+`getwebfetch-mcp` is published to npm and can be installed with `npx`.
 
 ---
 
@@ -14,13 +14,13 @@ Do not submit until `@webfetch/mcp` is published to npm (see blocker note at bot
 ### Exact line to add
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - License-first image search across 24 providers (Wikimedia, Openverse, Unsplash, Pexels, and more) with per-result CC/editorial license tags, attribution lines, and download tooling.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - License-first image search across 25 providers (Wikimedia, Openverse, Unsplash, Pexels, and more) with per-result open/platform/editorial license tags, attribution lines, and download tooling.
 ```
 
 > Character count of description: 198. Registry entries typically prefer ≤160 chars. Shorter variant:
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 24 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 25 providers with license categories, attribution strings, and download — built for agents that need reviewable assets.
 ```
 
 (157 chars)
@@ -33,7 +33,7 @@ Find the `## 🌐 Web & Browser` (or equivalent) section in the servers README a
  ## 🌐 Web & Browser
 
  ...
-+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 24 providers with license tagging (CC0 → editorial), attribution strings, and download — built for agents that need shippable assets.
++- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) - Federated image search across 25 providers with license categories, attribution strings, and download — built for agents that need reviewable assets.
  ...
 ```
 
@@ -48,7 +48,7 @@ Find the `## 🌐 Web & Browser` (or equivalent) section in the servers README a
 ### Exact line to add
 
 ```markdown
-- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 24 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 25 providers. Every result includes an open/platform/editorial license tag, confidence score, and attribution line ready to render.
 ```
 
 Awesome-MCP-Servers uses emoji badges: 🏠 = open-source/self-hosted, ☁️ = cloud-optional. webfetch runs locally with optional cloud provider keys — both apply.
@@ -59,7 +59,7 @@ Awesome-MCP-Servers uses emoji badges: 🏠 = open-source/self-hosted, ☁️ = 
  ## 🔍 Search
 
  ...
-+- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 24 providers. Every result includes a CC/editorial license tag, confidence score, and attribution line ready to render.
++- [webfetch](https://github.com/ashlrai/webfetch/tree/main/packages/mcp) 🏠 ☁️ - License-first federated image search across 25 providers. Every result includes an open/platform/editorial license tag, confidence score, and attribution line ready to render.
  ...
 ```
 
@@ -84,8 +84,8 @@ feat: add webfetch — license-first image search MCP server
 
 ### What it does
 
-- Federated search across **24 providers** — Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, MusicBrainz CAA, iTunes, Spotify, YouTube thumbnails, Brave, Bing, SerpApi, browser fallback, and public-domain/GLAM sources like NASA, The Met, Library of Congress, Internet Archive, Smithsonian, Europeana, Wellcome, Rawpixel, and Burst
-- Every result carries a **structured license tag** (`CC0`, `CC_BY`, `CC_BY_SA`, `EDITORIAL_LICENSED`, …), a **confidence score** in [0, 1], and a **ready-to-render attribution line**
+- Federated search across **25 providers** — Wikimedia Commons, Openverse, Unsplash, Pexels, Pixabay, MusicBrainz CAA, iTunes, Spotify, YouTube thumbnails, Brave, Bing, SerpApi, browser fallback, managed browser fallback, and public-domain/GLAM sources like NASA, The Met, Library of Congress, Internet Archive, Smithsonian, Europeana, Wellcome, Rawpixel, and Burst
+- Every result carries a **structured license tag** (`CC0`, `CC_BY`, `UNSPLASH_LICENSE`, `EDITORIAL_LICENSED`, `UNKNOWN`, …), a **confidence score** in [0, 1], and a **ready-to-render attribution line**
 - Results with `confidence < 0.5` are excluded from "safe" results by default
 - 7 composable tools: `search_images`, `search_artist_images`, `search_album_cover`, `download_image`, `fetch_with_license`, `find_similar`, `probe_page`
 - **No API key required** for Wikimedia + Openverse; optional keys unlock additional providers
@@ -93,6 +93,9 @@ feat: add webfetch — license-first image search MCP server
 ### Install
 
 ```bash
+# npm package
+npx -y getwebfetch-mcp
+
 # one-line installer (sets up bun, builds server, merges Claude config)
 curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
 ```
@@ -116,7 +119,7 @@ Or add manually to `~/.claude/settings.json`:
 - [x] MIT licensed
 - [x] README covers install, tools table, env vars, and demo prompts
 - [x] Works with Claude Desktop, Cursor, Cline (per docs)
-- [ ] Published to npm as `@webfetch/mcp` ← **pending** (see note below)
+- [x] Published to npm as `getwebfetch-mcp`
 
 ### Links
 
@@ -127,25 +130,30 @@ Or add manually to `~/.claude/settings.json`:
 
 ---
 
-## Blockers before submitting
+## Submission notes
 
-1. **`@webfetch/mcp` is not published to npm.**  
-   `npm view @webfetch/mcp` returns 404. Both registries prefer (and awesome-mcp-servers may require) a published npm package so users can install via `npx` or reference a versioned release.  
-   Run `bun run build && npm publish --access public` from `packages/mcp/` after setting up an npm token (see `docs/NPM_TOKEN_SETUP.md`).  
-   Once published, add an `npx` install option to the README:
+1. **NPM install.**
+   `getwebfetch-mcp` is published on npm. Registry reviewers can smoke-test it with:
+
+   ```bash
+   npx -y getwebfetch-mcp
+   ```
+
+   MCP client config:
+
    ```json
    {
      "mcpServers": {
        "webfetch": {
          "command": "npx",
-         "args": ["-y", "@webfetch/mcp"]
+         "args": ["-y", "getwebfetch-mcp"]
        }
      }
    }
    ```
 
-2. **Repository URL.**  
+2. **Repository URL.**
    Canonical public GitHub URL is `https://github.com/ashlrai/webfetch`; registries link directly to it.
 
-3. **No `mcp-registry` page under `/mcp`.**  
+3. **Landing URL.**
    The landing site has the route at `/mcp-registry`, not `/mcp`. Submission copy above links to GitHub directly, which is fine, but the landing URL in the README (`getwebfetch.com`) should route reviewers somewhere meaningful. Verify the canonical marketing URL before submitting.

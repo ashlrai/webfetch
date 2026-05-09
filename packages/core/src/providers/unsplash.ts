@@ -1,8 +1,6 @@
 /**
- * Unsplash — requires free access key. License is Unsplash License (CC0-like,
- * commercial OK with no attribution required; we map to CC0 with confidence
- * 0.85 because the Unsplash License isn't technically CC0 but is treated
- * identically for our policy).
+ * Unsplash — requires free access key. Results use the proprietary Unsplash
+ * License: commercial reuse is broadly allowed, but it is not CC0.
  */
 
 import { getBucket } from "../rate-limit.ts";
@@ -10,7 +8,7 @@ import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
 
 export const unsplash: Provider = {
   id: "unsplash",
-  defaultLicense: "CC0",
+  defaultLicense: "UNSPLASH_LICENSE",
   requiresAuth: true,
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     const key = opts.auth?.unsplashAccessKey ?? process.env.UNSPLASH_ACCESS_KEY;
@@ -38,7 +36,7 @@ export const unsplash: Provider = {
         sourcePageUrl: r.links?.html,
         title: r.description ?? r.alt_description,
         author: r.user?.name,
-        license: "CC0",
+        license: "UNSPLASH_LICENSE",
         licenseUrl: "https://unsplash.com/license",
         confidence: 0.85,
       }),

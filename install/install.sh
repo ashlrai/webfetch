@@ -114,7 +114,7 @@ fi
 say "installing dependencies (bun install)"
 ( cd "$REPO_DIR" && bun install --silent )
 
-say "building @webfetch/core (CLI depends on its types)"
+say "building webfetch-core (CLI depends on its types)"
 ( cd "$REPO_DIR" && bun run --cwd packages/core build )
 
 say "building CLI"

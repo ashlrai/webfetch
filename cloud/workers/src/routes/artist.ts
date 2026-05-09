@@ -1,7 +1,7 @@
 /** /v1/artist — specialized artist image search. See search.ts for shape. */
 
-import { searchArtistImages } from "@webfetch/core";
 import { Hono } from "hono";
+import { searchArtistImages } from "webfetch-core";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";

@@ -1,5 +1,5 @@
 {
-  "name": "@webfetch/core",
+  "name": "webfetch-core",
   "version": "0.1.0",
   "description": "License-first federated image search core: ranker, cache, provider federation, pHash dedupe, EXIF/IPTC/XMP metadata.",
   "license": "MIT",
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ashlrai/webfetch.git",
+    "url": "git+https://github.com/ashlrai/webfetch.git",
     "directory": "packages/core"
   },
   "publishConfig": {

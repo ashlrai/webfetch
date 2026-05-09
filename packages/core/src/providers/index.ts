@@ -1,4 +1,4 @@
-import type { Provider, ProviderId } from "../types.ts";
+import type { Provider, ProviderAuthRequirement, ProviderId } from "../types.ts";
 export { PROVIDER_IDS } from "../types.ts";
 import { bing } from "./bing.ts";
 import { brave } from "./brave.ts";
@@ -53,6 +53,29 @@ export const ALL_PROVIDERS: Record<ProviderId, Provider> = {
   "europeana-archival": europeanaArchival,
   "managed-browser": managedBrowser,
 };
+
+export const PROVIDER_AUTH: Partial<Record<ProviderId, ProviderAuthRequirement>> = {
+  unsplash: { keys: ["unsplashAccessKey"], env: ["UNSPLASH_ACCESS_KEY"] },
+  pexels: { keys: ["pexelsApiKey"], env: ["PEXELS_API_KEY"] },
+  pixabay: { keys: ["pixabayApiKey"], env: ["PIXABAY_API_KEY"] },
+  spotify: {
+    keys: ["spotifyClientId", "spotifyClientSecret"],
+    env: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
+  },
+  brave: { keys: ["braveApiKey"], env: ["BRAVE_API_KEY"] },
+  bing: { keys: ["bingApiKey"], env: ["BING_API_KEY"] },
+  serpapi: { keys: ["serpApiKey"], env: ["SERPAPI_KEY"] },
+  flickr: { keys: ["flickrApiKey"], env: ["FLICKR_API_KEY"] },
+  smithsonian: { keys: ["smithsonianApiKey"], env: ["SMITHSONIAN_API_KEY"] },
+  europeana: { keys: ["europeanaApiKey"], env: ["EUROPEANA_API_KEY"] },
+  "europeana-archival": { keys: ["europeanaApiKey"], env: ["EUROPEANA_API_KEY"] },
+  "managed-browser": { keys: ["brightDataApiToken"], env: ["BRIGHTDATA_API_TOKEN"] },
+};
+
+for (const id of Object.keys(PROVIDER_AUTH) as ProviderId[]) {
+  const provider = ALL_PROVIDERS[id];
+  if (provider) provider.auth = PROVIDER_AUTH[id];
+}
 
 /**
  * Safe defaults: providers run when no `providers` list is supplied.

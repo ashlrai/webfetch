@@ -106,6 +106,10 @@ async function runProvider(
     reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "not-enabled" });
     return [];
   }
+  if (!providerCanRun(provider, opts)) {
+    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "missing-auth" });
+    return [];
+  }
 
   const started = Date.now();
   // Per-provider timeout wired onto a dedicated AbortController so the global
@@ -123,20 +127,30 @@ async function runProvider(
     return out;
   } catch (e) {
     const msg = (e as Error).message ?? "unknown";
-    const skipped = /missing|disabled/i.test(msg) ? "missing-auth" : undefined;
     reports.push({
       provider: id,
       ok: false,
       count: 0,
       timeMs: Date.now() - started,
       error: msg,
-      skipped,
     });
     return [];
   } finally {
     clearTimeout(timer);
     outerAbort?.removeEventListener("abort", onAbort);
   }
+}
+
+function providerCanRun(provider: Provider, opts: SearchOptions): boolean {
+  if (!provider.requiresAuth) return true;
+  const req = provider.auth;
+  if (!req || req.keys.length === 0) return true;
+  return req.keys.every((key, index) => {
+    const val = opts.auth?.[key];
+    if (typeof val === "string" && val.length > 0) return true;
+    const envName = req.env[index];
+    return envName ? !!process.env[envName] : false;
+  });
 }
 
 function prettySource(source: string): string {

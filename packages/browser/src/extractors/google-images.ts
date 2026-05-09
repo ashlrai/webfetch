@@ -10,7 +10,7 @@
  * responsible for downstream license classification + ToS acceptance.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import type { ExtractContext, ExtractResult } from "./types.ts";
 
 function decodeImgresHref(href: string): { full?: string; page?: string } | null {

@@ -9,7 +9,7 @@
  * Dedupes by URL. All candidates get license:"UNKNOWN" and viaBrowserFallback:true.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import type { ExtractContext, ExtractResult } from "./types.ts";
 
 const IMAGE_EXTS = /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)(?:\?.*)?$/i;

@@ -1,4 +1,4 @@
-# mcp.run submission — @webfetch/mcp
+# mcp.run submission — webfetch-mcp
 
 Target registry: https://mcp.run (Extism-backed MCP registry with hosted
 wasm + npx runtimes).
@@ -10,11 +10,11 @@ slug: webfetch
 name: webfetch
 publisher: ashlrai
 runtime: node
-entry: "npx -y @webfetch/mcp"
+entry: "npx -y getwebfetch-mcp"
 license: MIT
 homepage: https://getwebfetch.com
 repository: https://github.com/ashlrai/webfetch
-tagline: License-first federated image search for AI agents (24 providers)
+tagline: License-first federated image search for AI agents (25 providers)
 description: |
   webfetch is a single MCP server that federates 24 licensed image
   providers — Wikimedia, Openverse, NASA, Smithsonian, Met Museum, LOC,
@@ -51,8 +51,8 @@ badges:
 
 ## Submission checklist
 
-- [ ] `@webfetch/mcp@0.1.0` live on npm
-- [ ] `npx -y @webfetch/mcp` responds to `tools/list` in <5s cold
+- [ ] `getwebfetch-mcp@0.1.2` live on npm
+- [ ] `npx -y getwebfetch-mcp` responds to `tools/list` in <5s cold
 - [ ] README top section has a mcp.run install button
 - [ ] File a registry issue at https://github.com/dylibso/mcp.run-registry
       (or the current canonical path) with the YAML above

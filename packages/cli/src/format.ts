@@ -74,6 +74,10 @@ export function licenseColor(lic: string): (s: string) => string {
     case "CC_BY":
     case "CC_BY_SA":
       return c.cyan;
+    case "UNSPLASH_LICENSE":
+    case "PEXELS_LICENSE":
+    case "PIXABAY_LICENSE":
+      return c.blue;
     case "EDITORIAL_LICENSED":
     case "PRESS_KIT_ALLOWLIST":
       return c.yellow;

@@ -1,5 +1,5 @@
 /**
- * Timeline / event photo helper — uses providers with strong CC/editorial
+ * Timeline / event photo helper — uses providers with strong open/platform
  * coverage for historical/news events.
  */
 

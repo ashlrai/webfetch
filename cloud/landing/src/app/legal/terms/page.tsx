@@ -26,7 +26,7 @@ export default function TermsPage() {
 
       <h2>1. Agreement</h2>
       <p>
-        By using getwebfetch.com, api.getwebfetch.com, or any @webfetch/* package, you agree to
+        By using getwebfetch.com, api.getwebfetch.com, or any webfetch package, you agree to
         these terms. If you disagree, do not use the service.
       </p>
 

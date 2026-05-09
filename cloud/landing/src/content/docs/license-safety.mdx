@@ -28,6 +28,9 @@ Every candidate carries exactly one of these tags:
 | `PUBLIC_DOMAIN` | Expired copyright or government work. | Yes |
 | `CC_BY` | Commercial OK, attribution required. | Yes, with credit |
 | `CC_BY_SA` | Commercial OK, attribution + sharealike (derivative works must be CC-BY-SA). | Usually yes; check your contract |
+| `UNSPLASH_LICENSE` | Unsplash platform license. | Check platform terms |
+| `PEXELS_LICENSE` | Pexels platform license. | Check platform terms |
+| `PIXABAY_LICENSE` | Pixabay platform license. | Check platform terms |
 | `EDITORIAL_LICENSED` | Platform ToS allows editorial display (Spotify/CAA/iTunes). | Only in the context of the platform identity |
 | `PRESS_KIT_ALLOWLIST` | Official press kit from an allowlisted URL. | Within press-kit usage terms |
 | `UNKNOWN` | No license evidence found. | **No** |
@@ -36,13 +39,15 @@ Every candidate carries exactly one of these tags:
 
 Candidates are sorted by three keys, in order:
 
-1. **License rank** — `CC0 (1) < PUBLIC_DOMAIN (2) < CC_BY (3) < CC_BY_SA (4) < EDITORIAL_LICENSED (5) < PRESS_KIT_ALLOWLIST (6) < UNKNOWN (99)`.
+1. **License rank** — `CC0 (1) < PUBLIC_DOMAIN (2) < CC_BY (3) < CC_BY_SA (4) < UNSPLASH_LICENSE (5) < PEXELS_LICENSE (6) < PIXABAY_LICENSE (7) < EDITORIAL_LICENSED (8) < PRESS_KIT_ALLOWLIST (9) < UNKNOWN (99)`.
 2. **Confidence** — higher is better. Metadata-backed beats heuristic.
 3. **Resolution** — `width × height`, higher first.
 
 The `--license` flag changes how strict the filter is:
 
+- `open-only` — only Creative Commons/public-domain candidates are kept.
 - `safe-only` (default) — `UNKNOWN` candidates are dropped entirely.
+- `context-safe` — explicit alias for `safe-only`.
 - `prefer-safe` — `UNKNOWN` candidates are kept but sorted last.
 - `any` — no filter; sort only by license rank, confidence, resolution.
 
@@ -59,7 +64,7 @@ The `providerReports` field in every response tells you how many candidates each
 Each candidate carries a `confidence` in `[0, 1]`:
 
 - **0.95** — structured license metadata from an authoritative API (Wikimedia `extmetadata`, Openverse `license`).
-- **0.85** — platform-owned license (Unsplash, Pexels, Pixabay, Spotify).
+- **0.85** — platform-owned license (Unsplash, Pexels, Pixabay).
 - **0.60–0.80** — heuristics + coercion (e.g., Brave result with Commons host).
 - **≤ 0.40** — host-based guess only.
 - **0** — no evidence.

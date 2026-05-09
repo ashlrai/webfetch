@@ -12,7 +12,7 @@ export function ArchitectureDiagram() {
         </h2>
         <p className="mt-4 text-[var(--color-fg-dim)] max-w-2xl leading-relaxed">
           Every surface shares{" "}
-          <code className="font-mono text-[var(--color-accent)]">@webfetch/core</code>. The cloud
+          <code className="font-mono text-[var(--color-accent)]">webfetch-core</code>. The cloud
           router adds metering, pooled keys, and a managed browser you never have to operate.
         </p>
       </FadeUp>
@@ -23,7 +23,7 @@ export function ArchitectureDiagram() {
             viewBox="0 0 880 500"
             className="w-full h-auto"
             role="img"
-            aria-label="webfetch architecture: surfaces on top, @webfetch/core + browser + cloud in the middle, 24 providers at the bottom"
+            aria-label="webfetch architecture: surfaces on top, webfetch-core + browser + cloud in the middle, 25 providers at the bottom"
           >
             <defs>
               <marker
@@ -90,13 +90,13 @@ export function ArchitectureDiagram() {
             {/* Core + browser + cloud row */}
             <rect x="140" y="200" width="600" height="70" rx={8} className="n-core" />
             <text x="440" y="226" textAnchor="middle" className="lbl">
-              @webfetch/core
+              webfetch-core
             </text>
             <text x="440" y="244" textAnchor="middle" className="sub-core">
               federation · license rank · dedupe · pHash · cache
             </text>
             <text x="440" y="260" textAnchor="middle" className="sub">
-              typescript · MIT · 241 tests
+              typescript · MIT · 300+ tests
             </text>
 
             {/* branches */}
@@ -106,7 +106,7 @@ export function ArchitectureDiagram() {
 
             {[
               { x: 140, l: "browser layer", s: "Rebrowser · Camoufox" },
-              { x: 340, l: "provider adapters", s: "24 sources · normalized" },
+              { x: 340, l: "provider adapters", s: "25 sources · normalized" },
               { x: 540, l: "cloud router", s: "auth · quota · meter" },
             ].map((n) => (
               <g key={n.l}>
@@ -131,7 +131,7 @@ export function ArchitectureDiagram() {
               stroke="#2a2a30"
             />
             <text x="440" y="424" textAnchor="middle" className="lbl-sm">
-              24 provider endpoints
+              25 provider endpoints
             </text>
             <text x="440" y="442" textAnchor="middle" className="sub">
               wikimedia · openverse · unsplash · pexels · nasa · smithsonian · met · loc · spotify ·

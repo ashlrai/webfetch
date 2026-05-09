@@ -1,10 +1,10 @@
 ---
 title: Providers
-description: The 24 image sources webfetch federates — auth, rate limits, license defaults, and when to enable each one.
+description: The 25 image sources webfetch federates — auth, rate limits, license defaults, and when to enable each one.
 section: Core concepts
 ---
 
-webfetch ships with 24 provider adapters. Each one normalizes a different source into the same `ImageCandidate` shape, tagged with a license and a confidence score. The `DEFAULT_PROVIDERS` set — 19 of the 24 — is optimized for "ship a safe image without human review". The other five are opt-in for ToS-grey, paid, or variant use cases.
+webfetch ships with 25 provider adapters. Each one normalizes a different source into the same `ImageCandidate` shape, tagged with a license and a confidence score. The `DEFAULT_PROVIDERS` set — 19 of the 25 — rejects `UNKNOWN` results by default and prioritizes sources with usable provenance. The other six are opt-in for ToS-grey, paid, managed, or variant use cases.
 
 ## Provider matrix
 
@@ -12,9 +12,9 @@ webfetch ships with 24 provider adapters. Each one normalizes a different source
 |---|---|---|---|---|---|
 | wikimedia | portraits, events, logos, history | CC_BY_SA (from meta) | none (UA required) | 20/s | no |
 | openverse | any CC-licensed content (50+ GLAMs) | CC_BY (from meta) | none | 5/s | no |
-| unsplash | high-quality photography | CC0 (Unsplash License) | `UNSPLASH_ACCESS_KEY` | 1/s demo, 5000/hr prod | no |
-| pexels | stock photography | CC0 (Pexels License) | `PEXELS_API_KEY` | 3/s | no |
-| pixabay | stock photos + illustrations | CC0 (Pixabay License) | `PIXABAY_API_KEY` | 2/s | no |
+| unsplash | high-quality photography | `UNSPLASH_LICENSE` | `UNSPLASH_ACCESS_KEY` | 1/s demo, 5000/hr prod | no |
+| pexels | stock photography | `PEXELS_LICENSE` | `PEXELS_API_KEY` | 3/s | no |
+| pixabay | stock photos + illustrations | `PIXABAY_LICENSE` | `PIXABAY_API_KEY` | 2/s | no |
 | itunes | album covers, artist portraits | EDITORIAL_LICENSED | none | 5/s | no |
 | musicbrainz-caa | canonical album art | EDITORIAL_LICENSED | none (UA required) | 1/s hard cap | no |
 | spotify | artist + album images | EDITORIAL_LICENSED | `SPOTIFY_CLIENT_ID`/`SECRET` | 10/s | no |
@@ -34,6 +34,7 @@ webfetch ships with 24 provider adapters. Each one normalizes a different source
 | rawpixel | CC0 slice of Rawpixel library | CC0 | optional | 3/s | no |
 | burst | Shopify Burst (100% CC0) | CC0 | none | 3/s | no |
 | europeana-archival | Europeana TEXT records | CC_BY (from meta) | `EUROPEANA_API_KEY` | 5/s | yes |
+| managed-browser | hosted browser fallback | UNKNOWN (+heuristic) | cloud entitlement | 0.25/s | yes |
 
 ## Default set
 
@@ -56,6 +57,7 @@ Providers that need auth gracefully skip when their keys are missing, so the def
 | serpapi | You need Google-quality recall and accept per-query cost (~$10/1k queries). |
 | browser | You explicitly accept ToS risk and have Playwright installed. |
 | europeana-archival | You're building editorial or historical layouts and want manuscript / newspaper scans. |
+| managed-browser | You're using hosted webfetch and explicitly want managed browser fallback results for review. |
 
 Opt-in providers only run when the `providers` list mentions them AND, for `browser`, `WEBFETCH_ENABLE_BROWSER=1` is set. See [Browser layer](/docs/browser) for the consent model.
 
@@ -86,7 +88,7 @@ webfetch search "modern kitchen interior" \
   --providers unsplash,pexels,pixabay --min-width 1600
 ```
 
-CC0-equivalent platform licenses, no attribution required. Fastest pipeline of the three.
+Platform licenses, no attribution required. Fastest pipeline of the three.
 
 ### Science / nature / reference
 
@@ -114,12 +116,12 @@ webfetch search "new product category xyz" \
 
 - **Wikimedia** returns mixed licenses; coercion is 100% metadata-driven. We never default to "probably CC".
 - **Openverse** sets `license_type=commercial,modification` so results are commercial-safe by default. Results without metadata are dropped.
-- **Unsplash / Pexels / Pixabay** technically aren't CC0 — they use custom licenses that track CC0 terms. We map to CC0 with confidence 0.85 (vs 0.95 for real CC0).
+- **Unsplash / Pexels / Pixabay** technically aren't CC0. They use custom platform licenses and are tagged explicitly as `UNSPLASH_LICENSE`, `PEXELS_LICENSE`, and `PIXABAY_LICENSE`.
 - **iTunes / MusicBrainz CAA / Spotify** tag as `EDITORIAL_LICENSED`. This means "OK as part of album/artist identification UI under platform ToS". Always display attribution.
-- **Brave** returns web images with no structured license; we upgrade via `heuristicLicenseFromUrl` (Unsplash host → CC0, Commons host → CC-BY-SA pending verification, etc).
+- **Brave** returns web images with no structured license; we upgrade via `heuristicLicenseFromUrl` (Unsplash host → `UNSPLASH_LICENSE`, Commons host → CC-BY-SA pending verification, etc).
 - **Bing** — Microsoft retired the classic Bing Search API mid-2025. This adapter still targets v7. Callers may need to swap endpoints.
 - **SerpAPI** — opt-in because it's a paid relay. Most valuable for `find_similar` (Google reverse image search).
-- **browser** — only runs when `WEBFETCH_ENABLE_BROWSER=1` AND `"browser"` is in `providers`. Every result is flagged `viaBrowserFallback: true`; downstream code can refuse to ship it.
+- **browser / managed-browser** — only runs when explicitly requested. Every result is flagged `viaBrowserFallback: true`; downstream code can route it to review instead of treating it as production-ready.
 - **Smithsonian** — DEMO_KEY is fine for dev but hits a 30/hr rate limit under real load. Provision `SMITHSONIAN_API_KEY`.
 
 ## Bring your own keys
@@ -148,7 +150,7 @@ Or put them in `~/.webfetchrc` under a profile. See [CLI reference](/docs/cli) f
 If you're calling the core library directly, the same ids work:
 
 ```ts
-import { searchImages } from "@webfetch/core";
+import { searchImages } from "webfetch-core";
 
 const out = await searchImages("kyoto temple", {
   providers: ["wikimedia", "openverse", "flickr"],

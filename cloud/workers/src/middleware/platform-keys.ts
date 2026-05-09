@@ -2,7 +2,7 @@
  * Plan-aware provider-auth resolver.
  *
  * Free tier: returns only the user's BYOK (none, in bearer context) — the 10
- * no-key providers in @webfetch/core work fine without any entries here.
+ * no-key providers in webfetch-core work fine without any entries here.
  *
  * Pro / Team / Enterprise: starts from all PLATFORM_* keys present in env, then
  * overlays any BYOK the user has stored. User-supplied keys always win per
@@ -16,8 +16,8 @@
  */
 
 import type { KVNamespace } from "@cloudflare/workers-types";
-import type { ProviderAuth } from "@webfetch/core";
 import type { Context } from "hono";
+import type { ProviderAuth } from "webfetch-core";
 import type { PlanId } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { err } from "../responses.ts";

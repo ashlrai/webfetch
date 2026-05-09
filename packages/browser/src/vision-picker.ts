@@ -7,7 +7,7 @@
  * exposed for tests (stubs).
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import { BrowserDependencyError, type VisionConfig } from "./types.ts";
 
 const DEFAULT_MODEL = "claude-opus-4-6";

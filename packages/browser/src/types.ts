@@ -1,8 +1,8 @@
 /**
- * Public types for @webfetch/browser.
+ * Public types for webfetch-browser.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 
 export type StackId = "vanilla" | "rebrowser" | "camoufox" | "brightdata";
 

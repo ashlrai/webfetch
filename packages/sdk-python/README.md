@@ -2,12 +2,13 @@
 
 The license-first image layer for AI agents and humans. Python bindings for
 [getwebfetch.com](https://getwebfetch.com), at full parity with the TypeScript SDK
-([`@webfetch/core`](https://www.npmjs.com/package/@webfetch/core)).
+([`webfetch-core`](https://www.npmjs.com/package/webfetch-core)).
 
-- 24 image providers with license-aware ranking
-- Safe-license defaults (CC0, Public Domain, CC-BY, CC-BY-SA) out of the box
+- 25 image providers with license-aware ranking
+- Platform-license tags for Unsplash, Pexels, and Pixabay instead of treating them as CC0
+- License-aware defaults that distinguish open, platform-license, editorial, and unknown results
 - Drop-in async API via `AsyncWebfetchClient`
-- Works against your self-hosted server; cloud account methods use `/v1/usage` and `/v1/keys`
+- Cloud calls use `/v1/*`; custom self-hosted base URLs keep the server's unversioned compatibility routes
 
 ## Install
 
@@ -35,7 +36,7 @@ from webfetch import WebfetchClient
 client = WebfetchClient(api_key="wf_live_...")
 ```
 
-For self-hosted (`@webfetch/server`), point at your local instance:
+For self-hosted (`webfetch-server`), point at your local instance:
 
 ```python
 client = WebfetchClient(
@@ -43,6 +44,10 @@ client = WebfetchClient(
     api_key=open(os.path.expanduser("~/.webfetch/server.token")).read().strip(),
 )
 ```
+
+Default clients call cloud mode at `https://api.getwebfetch.com/v1/*`.
+Supplying a custom `base_url` switches to local/self-hosted compatibility
+routes such as `/search`, `/download`, and `/providers`.
 
 ## Examples
 
@@ -79,6 +84,12 @@ async def main():
             print(r.candidates[0].url if r.candidates else "(none)")
 
 asyncio.run(main())
+```
+
+For very large shell-oriented batches, prefer the TypeScript CLI:
+
+```bash
+printf "drake portrait\nradiohead album\n" | webfetch batch --jsonl --continue-on-error
 ```
 
 ### Download with attribution sidecar
@@ -121,30 +132,43 @@ except WebfetchError as e:
 ## CLI
 
 ```bash
-python -m webfetch search "drake portrait" --limit 5
-python -m webfetch providers
-python -m webfetch download https://... --out-dir ./assets
+webfetch-py search "drake portrait" --limit 5
+webfetch-py providers
+webfetch-py download https://... --out-dir ./assets
 ```
+
+`python -m webfetch ...` remains available for direct module execution. The
+installed console script is `webfetch-py` so it does not shadow the canonical
+TypeScript `webfetch` CLI.
 
 ## Parity with the TypeScript SDK
 
-| Python method | HTTP endpoint | `@webfetch/core` equivalent |
+| Python method | HTTP endpoint | `webfetch-core` equivalent |
 |---|---|---|
-| `search` | `POST /search` | `searchImages` |
-| `search_artist_images` | `POST /artist` | `searchArtistImages` |
-| `search_album_cover` | `POST /album` | `searchAlbumCover` |
-| `download` | `POST /download` | `downloadImage` |
-| `probe` | `POST /probe` | `probePage` |
-| `fetch_with_license` | `POST /license` | `fetchWithLicense` |
-| `find_similar` | `POST /similar` | `findSimilar` |
-| `providers` | `GET /providers` | `ALL_PROVIDERS` |
+| `search` | `POST /v1/search` cloud, `POST /search` local | `searchImages` |
+| `search_artist_images` | `POST /v1/artist` cloud, `POST /artist` local | `searchArtistImages` |
+| `search_album_cover` | `POST /v1/album` cloud, `POST /album` local | `searchAlbumCover` |
+| `download` | `POST /v1/download` cloud, `POST /download` local | `downloadImage` |
+| `probe` | `POST /v1/probe` cloud, `POST /probe` local | `probePage` |
+| `fetch_with_license` | `POST /v1/license` cloud, `POST /license` local | `fetchWithLicense` |
+| `find_similar` | `POST /v1/similar` cloud, `POST /similar` local | `findSimilar` |
+| `providers` | `GET /v1/providers` cloud, `GET /providers` local | `ALL_PROVIDERS` |
 | `usage` | `GET /v1/usage` | cloud only |
 | `keys` | `GET /v1/keys` | cloud only |
+
+## License Migration
+
+Older integrations may have expected Unsplash, Pexels, and Pixabay results to
+deserialize as `License.CC0`. The current taxonomy uses
+`License.UNSPLASH_LICENSE`, `License.PEXELS_LICENSE`, and
+`License.PIXABAY_LICENSE`. Keep `license="safe-only"` if those platform terms
+are acceptable; use `license="open-only"` for Creative Commons/public-domain
+only workflows.
 
 ## Links
 
 - Docs and dashboard: https://getwebfetch.com
-- TypeScript SDK: https://www.npmjs.com/package/@webfetch/core
+- TypeScript SDK: https://www.npmjs.com/package/webfetch-core
 - Source: https://github.com/ashlrai/webfetch
 
 ## License

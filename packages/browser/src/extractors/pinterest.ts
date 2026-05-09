@@ -7,7 +7,7 @@
  * the CDN path makes it unambiguous.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import type { ExtractContext, ExtractResult } from "./types.ts";
 
 /** Upgrade `https://i.pinimg.com/236x/ab/cd/ef/<id>.jpg` → `/originals/` form. */

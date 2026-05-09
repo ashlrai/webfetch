@@ -49,3 +49,35 @@ test("blocks private and non-http URLs before fetching", async () => {
     "disallowed url scheme",
   );
 });
+
+test("blocks redirects to private hosts", async () => {
+  const fetcher = stubFetcher([
+    {
+      match: (u) => u === "https://example.com/start",
+      handler: async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "http://169.254.169.254/latest" },
+        }),
+    },
+  ]);
+  await expect(downloadImage("https://example.com/start", { fetcher, cacheDir })).rejects.toThrow(
+    "host blocked by policy",
+  );
+});
+
+test("enforces redirect hop limit", async () => {
+  const fetcher = stubFetcher([
+    {
+      match: () => true,
+      handler: async (u) =>
+        new Response(null, {
+          status: 302,
+          headers: { location: `${u}/next` },
+        }),
+    },
+  ]);
+  await expect(
+    downloadImage("https://example.com/start", { fetcher, cacheDir, maxRedirects: 1 }),
+  ).rejects.toThrow("too many redirects");
+});

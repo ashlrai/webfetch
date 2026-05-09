@@ -8,6 +8,7 @@ dist
 .venv
 __pycache__
 *.vsix
+*.tgz
 *.log
 .DS_Store
 bun.lockb

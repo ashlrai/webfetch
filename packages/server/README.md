@@ -1,6 +1,6 @@
-# @webfetch/server
+# webfetch-server
 
-Local HTTP server that exposes the `@webfetch/core` surface over
+Local HTTP server that exposes the `webfetch-core` surface over
 `127.0.0.1:7600`. Designed to be called by the webfetch Chrome extension
 and by `curl` during development.
 
@@ -9,7 +9,7 @@ and by `curl` during development.
 ```bash
 bun run --cwd packages/server src/index.ts
 # or, from npm:
-npx -y @webfetch/server -- --port 7600
+npx -y webfetch-server -- --port 7600
 ```
 
 On first boot the server writes a random 32-byte hex token to
@@ -21,7 +21,7 @@ you can copy it into the extension's options page.
 
 All endpoints require `Authorization: Bearer <token>`. POST endpoints
 take a JSON body that mirrors the corresponding MCP tool's input schema
-from `@webfetch/mcp`.
+from `getwebfetch-mcp`.
 
 | Method | Path              | Mirrors MCP tool     |
 |--------|-------------------|----------------------|

@@ -5,7 +5,7 @@
  * `readKey` is injectable so tests can simulate keystrokes without a TTY.
  */
 
-import type { ImageCandidate } from "@webfetch/core";
+import type { ImageCandidate } from "webfetch-core";
 import { c, licenseColor, renderTable } from "./format.ts";
 
 export type KeyReader = () => Promise<string>;

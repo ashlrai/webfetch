@@ -1,6 +1,6 @@
 # webfetch
 
-[![npm version](https://img.shields.io/npm/v/%40webfetch%2Fcli?color=0a7)](https://www.npmjs.com/package/@webfetch/cli)
+[![npm version](https://img.shields.io/npm/v/getwebfetch?color=0a7)](https://www.npmjs.com/package/getwebfetch)
 [![CI](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Discord](https://img.shields.io/badge/discord-join-5865F2)](https://getwebfetch.com/discord)
@@ -8,9 +8,9 @@
 
 **The license-first image layer for AI agents and humans.**
 
-One MCP server, one CLI, and one HTTP server that federate across 24 image
-providers, rank results license-first, and refuse to return anything you
-can't safely ship. Any agent that speaks MCP (Claude Code, Cursor, Cline,
+One MCP server, one CLI, and one HTTP server that federate across 25 image
+providers, rank results license-first, and reject `UNKNOWN` results by default.
+Any agent that speaks MCP (Claude Code, Cursor, Cline,
 Continue, Roo Code, Codex) wires up from one config line. Landing page,
 pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**.
 
@@ -18,9 +18,9 @@ pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**
 
 | Surface       | One-liner |
 | ------------- | --------- |
-| npm           | `npm i -g @webfetch/cli` |
+| npm           | `npm i -g getwebfetch` |
 | Homebrew      | `brew tap ashlrai/webfetch && brew install webfetch` |
-| Docker        | `docker run --rm ghcr.io/ashlrai/webfetch cli --help` |
+| Docker        | `docker run --rm ghcr.io/ashlrai/webfetch cli help` |
 | curl \| bash  | `curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh \| bash` |
 
 The `curl | bash` installer also wires webfetch into Claude Code's
@@ -34,20 +34,21 @@ CLI:
 webfetch search "drake portrait" --limit 5
 webfetch artist "Taylor Swift" --kind portrait --min-width 1200
 webfetch download <url> --out ./portrait.jpg
+printf "drake portrait\nradiohead album\n" | webfetch batch --jsonl --continue-on-error
 ```
 
 MCP (from inside any MCP-speaking agent):
 
 ```
 search_images({ query: "drake portrait", limit: 5 })
-search_artist_images({ name: "Taylor Swift", kind: "portrait" })
+search_artist_images({ artist: "Taylor Swift", kind: "portrait" })
 download_image({ url: "..." })
 ```
 
 TypeScript library:
 
 ```ts
-import { searchArtistImages, pickBest, downloadImage } from "@webfetch/core";
+import { searchArtistImages, pickBest, downloadImage } from "webfetch-core";
 
 const { candidates } = await searchArtistImages("Drake", "portrait");
 const best = pickBest(candidates, { minWidth: 1200 });
@@ -76,9 +77,9 @@ license-first, and exposing the result as a single MCP tool.
 | ---------------- | ---------------------------------------- | -------------------- | ---------------------------- | ------ |
 | wikimedia        | portraits, events, logos, history        | CC_BY_SA (metadata)  | —                            | no     |
 | openverse        | any CC-licensed content                  | CC_BY (metadata)     | —                            | no     |
-| unsplash         | high-quality photography                 | Unsplash (~CC0)      | `UNSPLASH_ACCESS_KEY`        | no     |
-| pexels           | stock photography                        | Pexels (~CC0)        | `PEXELS_API_KEY`             | no     |
-| pixabay          | stock photos + illustrations             | Pixabay (~CC0)       | `PIXABAY_API_KEY`            | no     |
+| unsplash         | high-quality photography                 | `UNSPLASH_LICENSE`   | `UNSPLASH_ACCESS_KEY`        | no     |
+| pexels           | stock photography                        | `PEXELS_LICENSE`     | `PEXELS_API_KEY`             | no     |
+| pixabay          | stock photos + illustrations             | `PIXABAY_LICENSE`    | `PIXABAY_API_KEY`            | no     |
 | itunes           | album covers, artist portraits           | EDITORIAL_LICENSED   | —                            | no     |
 | musicbrainz-caa  | canonical album art                      | EDITORIAL_LICENSED   | —                            | no     |
 | spotify          | artist + album images                    | EDITORIAL_LICENSED   | `SPOTIFY_CLIENT_ID/SECRET`   | no     |
@@ -87,6 +88,7 @@ license-first, and exposing the result as a single MCP tool.
 | bing             | general web image search                 | UNKNOWN (+heuristic) | `BING_API_KEY`               | yes    |
 | serpapi          | Google Images + reverse lookup           | UNKNOWN (+heuristic) | `SERPAPI_KEY`                | yes    |
 | browser          | headless fallback vs images.google.com   | UNKNOWN              | —                            | yes    |
+| managed-browser  | Bright Data managed browser fallback     | UNKNOWN              | `BRIGHTDATA_API_TOKEN`       | yes    |
 | flickr           | CC / public-domain photography           | CC_BY (metadata)     | `FLICKR_API_KEY`             | no     |
 | internet-archive | public-domain / CC archive media         | PUBLIC_DOMAIN        | —                            | no     |
 | smithsonian      | Open Access museum media                 | CC0                  | `SMITHSONIAN_API_KEY`        | no     |
@@ -102,9 +104,21 @@ license-first, and exposing the result as a single MCP tool.
 See [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) for gotchas, rate limits, and
 [`docs/PROVIDER_TUNING.md`](./docs/PROVIDER_TUNING.md) for per-use-case picks.
 
+## Local and cloud modes
+
+The CLI is local-first: by default `webfetch search`, `artist`, `album`,
+`download`, `probe`, `license`, and `batch` call `webfetch-core` in-process
+and use provider API keys from your environment. Pass `--cloud` or set
+`WEBFETCH_MODE=cloud` to call `https://api.getwebfetch.com/v1/*` with
+`WEBFETCH_API_KEY` or `webfetch config set apiKey wf_live_...`.
+
+Use local mode when you want direct provider calls and a local cache. Use cloud
+mode when you want hosted auth, pooled provider keys, managed browser fallback,
+usage accounting, or team controls.
+
 ## Why license-first
 
-The only outcome we refuse is shipping an image we can't justify. A
+The only outcome we reject by default is an image we can't justify. A
 marginally-better photo under an unknown license is worthless to a pipeline
 that needs to ship without human review. Relevance ties are easy to break;
 provenance is not.
@@ -113,6 +127,23 @@ The ranker sorts by: **license tag -> metadata confidence -> resolution ->
 provider priority**. `UNKNOWN` is rejected by default (Berne Convention:
 most of the web is all-rights-reserved unless proven otherwise). See
 [`docs/LICENSE_POLICY.md`](./docs/LICENSE_POLICY.md).
+
+### Migration: CC0 stock providers
+
+Older webfetch builds treated Unsplash, Pexels, and Pixabay as `CC0`. Current
+builds expose their platform terms explicitly:
+
+| Old tag | New tag | What to check |
+| --- | --- | --- |
+| `CC0` from Unsplash | `UNSPLASH_LICENSE` | Unsplash terms; not Creative Commons |
+| `CC0` from Pexels | `PEXELS_LICENSE` | Pexels terms; not Creative Commons |
+| `CC0` from Pixabay | `PIXABAY_LICENSE` | Pixabay terms; not Creative Commons |
+
+Most callers should keep `licensePolicy: "safe-only"` because it still allows
+open, platform, editorial, and press-kit categories while rejecting `UNKNOWN`.
+Pipelines that require only Creative Commons or public-domain assets should use
+`licensePolicy: "open-only"` and update type guards to handle the three
+platform tags separately.
 
 ## webfetch vs alternatives
 
@@ -132,7 +163,7 @@ most of the web is all-rights-reserved unless proven otherwise). See
 
 ```
                              +------------------+
-                             |  @webfetch/core  |
+                             |  webfetch-core  |
                              |  (ranker, cache, |
                              |   license coerce)|
                              +---------+--------+
@@ -140,8 +171,8 @@ most of the web is all-rights-reserved unless proven otherwise). See
           +----------------+-----------+-----------+----------------+
           |                |                       |                |
   +-------v------+  +------v-------+       +-------v------+  +------v-------+
-  | @webfetch/   |  | @webfetch/   |       | @webfetch/   |  | browser      |
-  | cli          |  | mcp (stdio)  |       | server (HTTP)|  | extensions   |
+  | webfetch     |  | webfetch-mcp |       | webfetch-    |  | browser      |
+  | CLI          |  | (stdio)      |       | server (HTTP)|  | extensions   |
   +-------+------+  +------+-------+       +-------+------+  +------+-------+
           |                |                       |                |
           |                |                       |                |
@@ -149,12 +180,12 @@ most of the web is all-rights-reserved unless proven otherwise). See
                                        |
                  +---------------------v---------------------+
                  |              provider adapters            |
-                 |  wikimedia  openverse  unsplash  pexels   |
-                 |  pixabay    itunes     mb-caa    spotify  |
-                 |  youtube    brave      bing      serpapi  |
-                 |  flickr     nasa       met       europeana|
-                 |  loc        wellcome   rawpixel  burst    |
-                 |  browser + europeana-archival opt-in       |
+                 |  wikimedia  openverse  unsplash  pexels    |
+                 |  pixabay    itunes     mb-caa    spotify   |
+                 |  youtube    brave      bing      serpapi   |
+                 |  flickr     nasa       met       europeana |
+                 |  loc        wellcome   rawpixel  burst     |
+                 |  browser + managed-browser + archival opt-in|
                  +-------------------------------------------+
 ```
 
@@ -163,9 +194,9 @@ from the CLI is instantly available to the MCP server and vice versa.
 
 ## Safety defaults
 
-- `licensePolicy: "safe-only"` — `UNKNOWN` results rejected.
+- `licensePolicy: "safe-only"` — open, platform-license, and editorial/press categories are allowed; `UNKNOWN` is rejected.
 - `safeSearch: "strict"`.
-- Opt-in providers (`youtube-thumb`, `bing`, `serpapi`, `browser`, `europeana-archival`) off by default.
+- Opt-in providers (`youtube-thumb`, `bing`, `serpapi`, `browser`, `managed-browser`, `europeana-archival`) off by default.
 - 20 MB per-download cap, content-type guard, host blocklist.
 - `robots.txt` respected on generic page probes.
 

@@ -1,7 +1,7 @@
 /**
  * /v1/download — download an image URL through the worker and stash bytes in R2.
  *
- * We do NOT stream the bytes through @webfetch/core's local-disk cache path
+ * We do NOT stream the bytes through webfetch-core's local-disk cache path
  * (that lives on Node fs). Instead:
  *   1. Fetch the remote URL directly from the Worker.
  *   2. Hash + size-check (20MB hard cap).

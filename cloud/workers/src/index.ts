@@ -13,7 +13,7 @@
  * drains UsageMessage batches into D1.
  */
 
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import type { PlanId } from "../../shared/pricing.ts";
 import { getSessionUser, handleAuth } from "./auth.ts";
 import { billingRouter, emitMeterEventForUsage } from "./billing.ts";
@@ -49,9 +49,9 @@ app.use("*", cors);
 
 // Unauthenticated.
 app.get("/health", (c) => c.json({ ok: true, service: "webfetch-api", env: c.env.ENVIRONMENT }));
-app.get("/providers", async (c) => {
-  // Avoid hot-path deps on @webfetch/core provider registry.
-  const { ALL_PROVIDERS, DEFAULT_PROVIDERS } = await import("@webfetch/core");
+async function providerData(c: Context<HonoEnv>) {
+  // Avoid hot-path deps on webfetch-core provider registry.
+  const { ALL_PROVIDERS, DEFAULT_PROVIDERS } = await import("webfetch-core");
   const platformProvidersAvailable = platformProvidersConfigured(c.env);
 
   // Best-effort user plan resolution — only populated when the caller has a
@@ -75,24 +75,29 @@ app.get("/providers", async (c) => {
     // ignore — /providers is unauthenticated and should never fail on this.
   }
 
-  return c.json({
-    ok: true,
-    data: {
-      all: Object.keys(ALL_PROVIDERS),
-      defaults: DEFAULT_PROVIDERS,
-      platformProvidersAvailable,
-      userPlan,
-      endpoints: [
-        "/v1/search",
-        "/v1/artist",
-        "/v1/album",
-        "/v1/download",
-        "/v1/probe",
-        "/v1/license",
-        "/v1/similar",
-      ],
-    },
-  });
+  return {
+    all: Object.keys(ALL_PROVIDERS),
+    defaults: DEFAULT_PROVIDERS,
+    platformProvidersAvailable,
+    userPlan,
+    endpoints: [
+      "/v1/search",
+      "/v1/artist",
+      "/v1/album",
+      "/v1/download",
+      "/v1/probe",
+      "/v1/license",
+      "/v1/similar",
+    ],
+  };
+}
+
+app.get("/providers", async (c) => {
+  return c.json({ ok: true, data: await providerData(c) });
+});
+
+app.get("/v1/providers", async (c) => {
+  return c.json({ ok: true, data: await providerData(c) });
 });
 
 // Auth subroute — delegates to Better Auth. All paths starting with /auth/...

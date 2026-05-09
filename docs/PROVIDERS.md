@@ -4,9 +4,9 @@
 |------------------|-----------------------------------------|----------------------|----------------------------------------|---------------------------|--------|
 | wikimedia        | portraits, events, logos, history       | CC_BY_SA (from meta) | none (UA required)                     | 20/s                      | no     |
 | openverse        | any CC-licensed content                 | CC_BY (from meta)    | none                                   | 5/s                       | no     |
-| unsplash         | high-quality photography                | CC0 (Unsplash Lic.)  | UNSPLASH_ACCESS_KEY                    | 1/s (demo-key budget)     | no     |
-| pexels           | stock photography                       | CC0 (Pexels Lic.)    | PEXELS_API_KEY                         | 3/s                       | no     |
-| pixabay          | stock photos, illustrations             | CC0 (Pixabay Lic.)   | PIXABAY_API_KEY                        | 2/s                       | no     |
+| unsplash         | high-quality photography                | UNSPLASH_LICENSE     | UNSPLASH_ACCESS_KEY                    | 1/s (demo-key budget)     | no     |
+| pexels           | stock photography                       | PEXELS_LICENSE       | PEXELS_API_KEY                         | 3/s                       | no     |
+| pixabay          | stock photos, illustrations             | PIXABAY_LICENSE      | PIXABAY_API_KEY                        | 2/s                       | no     |
 | itunes           | album covers, artist portraits          | EDITORIAL_LICENSED   | none                                   | 5/s                       | no     |
 | musicbrainz-caa  | canonical album art                     | EDITORIAL_LICENSED   | none (UA required)                     | 1/s (hard MB limit)       | no     |
 | spotify          | artist + album images                   | EDITORIAL_LICENSED   | SPOTIFY_CLIENT_ID/SECRET               | 10/s                      | no     |
@@ -15,6 +15,7 @@
 | bing             | general web image search                | UNKNOWN (+heuristic) | BING_API_KEY                           | 3/s                       | **yes** (API deprecation risk) |
 | serpapi          | Google Images wrapper, reverse-image    | UNKNOWN (+heuristic) | SERPAPI_KEY                            | 2/s                       | **yes** |
 | browser          | headless fallback vs images.google.com  | UNKNOWN (+heuristic) | none (requires `playwright` installed) | 0.25/s                    | **yes** (ToS-grey) |
+| managed-browser  | Bright Data managed browser fallback    | UNKNOWN (+heuristic) | BRIGHTDATA_API_TOKEN (+ optional BRIGHTDATA_ZONE) | 0.5/s              | **yes** (server/cloud fallback) |
 | flickr           | CC-licensed + PD photos                 | CC_BY (from meta)    | FLICKR_API_KEY (free; gracefully skips) | 3/s                       | no     |
 | internet-archive | PD / CC images across IA mediatype      | PUBLIC_DOMAIN        | none                                    | 5/s                       | no     |
 | smithsonian      | Open Access museum collection (all CC0) | CC0                  | SMITHSONIAN_API_KEY (defaults DEMO_KEY) | 1/s (DEMO_KEY budget)     | no     |
@@ -33,14 +34,13 @@
   We never default to "probably CC".
 - **Openverse**: `license_type=commercial,modification` is set by default so
   results are commercial-safe. Results without metadata are skipped.
-- **Unsplash/Pexels/Pixabay licenses**: technically *not* CC0 — they're
-  custom licenses that track CC0 terms (free commercial use, no attribution
-  required). We map to CC0 with confidence 0.85.
+- **Unsplash/Pexels/Pixabay licenses**: technically *not* CC0. They are
+  custom platform licenses, exposed as explicit platform-license tags.
 - **iTunes / MusicBrainz CAA / Spotify**: EDITORIAL_LICENSED means "OK as
   part of album/artist identification UI under platform ToS". Always display
   attribution.
 - **Brave**: returns web images with no structured license; we upgrade via
-  `heuristicLicenseFromUrl` (Unsplash host → CC0, Commons host → CC-BY-SA
+  `heuristicLicenseFromUrl` (Unsplash host → UNSPLASH_LICENSE, Commons host → CC-BY-SA
   pending verification, etc).
 - **Bing**: Microsoft retired the classic Bing Search API mid-2025. This
   adapter still targets v7. Callers may need to swap endpoints.
@@ -50,6 +50,10 @@
   in `providers`. Scraping images.google.com is brittle and ToS-grey. Every
   result returned via this provider is flagged `viaBrowserFallback: true` so
   downstream code can refuse to ship it.
+- **managed-browser**: opt-in server/cloud fallback backed by Bright Data Web
+  Unlocker. Requires `BRIGHTDATA_API_TOKEN`; results remain `UNKNOWN` with
+  heuristic confidence and should be treated as leads unless another source
+  verifies the license.
 
 ### New public-domain / CC providers
 
@@ -90,4 +94,5 @@
 - **Building artist pages?** Use `searchArtistImages(name, kind)` — it picks
   the right sources per kind automatically.
 - **Need *anything* at all, license be damned?** `providers: ["brave",
-  "serpapi", "browser"]` with `licensePolicy: "any"`. Understand the risk.
+  "serpapi", "browser", "managed-browser"]` with `licensePolicy: "any"`.
+  Understand the risk.

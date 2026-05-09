@@ -116,7 +116,7 @@ Walk every `<img>` on an HTML page; per-image license inference.
 | Roo Code | [Roo Code](/docs/mcp/roo) |
 | Codex | [Codex](/docs/mcp/codex) |
 
-All six use the same underlying MCP binary (`@webfetch/mcp`), just wired up differently.
+All six use the same underlying MCP binary (`getwebfetch-mcp`), just wired up differently.
 
 ## Transport modes
 
@@ -144,6 +144,6 @@ No telemetry is collected in the CLI / MCP binary. The Cloud API collects standa
 ## Troubleshooting
 
 - **"Tool call returned no candidates"** — most common cause is a too-strict `licensePolicy` combined with a niche query. Try `prefer-safe` to see what's available.
-- **"Spawn ENOENT"** — the IDE can't find the MCP binary. Use `npx -y @webfetch/mcp` instead of a direct path.
+- **"Spawn ENOENT"** — the IDE can't find the MCP binary. Use `npx -y getwebfetch-mcp` instead of a direct path.
 - **"Provider X returned missing-auth"** — you haven't set the provider's env var. That's fine — the provider skips silently, and others cover for it.
 - **"viaBrowserFallback: true"** — a candidate was sourced by the headless browser. License is `UNKNOWN` and downstream code should treat it accordingly. See [Browser layer](/docs/browser).

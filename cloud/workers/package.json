@@ -14,7 +14,7 @@
     "types": "wrangler types"
   },
   "dependencies": {
-    "@webfetch/core": "workspace:*",
+    "webfetch-core": "workspace:*",
     "hono": "^4.6.0",
     "better-auth": "^1.0.0",
     "stripe": "^17.0.0",

@@ -1,11 +1,11 @@
-/** Pixabay — free key. Pixabay License is CC0-like. */
+/** Pixabay — free key. Results use the proprietary Pixabay License, not CC0. */
 
 import { getBucket } from "../rate-limit.ts";
 import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
 
 export const pixabay: Provider = {
   id: "pixabay",
-  defaultLicense: "CC0",
+  defaultLicense: "PIXABAY_LICENSE",
   requiresAuth: true,
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     const key = opts.auth?.pixabayApiKey ?? process.env.PIXABAY_API_KEY;
@@ -30,7 +30,7 @@ export const pixabay: Provider = {
         source: "pixabay",
         sourcePageUrl: p.pageURL,
         author: p.user,
-        license: "CC0",
+        license: "PIXABAY_LICENSE",
         licenseUrl: "https://pixabay.com/service/license-summary/",
         confidence: 0.85,
       }),

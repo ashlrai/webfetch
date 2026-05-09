@@ -2,15 +2,15 @@
 
 License-first image search and download for any MCP-speaking agent.
 
-Every result ships with a structured license tag (`CC0`, `CC_BY`, `CC_BY_SA`, `EDITORIAL_LICENSED`, …), a confidence score, and a ready-to-render attribution line. No result with `confidence < 0.5` ever reaches you as "safe." Covers 24 providers, with 19 in the default set — no API key needed for Wikimedia Commons, Openverse, iTunes, MusicBrainz CAA, NASA, The Met, Library of Congress, Internet Archive, Wellcome Collection, and Burst.
+Every result ships with a structured license tag (`CC0`, `CC_BY`, `CC_BY_SA`, platform-license tags, `EDITORIAL_LICENSED`, ...), a confidence score, and a ready-to-render attribution line. Covers 25 providers, with 19 in the default set — no API key needed for Wikimedia Commons, Openverse, iTunes, MusicBrainz CAA, NASA, The Met, Library of Congress, Internet Archive, Wellcome Collection, and Burst.
 
 ---
 
 ## Why webfetch MCP?
 
-Most image-search tools give you URLs. webfetch gives you URLs **plus** the legal metadata that determines whether you can ship them. The MCP layer exposes seven composable tools — search, specialize by artist/album, download with a hash, resolve an arbitrary URL's license, reverse-image-search, and triage a source page — so an agent can go from prompt to attributed asset in a single conversation turn.
+Most image-search tools give you URLs. webfetch gives you URLs **plus** the legal metadata needed to classify them as open/commercial reusable, platform-license, editorial-only, or exploration-only. The MCP layer exposes seven composable tools — search, specialize by artist/album, download with a hash, resolve an arbitrary URL's license, reverse-image-search, and triage a source page — so an agent can go from prompt to attributed asset in a single conversation turn.
 
-- **24 providers**, 19 in the default set and many requiring no key at all
+- **25 providers**, 19 in the default set and many requiring no key at all
 - **License-first ranking**: CC0 floats to the top; heuristic-only results stay below 0.5 confidence
 - **Attribution always included**: one `attributionLine` string, ready for a tooltip or credits footer
 - **Free tier needs no API key** for Wikimedia and Openverse; full provider coverage adds optional keys per provider
@@ -82,7 +82,7 @@ Replace `/path/to/webfetch` with your clone path (default after installer: `~/.w
 
 | Tool | Description | Key params |
 |------|-------------|------------|
-| `search_images` | Federated search across 24 providers. Returns ranked candidates with license + attribution. Does not download. | `query`, `providers[]`, `licensePolicy`, `minWidth`, `minHeight` |
+| `search_images` | Federated search across 25 providers. Returns the top candidates with license + attribution. Does not download. For large batches, use CLI handoff: `webfetch batch --jsonl`. | `query`, `providers[]`, `licensePolicy`, `minWidth`, `minHeight` |
 | `search_artist_images` | Specialized artist image search with kind-aware provider routing: `portrait`, `album`, `logo`, `performing`. | `artist`, `kind`, `providers[]` |
 | `search_album_cover` | Canonical album artwork via MusicBrainz CAA + iTunes + Spotify. Results are `EDITORIAL_LICENSED`. | `artist`, `album` |
 | `download_image` | Download a URL to local disk cache. 20 MB cap, content-type guard, SHA-256 hash, host blocklist enforced. | `url`, `maxBytes`, `cacheDir` |
@@ -92,7 +92,25 @@ Replace `/path/to/webfetch` with your clone path (default after installer: `~/.w
 
 ### License tags
 
-Results carry one of: `CC0` · `PUBLIC_DOMAIN` · `CC_BY` · `CC_BY_SA` · `EDITORIAL_LICENSED` · `PRESS_KIT_ALLOWLIST` · `UNKNOWN` (rejected). Rank order matches that list — lower is safer.
+Results carry one of: `CC0` · `PUBLIC_DOMAIN` · `CC_BY` · `CC_BY_SA` · `UNSPLASH_LICENSE` · `PEXELS_LICENSE` · `PIXABAY_LICENSE` · `EDITORIAL_LICENSED` · `PRESS_KIT_ALLOWLIST` · `UNKNOWN` (rejected by default). Use `open-only` when platform/editorial licenses are not acceptable.
+
+Migration note: Unsplash, Pexels, and Pixabay are no longer reported as `CC0`.
+Agents should treat `UNSPLASH_LICENSE`, `PEXELS_LICENSE`, and
+`PIXABAY_LICENSE` as platform-license results, not Creative Commons/public
+domain results.
+
+### Batch handoff
+
+MCP tools are meant for interactive agent calls. For hundreds or thousands of
+queries, have the agent hand off to the CLI:
+
+```bash
+webfetch batch --file queries.txt --jsonl --continue-on-error --candidates 3
+```
+
+Input lines are `query` or `query<TAB>provider-a,provider-b`. Each output line
+contains `index`, `query`, `status`, `candidateCount`, `candidates`, `top`,
+`downloads`, and provider diagnostics.
 
 ---
 
@@ -108,6 +126,7 @@ Results carry one of: `CC0` · `PUBLIC_DOMAIN` · `CC_BY` · `CC_BY_SA` · `EDIT
 | Spotify | `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` | Dev app required |
 | Brave Search | `BRAVE_API_KEY` | Free tier available |
 | SerpApi | `SERPAPI_KEY` | Required for `find_similar` |
+| Bright Data managed browser | `BRIGHTDATA_API_TOKEN` | Optional server/cloud fallback |
 
 MusicBrainz CAA and iTunes require no key. Missing keys cause the provider to skip gracefully — other providers still respond.
 

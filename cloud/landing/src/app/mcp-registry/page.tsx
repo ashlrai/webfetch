@@ -36,7 +36,7 @@ const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
   "mcpServers": {
     "webfetch": {
       "command": "npx",
-      "args": ["-y", "@webfetch/mcp"],
+      "args": ["-y", "getwebfetch-mcp"],
       "env": { "WEBFETCH_API_KEY": "wf_live_..." }
     }
   }
@@ -49,7 +49,7 @@ const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
   "mcpServers": {
     "webfetch": {
       "command": "npx",
-      "args": ["-y", "@webfetch/mcp"]
+      "args": ["-y", "getwebfetch-mcp"]
     }
   }
 }`,
@@ -59,7 +59,7 @@ const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
     path: "cline_mcp_settings.json",
     snippet: `{
   "mcpServers": {
-    "webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }
+    "webfetch": { "command": "npx", "args": ["-y", "getwebfetch-mcp"] }
   }
 }`,
   },
@@ -69,14 +69,14 @@ const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
     snippet: `mcpServers:
   - name: webfetch
     command: npx
-    args: ["-y", "@webfetch/mcp"]`,
+    args: ["-y", "getwebfetch-mcp"]`,
   },
   {
     agent: "Roo Code",
     path: "mcp_settings.json",
     snippet: `{
   "mcpServers": {
-    "webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }
+    "webfetch": { "command": "npx", "args": ["-y", "getwebfetch-mcp"] }
   }
 }`,
   },
@@ -86,7 +86,7 @@ const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
     snippet: `[[mcp_servers]]
 name = "webfetch"
 command = "npx"
-args = ["-y", "@webfetch/mcp"]`,
+args = ["-y", "getwebfetch-mcp"]`,
   },
 ];
 
@@ -95,9 +95,9 @@ const MANIFEST = `{
   "version": "1.0.0",
   "description": "License-first federated image search MCP server",
   "transport": "stdio",
-  "command": "npx -y @webfetch/mcp",
+  "command": "npx -y getwebfetch-mcp",
   "tools": [
-    { "name": "search_images", "description": "Search 24 providers, license-ranked" },
+    { "name": "search_images", "description": "Search 25 providers, license-ranked" },
     { "name": "search_artist_images", "description": "Musician-optimized search" },
     { "name": "download_image", "description": "Content-addressed download with attribution" }
   ],

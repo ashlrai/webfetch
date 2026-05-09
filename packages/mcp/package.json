@@ -1,12 +1,13 @@
 {
-  "name": "@webfetch/mcp",
-  "version": "0.1.0",
+  "name": "getwebfetch-mcp",
+  "version": "0.1.2",
   "description": "Model Context Protocol server exposing webfetch license-first image search to any MCP-speaking agent.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "webfetch-mcp": "./dist/index.js"
+    "webfetch-mcp": "dist/index.js",
+    "getwebfetch-mcp": "dist/index.js"
   },
   "exports": {
     ".": {
@@ -30,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ashlrai/webfetch.git",
+    "url": "git+https://github.com/ashlrai/webfetch.git",
     "directory": "packages/mcp"
   },
   "publishConfig": {
@@ -39,14 +40,14 @@
   "scripts": {
     "build": "bun run build:clean && bun run build:js && bun run build:fixup",
     "build:clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build:js": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp --external=@modelcontextprotocol/sdk --external=@webfetch/core --external=zod",
+    "build:js": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external=sharp --external=@modelcontextprotocol/sdk --external=webfetch-core --external=zod",
     "build:fixup": "node -e \"const fs=require('node:fs'),path=require('node:path');if(fs.existsSync('dist/index.js')){const s=fs.readFileSync('dist/index.js','utf8');fs.writeFileSync('dist/index.js',s.replace(/^#!\\/usr\\/bin\\/env bun/m,'#!/usr/bin/env node'));}const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(p.endsWith('.d.ts')){const s=fs.readFileSync(p,'utf8').replaceAll('.ts\\\"','.js\\\"');fs.writeFileSync(p,s);}}};if(fs.existsSync('dist'))walk('dist');\"",
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@webfetch/core": "0.1.0",
+    "webfetch-core": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "zod": "^3.23.8"
   },

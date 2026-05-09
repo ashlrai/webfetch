@@ -46,7 +46,7 @@
   <text x="72" y="430" fill="#8a8a95"
         font-family="Geist Mono, ui-monospace, Menlo, monospace"
         font-size="15" letter-spacing="0.04em">
-    24 providers · federated · attribution-first · MCP-native
+    25 providers · federated · attribution-first · MCP-native
   </text>
 
   <!-- Stamp grid (right side) -->
@@ -110,7 +110,7 @@
     <text x="0" y="22" fill="#f0f0f2"
           font-family="Geist Mono, ui-monospace, Menlo, monospace"
           font-size="16" font-weight="500" letter-spacing="0.04em">
-      MIT  ·  24 providers  ·  241 tests
+      MIT  ·  25 providers  ·  300+ tests
     </text>
   </g>
 

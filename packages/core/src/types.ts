@@ -1,5 +1,5 @@
 /**
- * Public types for @webfetch/core.
+ * Public types for webfetch-core.
  *
  * The `ImageCandidate` shape is intentionally a superset of the one used by
  * `artist-encyclopedia-factory/packages/ingest` so consumers can pass results
@@ -11,6 +11,9 @@ export type License =
   | "PUBLIC_DOMAIN"
   | "CC_BY"
   | "CC_BY_SA"
+  | "UNSPLASH_LICENSE"
+  | "PEXELS_LICENSE"
+  | "PIXABAY_LICENSE"
   | "EDITORIAL_LICENSED"
   | "PRESS_KIT_ALLOWLIST"
   | "UNKNOWN";
@@ -128,6 +131,13 @@ export interface ProviderAuth {
   brightDataZone?: string;
 }
 
+export interface ProviderAuthRequirement {
+  /** Environment variables accepted by the provider when opts.auth omits a key. */
+  env: string[];
+  /** ProviderAuth fields accepted by the provider. All fields listed here are required. */
+  keys: (keyof ProviderAuth)[];
+}
+
 export interface SearchResultBundle {
   candidates: ImageCandidate[];
   providerReports: ProviderReport[];
@@ -142,6 +152,8 @@ export interface Provider {
   defaultLicense: License;
   /** Whether this provider requires auth (and therefore should be skipped when none is configured). */
   requiresAuth: boolean;
+  /** Declarative auth contract used by federation/CLI for deterministic skips. */
+  auth?: ProviderAuthRequirement;
   /** When true, provider is only run on explicit opt-in. */
   optIn?: boolean;
   search: (query: string, opts: SearchOptions) => Promise<ImageCandidate[]>;

@@ -1,7 +1,7 @@
 {
   "name": "webfetch",
   "displayName": "webfetch",
-  "description": "License-first federated image search inside VS Code. Search 19 providers, insert with attribution, drag into markdown.",
+  "description": "License-first federated image search inside VS Code. Search 25 providers, insert with attribution, drag into markdown.",
   "version": "0.1.0",
   "publisher": "ashlrai",
   "license": "MIT",
@@ -118,10 +118,12 @@
         },
         "webfetch.defaultLicense": {
           "type": "string",
-          "enum": ["safe-only", "prefer-safe", "any"],
+          "enum": ["open-only", "safe-only", "context-safe", "prefer-safe", "any"],
           "default": "safe-only",
           "markdownEnumDescriptions": [
-            "Only return images with a clearly-safe license (CC0, CC_BY, CC_BY_SA, PUBLIC_DOMAIN).",
+            "Only return images with open reuse licenses (CC0, PUBLIC_DOMAIN, CC_BY, CC_BY_SA).",
+            "Compatibility alias for context-safe: reject UNKNOWN while allowing open, platform-license, editorial, and press-kit results.",
+            "Allow open, platform-license, editorial, and press-kit results; reject UNKNOWN.",
             "Rank safe-licensed images first but allow UNKNOWN.",
             "Return any result regardless of license."
           ],
@@ -150,7 +152,13 @@
               "smithsonian",
               "nasa",
               "met-museum",
-              "europeana"
+              "europeana",
+              "library-of-congress",
+              "wellcome-collection",
+              "rawpixel",
+              "burst",
+              "europeana-archival",
+              "managed-browser"
             ]
           },
           "default": [],

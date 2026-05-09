@@ -1,7 +1,7 @@
-/** /v1/probe — page probe, wraps @webfetch/core's probePage. */
+/** /v1/probe — page probe, wraps webfetch-core's probePage. */
 
-import { probePage } from "@webfetch/core";
 import { Hono } from "hono";
+import { probePage } from "webfetch-core";
 import { unitsFor } from "../../../shared/pricing.ts";
 import type { Env, RequestCtx } from "../env.ts";
 import { recordUsage } from "../metering.ts";

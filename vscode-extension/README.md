@@ -1,9 +1,9 @@
 # webfetch for VS Code
 
-License-first federated image search inside your editor. Search 24 providers
+License-first federated image search inside your editor. Search 25 providers
 (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, Smithsonian, Europeana, NASA,
-and more), insert with attribution, and never ship an image of unknown license
-to production.
+and more), insert with attribution, and keep unknown-license images out of
+production workflows by default.
 
 ![preview](media/preview.gif)
 
@@ -40,8 +40,8 @@ to production.
 | --- | --- | --- |
 | `webfetch.apiKey` | `""` | Bearer token for the webfetch API (prefer `Set API Key`). |
 | `webfetch.baseUrl` | `https://api.getwebfetch.com` | Set to `http://127.0.0.1:7600` for self-hosted. |
-| `webfetch.defaultLicense` | `safe-only` | `safe-only` / `prefer-safe` / `any`. |
-| `webfetch.defaultProviders` | `[]` | Subset of the 24 providers to query (empty = the 19-provider server default set). |
+| `webfetch.defaultLicense` | `safe-only` | `open-only` / `safe-only` / `context-safe` / `prefer-safe` / `any`. |
+| `webfetch.defaultProviders` | `[]` | Subset of the 25 providers to query (empty = the 19-provider server default set). |
 | `webfetch.outputDir` | `./assets` | Where downloaded images land, relative to the workspace root. |
 | `webfetch.writeXmpSidecar` | `true` | Write `<image>.xmp` alongside each download. |
 | `webfetch.attributionStyle` | `html-comment` | `html-comment` / `markdown-caption` / `none`. |

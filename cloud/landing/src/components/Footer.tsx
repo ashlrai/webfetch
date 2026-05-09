@@ -55,13 +55,13 @@ export function Footer() {
 
         <FooterCol title="Resources">
           <FooterLink href="/blog">Blog</FooterLink>
-          <FooterLink href="https://github.com/ashlrai/web-fetcher-mcp/tree/main/docs/COOKBOOK.md">
+          <FooterLink href="https://github.com/ashlrai/webfetch/tree/main/docs/COOKBOOK.md">
             Cookbook
           </FooterLink>
-          <FooterLink href="https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/API.md">
+          <FooterLink href="https://github.com/ashlrai/webfetch/blob/main/docs/API.md">
             API reference
           </FooterLink>
-          <FooterLink href="https://github.com/ashlrai/web-fetcher-mcp/blob/main/docs/SELF_HOSTING.md">
+          <FooterLink href="https://github.com/ashlrai/webfetch/blob/main/docs/SELF_HOSTING.md">
             Self-hosting
           </FooterLink>
         </FooterCol>
@@ -78,7 +78,7 @@ export function Footer() {
           <FooterLink href="/legal/terms">Terms</FooterLink>
           <FooterLink href="/legal/privacy">Privacy</FooterLink>
           <FooterLink href="/legal/license-policy">License policy</FooterLink>
-          <FooterLink href="https://github.com/ashlrai/web-fetcher-mcp/blob/main/SECURITY.md">
+          <FooterLink href="https://github.com/ashlrai/webfetch/blob/main/SECURITY.md">
             Security
           </FooterLink>
         </FooterCol>

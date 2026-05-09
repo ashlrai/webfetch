@@ -9,7 +9,7 @@
  * overwritten so non-telemetry config is preserved.
  *
  * Nothing in this module performs a network call. All transport is
- * delegated to `@webfetch/core`'s `trackEvent`.
+ * delegated to `webfetch-core`'s `trackEvent`.
  */
 
 import { existsSync } from "node:fs";
@@ -22,7 +22,7 @@ import {
   type TelemetryProps,
   isTelemetryEnabled as coreIsEnabled,
   trackEvent,
-} from "@webfetch/core";
+} from "webfetch-core";
 
 export type TelemetryState = "enabled" | "disabled" | "unset";
 

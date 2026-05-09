@@ -25,7 +25,7 @@ Human developers have the same four failure modes, just slower.
 
 webfetch is one `search_images(query)` call that:
 
-- fans out across 24 providers (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, Internet Archive, Wellcome Collection, Rawpixel, Burst, Europeana Archival, and an opt-in browser fallback)
+- fans out across 25 providers (Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, Europeana, Flickr-CC, iTunes, MusicBrainz-CAA, Spotify, YouTube, Brave, Bing, SerpAPI, Internet Archive, Wellcome Collection, Rawpixel, Burst, Europeana Archival, and an opt-in browser fallback)
 - ranks results **license-first**: CC0 > PUBLIC_DOMAIN > CC_BY > CC_BY_SA > EDITORIAL_LICENSED > UNKNOWN
 - rejects UNKNOWN by default (you can opt in explicitly, in code)
 - returns a pre-built attribution string on every result
@@ -36,14 +36,14 @@ One surface (MCP) means every agent works — Claude Code, Cursor, Cline, Contin
 ## The code
 
 ```bash
-npm i -g @webfetch/cli
+npm i -g getwebfetch
 webfetch search "drake portrait" --limit 5
 ```
 
 Or as a library:
 
 ```ts
-import { searchArtistImages, pickBest, downloadImage } from "@webfetch/core";
+import { searchArtistImages, pickBest, downloadImage } from "webfetch-core";
 
 const { candidates } = await searchArtistImages("Drake", "portrait");
 const best = pickBest(candidates, { minWidth: 1200 });
@@ -56,7 +56,7 @@ if (best) {
 Or as an MCP config one-liner in Claude Code / Cursor / Cline:
 
 ```json
-"webfetch": { "command": "npx", "args": ["-y", "@webfetch/mcp"] }
+"webfetch": { "command": "npx", "args": ["-y", "getwebfetch-mcp"] }
 ```
 
 ## The moat: "like a human" browser fallback

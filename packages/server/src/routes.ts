@@ -9,7 +9,7 @@
  * GET /providers        — list known provider ids + defaults (no auth-sensitive data).
  * GET /health           — liveness probe (still requires auth).
  *
- * All handlers are pure wrappers — domain logic stays in @webfetch/core.
+ * All handlers are pure wrappers — domain logic stays in webfetch-core.
  */
 
 import {
@@ -22,7 +22,7 @@ import {
   searchAlbumCover,
   searchArtistImages,
   searchImages,
-} from "@webfetch/core";
+} from "webfetch-core";
 import { z } from "zod";
 import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {

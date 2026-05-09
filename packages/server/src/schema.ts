@@ -1,7 +1,7 @@
 /**
  * Request schemas for HTTP endpoints.
  *
- * These mirror `@webfetch/mcp/src/schema.ts` 1:1 — same field names, same
+ * These mirror `webfetch-mcp/src/schema.ts` 1:1 — same field names, same
  * constraints — so the extension-facing HTTP API and the agent-facing MCP
  * API are interchangeable. Duplicated (not imported) because MCP's package
  * has no subpath exports; keeping both copies in lock-step is cheap.

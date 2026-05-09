@@ -32,13 +32,40 @@ webfetch search "drake portrait" --limit 3
 Expected: a table of 3 candidates with license tags and confidence scores.
 Exit code `0`.
 
+For machine-readable batch work:
+
+```bash
+printf "drake portrait\nradiohead album\n" | webfetch batch --jsonl --continue-on-error --candidates 3
+```
+
+Input lines are `query` or `query<TAB>provider-a,provider-b`; blank lines and
+lines beginning with `#` are ignored. Each `--jsonl` output line is one record:
+
+```json
+{"index":0,"query":"drake portrait","status":"ok","candidateCount":12,"candidates":[],"top":null,"downloads":[],"providerReports":[],"warnings":[]}
+```
+
+`status` is `ok` or `error`. With `--download-best`, `downloads[0]` contains
+`url`, `path`, `sha256`, and optional `sidecar`.
+
+For hosted API mode:
+
+```bash
+webfetch config set apiKey wf_live_...
+webfetch search "drake portrait" --cloud --json
+```
+
+Without `--cloud`, the CLI runs local `webfetch-core` and reads provider keys
+from the process environment. Cloud mode calls `https://api.getwebfetch.com/v1/*`
+unless `WEBFETCH_BASE_URL` or config `baseUrl` overrides it.
+
 ## 2. MCP server (Claude Code / Cursor / Cline / Continue / Roo Code)
 
 1. Run the installer above, OR copy the matching snippet from
    [`integrations/`](../integrations/) into your agent's MCP config.
 2. Restart the agent.
 3. Verify: ask the agent to call `search_images` for a simple query, or run
-   `webfetch providers` locally. The registry has 24 providers and 19 defaults.
+   `webfetch providers` locally. The registry has 25 providers and 19 defaults.
 
 Per-agent details:
 
@@ -66,7 +93,7 @@ curl -sS -X POST http://127.0.0.1:7600/search \
 
 ## 4. Chrome extension
 
-The extension lives at `extension/` in the repo and is loaded as an
+The browser package lives at `packages/browser/` in the repo and is loaded as an
 unpacked extension via `chrome://extensions`. See that directory's README
 for packaging details.
 

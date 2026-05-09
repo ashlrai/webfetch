@@ -189,7 +189,7 @@ export default function OgImage() {
             letterSpacing: "0.08em",
           }}
         >
-          getwebfetch.com · one API · 24 providers · 0 UNKNOWN
+          getwebfetch.com · one API · 25 providers · 0 UNKNOWN
         </div>
 
         {/* orange accent stripe */}

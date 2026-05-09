@@ -9,7 +9,7 @@ Claude Code is Anthropic's official CLI. It's the reference client for MCP and t
 ## One-command setup
 
 ```bash
-claude mcp add webfetch -- npx -y @webfetch/mcp
+claude mcp add webfetch -- npx -y getwebfetch-mcp
 ```
 
 That's it. Claude reloads the config automatically. New sessions can call the webfetch tools immediately.
@@ -23,7 +23,7 @@ Edit `~/.claude/settings.json` and merge:
   "mcpServers": {
     "webfetch": {
       "command": "npx",
-      "args": ["-y", "@webfetch/mcp"],
+      "args": ["-y", "getwebfetch-mcp"],
       "env": {
         "UNSPLASH_ACCESS_KEY": "...",
         "PEXELS_API_KEY": "...",
@@ -47,7 +47,7 @@ In a new Claude Code session:
 > List the webfetch providers and their auth status.
 ```
 
-Claude should call the webfetch `search_images` tool. To inspect provider coverage outside MCP, run `webfetch providers`; the canonical registry has 24 providers and 19 defaults.
+Claude should call the webfetch `search_images` tool. To inspect provider coverage outside MCP, run `webfetch providers`; the canonical registry has 25 providers and 19 defaults.
 
 Or try an end-to-end flow:
 
@@ -64,7 +64,7 @@ Claude will call `search_images` with `licensePolicy: "safe-only"` and `minWidth
 - **"Failed to connect to MCP server 'webfetch'"** — check that `npx` is on PATH. Use the absolute path (`which npx`) if needed.
 - **"Tool returned no candidates"** — most commonly a too-strict `licensePolicy` on a niche query. Ask Claude to "try again with licensePolicy prefer-safe".
 - **Tool not appearing at all** — restart Claude Code. Check `~/.claude/logs/*.log` for startup errors from the MCP subprocess.
-- **"Cannot find module '@webfetch/mcp'"** — first invocation downloads via npx. If your machine is offline, install globally: `npm install -g @webfetch/mcp`.
+- **"Cannot find module 'webfetch-mcp'"** — first invocation downloads via npx. If your machine is offline, install globally: `npm install -g getwebfetch-mcp`.
 
 ## Next steps
 

@@ -12,11 +12,11 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
-import type { ProviderId } from "@webfetch/core";
+import type { ProviderId } from "webfetch-core";
 
 export interface ResolvedDefaults {
   providers?: ProviderId[];
-  license?: "safe-only" | "prefer-safe" | "any" | "safe" | "prefer";
+  license?: "open-only" | "safe-only" | "context-safe" | "prefer-safe" | "any" | "safe" | "prefer";
   limit?: number;
   minWidth?: number;
   minHeight?: number;
