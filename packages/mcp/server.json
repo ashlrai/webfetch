@@ -1,0 +1,62 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ashlrai/webfetch",
+  "description": "License-first federated image search with attribution, dimensions, and download tooling.",
+  "title": "webfetch",
+  "websiteUrl": "https://getwebfetch.com",
+  "repository": {
+    "url": "https://github.com/ashlrai/webfetch",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "version": "0.1.5",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "getwebfetch-mcp",
+      "version": "0.1.5",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "UNSPLASH_ACCESS_KEY",
+          "description": "Optional Unsplash API key for Unsplash provider results.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "PEXELS_API_KEY",
+          "description": "Optional Pexels API key for Pexels provider results.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "PIXABAY_API_KEY",
+          "description": "Optional Pixabay API key for Pixabay provider results.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "BRAVE_API_KEY",
+          "description": "Optional Brave Search API key for Brave image search results.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "SERPAPI_KEY",
+          "description": "Optional SerpApi key for Google Images results.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "tool": "mcp-publisher",
+      "project": "webfetch"
+    }
+  }
+}

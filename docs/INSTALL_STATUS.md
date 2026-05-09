@@ -8,6 +8,7 @@
 | curl installer | `bash install/install.sh` | Supported | Builds the TypeScript CLI from source. |
 | Python SDK | `pip install webfetch` | SDK | Console script is `webfetch-py` so it does not shadow the TypeScript CLI. Cloud calls use `/v1/*`; custom self-hosted URLs keep unversioned compatibility routes. |
 | MCP | `getwebfetch-mcp` | Supported | Thin bridge over core. Search responses are concise and include CLI handoff commands for batch work. |
+| Glama | root `Dockerfile` | Ready for listing | The root Dockerfile starts the MCP stdio server by default for Glama introspection; the canonical multi-command image remains `docker/Dockerfile`. |
 | VS Code | `vscode-extension/` | Supported | Uses the server API and mirrors the current provider/license type list. |
 | GitHub Action | `integrations/github-action` | Supported | Manifest records downloaded path, sha256, sidecar, attribution text, and candidate metadata. |
 

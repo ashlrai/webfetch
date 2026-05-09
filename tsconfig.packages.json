@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "webfetch-core": ["packages/core/src/index.ts"],
+      "webfetch-core/hints": ["packages/core/src/hints/index.ts"],
+      "webfetch-core/providers": ["packages/core/src/providers/index.ts"]
+    }
+  },
+  "include": [
+    "packages/browser/src/**/*.ts",
+    "packages/cli/src/**/*.ts",
+    "packages/core/src/**/*.ts",
+    "packages/mcp/src/**/*.ts",
+    "packages/server/src/**/*.ts"
+  ]
+}
