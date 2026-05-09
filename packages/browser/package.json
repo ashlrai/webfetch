@@ -1,6 +1,6 @@
 {
   "name": "webfetch-browser",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Like-a-human browser-fetch layer for webfetch: hybrid router over Rebrowser-Playwright, Camoufox, Bright Data Scraping Browser, CapSolver, and a Claude vision hero-picker.",
   "license": "MIT",
   "type": "module",
@@ -12,7 +12,11 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "webfetch",
     "browser",
@@ -47,7 +51,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "webfetch-core": "0.1.0",
+    "webfetch-core": "0.1.3",
     "undici": "^6.19.0",
     "zod": "^3.23.8"
   },
@@ -58,10 +62,18 @@
     "camoufox": "^0.4.0"
   },
   "peerDependenciesMeta": {
-    "@anthropic-ai/sdk": { "optional": true },
-    "playwright": { "optional": true },
-    "rebrowser-playwright": { "optional": true },
-    "camoufox": { "optional": true }
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "rebrowser-playwright": {
+      "optional": true
+    },
+    "camoufox": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18"

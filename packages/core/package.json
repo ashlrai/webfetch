@@ -1,6 +1,6 @@
 {
   "name": "webfetch-core",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "License-first federated image search core: ranker, cache, provider federation, pHash dedupe, EXIF/IPTC/XMP metadata.",
   "license": "MIT",
   "type": "module",
@@ -20,8 +20,20 @@
       "import": "./dist/hints/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "keywords": ["image-search", "licensing", "mcp", "agent", "federated", "creative-commons", "ai"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "image-search",
+    "licensing",
+    "mcp",
+    "agent",
+    "federated",
+    "creative-commons",
+    "ai"
+  ],
   "homepage": "https://getwebfetch.com",
   "bugs": {
     "url": "https://github.com/ashlrai/webfetch/issues"

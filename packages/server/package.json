@@ -1,6 +1,6 @@
 {
   "name": "webfetch-server",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Local HTTP server exposing webfetch license-first image search as a REST API.",
   "license": "MIT",
   "type": "module",
@@ -13,8 +13,20 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "keywords": ["webfetch", "http", "server", "rest", "image-search", "licensing", "api"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "webfetch",
+    "http",
+    "server",
+    "rest",
+    "image-search",
+    "licensing",
+    "api"
+  ],
   "homepage": "https://getwebfetch.com",
   "bugs": {
     "url": "https://github.com/ashlrai/webfetch/issues"
@@ -37,7 +49,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "webfetch-core": "0.1.0",
+    "webfetch-core": "0.1.3",
     "zod": "^3.23.8"
   },
   "engines": {
