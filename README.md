@@ -27,6 +27,21 @@ pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**
 The `curl | bash` installer also wires webfetch into Claude Code's
 `~/.claude/settings.json` idempotently. Re-run any time to update.
 
+## Surfaces
+
+| Surface | Best for | Entry point |
+| ------- | -------- | ----------- |
+| CLI | scripts, shell work, agent handoff | `webfetch search ...` |
+| MCP server | Claude Code, Cursor, Cline, Continue, Roo Code, Codex | `npx -y getwebfetch-mcp` |
+| HTTP server | local integrations and extensions | `npx -y webfetch-server` |
+| Core library | TypeScript apps and custom tooling | `npm i webfetch-core` |
+| Browser layer | fallback extraction and managed-browser flows | `npm i webfetch-browser` |
+| Hosted cloud | pooled keys, usage tracking, team controls | [app.getwebfetch.com](https://app.getwebfetch.com) |
+
+Package-level API notes live in [`packages/core/README.md`](./packages/core/README.md),
+[`packages/browser/README.md`](./packages/browser/README.md), and the other
+package READMEs under `packages/`.
+
 ## 30-second usage
 
 CLI:
