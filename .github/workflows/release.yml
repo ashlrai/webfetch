@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build core package (so webfetch-core resolves at test time)
+        run: bun run --cwd packages/core build
+
       - name: Typecheck
         run: bun run typecheck
 
