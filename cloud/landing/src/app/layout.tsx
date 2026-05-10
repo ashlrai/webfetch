@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s — webfetch",
   },
   description:
-    "One API, CLI, and MCP that federates 24 licensed image sources, falls through to a human-like browser when APIs miss, and always ships attribution.",
+    "One API, CLI, and MCP that federates 25 licensed image sources, falls through to a human-like browser when APIs miss, and always ships attribution.",
   applicationName: "webfetch",
   authors: [{ name: "Mason Wyatt", url: "https://ashlr.ai" }],
   creator: "AshlrAI",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "webfetch — the license-first image layer for AI agents",
     description:
-      "One API, CLI, and MCP that federates 24 licensed image sources, falls through to a human-like browser, and always ships attribution.",
+      "One API, CLI, and MCP that federates 25 licensed image sources, falls through to a human-like browser, and always ships attribution.",
     url: "https://getwebfetch.com",
     siteName: "webfetch",
     type: "website",
@@ -101,7 +101,7 @@ const SOFTWARE_JSONLD = {
   operatingSystem: "macOS, Linux, Windows",
   url: "https://getwebfetch.com",
   description:
-    "The license-first image layer for AI agents. One API, CLI, and MCP federating 24 licensed image sources with attribution baked in.",
+    "The license-first image layer for AI agents. One API, CLI, and MCP federating 25 licensed image sources with attribution baked in.",
   publisher: {
     "@type": "Organization",
     name: "AshlrAI",
