@@ -3,6 +3,12 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "baseUrl": "../..",
+    "paths": {
+      "webfetch-core": ["packages/core/src/index.ts"],
+      "webfetch-core/providers": ["packages/core/src/providers/index.ts"],
+      "webfetch-core/hints": ["packages/core/src/hints/index.ts"]
+    },
     "types": ["@cloudflare/workers-types", "@types/bun"],
     "strict": true,
     "noImplicitAny": true,
