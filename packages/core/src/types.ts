@@ -85,6 +85,20 @@ export interface ImageCandidate {
   viaBrowserFallback?: boolean;
 }
 
+/**
+ * Structured reason for a provider outcome.
+ * "ok" is set on success; all other values indicate failure/skip categories.
+ * Optional — callers that don't care can ignore it; shape remains back-compat.
+ */
+export type ErrorKind =
+  | "ok"
+  | "timeout"
+  | "http-4xx"
+  | "http-5xx"
+  | "network"
+  | "decode"
+  | "rate-limited";
+
 export interface ProviderReport {
   provider: ProviderId;
   ok: boolean;
@@ -92,6 +106,10 @@ export interface ProviderReport {
   timeMs: number;
   error?: string;
   skipped?: "missing-auth" | "disabled" | "rate-limited" | "not-enabled";
+  /** Structured failure category. Allows callers/agents to route on WHY a provider failed. */
+  errorKind?: ErrorKind;
+  /** Additional diagnostic context (e.g. HTTP status code, decode field). */
+  errorContext?: Record<string, unknown>;
 }
 
 export interface SearchOptions {

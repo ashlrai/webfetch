@@ -15,6 +15,7 @@ import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 import type {
+  ErrorKind,
   ImageCandidate,
   Provider,
   ProviderId,
@@ -97,17 +98,17 @@ async function runProvider(
 ): Promise<ImageCandidate[]> {
   const provider: Provider | undefined = ALL_PROVIDERS[id];
   if (!provider) {
-    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, error: "unknown provider" });
+    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, error: "unknown provider", errorKind: "network" });
     return [];
   }
   // Opt-in providers that weren't requested explicitly are never run (already
   // filtered out in DEFAULT_PROVIDERS, but guard anyway).
   if (provider.optIn && !(opts.providers ?? []).includes(id)) {
-    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "not-enabled" });
+    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "not-enabled", errorKind: "network" });
     return [];
   }
   if (!providerCanRun(provider, opts)) {
-    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "missing-auth" });
+    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "missing-auth", errorKind: "network" });
     return [];
   }
 
@@ -123,22 +124,62 @@ async function runProvider(
 
   try {
     const out = await provider.search(query, providerOpts);
-    reports.push({ provider: id, ok: true, count: out.length, timeMs: Date.now() - started });
+    reports.push({ provider: id, ok: true, count: out.length, timeMs: Date.now() - started, errorKind: "ok" });
     return out;
   } catch (e) {
+    const elapsed = Date.now() - started;
     const msg = (e as Error).message ?? "unknown";
+    const kind = classifyError(e, ctl.signal.aborted);
+    const ctx = kind === "http-4xx" || kind === "http-5xx" ? extractHttpContext(e) : undefined;
     reports.push({
       provider: id,
       ok: false,
       count: 0,
-      timeMs: Date.now() - started,
+      timeMs: elapsed,
       error: msg,
+      errorKind: kind,
+      ...(ctx ? { errorContext: ctx } : {}),
     });
     return [];
   } finally {
     clearTimeout(timer);
     outerAbort?.removeEventListener("abort", onAbort);
   }
+}
+
+/** Map a caught error to a structured ErrorKind. */
+function classifyError(e: unknown, timedOut: boolean): ErrorKind {
+  if (timedOut) return "timeout";
+  const msg = (e as Error)?.message ?? "";
+  // HTTP errors surfaced by providers as Error with status embedded in message.
+  // Convention: providers throw `new Error("HTTP 429 …")` etc.
+  const statusMatch = msg.match(/\bHTTP\s+(\d{3})\b/i) ?? msg.match(/\bstatus[:\s]+(\d{3})\b/i);
+  if (statusMatch) {
+    const status = Number(statusMatch[1]);
+    if (status === 429) return "rate-limited";
+    if (status >= 400 && status < 500) return "http-4xx";
+    if (status >= 500) return "http-5xx";
+  }
+  // Providers may also attach a .status property directly.
+  const status = (e as any)?.status ?? (e as any)?.statusCode;
+  if (typeof status === "number") {
+    if (status === 429) return "rate-limited";
+    if (status >= 400 && status < 500) return "http-4xx";
+    if (status >= 500) return "http-5xx";
+  }
+  // JSON / schema parse failures.
+  if (msg.includes("JSON") || msg.includes("parse") || msg.includes("unexpected token")) {
+    return "decode";
+  }
+  return "network";
+}
+
+/** Pull HTTP status into errorContext when available. */
+function extractHttpContext(e: unknown): Record<string, unknown> | undefined {
+  const msg = (e as Error)?.message ?? "";
+  const statusFromMsg = msg.match(/\bHTTP\s+(\d{3})\b/i)?.[1] ?? msg.match(/\bstatus[:\s]+(\d{3})\b/i)?.[1];
+  const status = (e as any)?.status ?? (e as any)?.statusCode ?? (statusFromMsg ? Number(statusFromMsg) : undefined);
+  return status !== undefined ? { httpStatus: status } : undefined;
 }
 
 function providerCanRun(provider: Provider, opts: SearchOptions): boolean {

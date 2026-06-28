@@ -102,6 +102,7 @@ describe("provider auth contracts", () => {
             count: 0,
             timeMs: 0,
             skipped: "missing-auth",
+            errorKind: "network",
           },
         ]);
       }

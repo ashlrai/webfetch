@@ -60,4 +60,122 @@ describe("federation", () => {
     const failed = out.providerReports.find((r) => r.provider === "openverse");
     expect(failed?.ok).toBe(false);
   });
+
+  test("errorKind=ok on successful provider", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => jsonResponse(fixture("wikimedia.json")),
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(true);
+    expect(report?.errorKind).toBe("ok");
+  });
+
+  test("errorKind=timeout when provider aborts due to timeout", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async (_url, init) =>
+          new Promise((_resolve, reject) => {
+            // Simulate an async operation that respects the abort signal
+            const signal = init?.signal as AbortSignal | undefined;
+            if (signal?.aborted) {
+              reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+              return;
+            }
+            signal?.addEventListener("abort", () => {
+              reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+            });
+          }),
+      },
+    ]);
+    const out = await searchImages("test", {
+      providers: ["wikimedia"],
+      fetcher,
+      timeoutMs: 10, // very short — will fire before the never-resolving promise
+    });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("timeout");
+  });
+
+  test("errorKind=http-4xx for 404 response", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => {
+          throw Object.assign(new Error("HTTP 404 Not Found"), { status: 404 });
+        },
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("http-4xx");
+    expect(report?.errorContext?.httpStatus).toBe(404);
+  });
+
+  test("errorKind=http-5xx for 500 response thrown as error", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => {
+          throw Object.assign(new Error("HTTP 500 Internal Server Error"), { status: 500 });
+        },
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("http-5xx");
+    expect(report?.errorContext?.httpStatus).toBe(500);
+  });
+
+  test("errorKind=rate-limited for 429 response", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => {
+          throw Object.assign(new Error("HTTP 429 Too Many Requests"), { status: 429 });
+        },
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("rate-limited");
+  });
+
+  test("errorKind=network for generic fetch failure", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => {
+          throw new Error("fetch failed: ECONNREFUSED");
+        },
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("network");
+  });
+
+  test("errorKind=decode for JSON parse failure", async () => {
+    const fetcher = stubFetcher([
+      {
+        match: (u) => u.includes("commons.wikimedia.org"),
+        handler: async () => {
+          throw new Error("Unexpected token < in JSON at position 0");
+        },
+      },
+    ]);
+    const out = await searchImages("test", { providers: ["wikimedia"], fetcher });
+    const report = out.providerReports.find((r) => r.provider === "wikimedia");
+    expect(report?.ok).toBe(false);
+    expect(report?.errorKind).toBe("decode");
+  });
 });
