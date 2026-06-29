@@ -18,6 +18,7 @@ import {
 } from "./federation-telemetry.ts";
 import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
+import { healthCheckProvider } from "./provider-health-check.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 import type {
   ErrorKind,
@@ -42,15 +43,54 @@ export async function searchImages(
   const requested = opts.providers ?? DEFAULT_PROVIDERS;
   const timeoutMs = opts.timeoutMs ?? 15_000;
 
+  // -------------------------------------------------------------------------
+  // Optional pre-flight health check — skips providers whose endpoints are down
+  // -------------------------------------------------------------------------
+  let activeProviders = requested;
+  const skippedByHealth: ProviderReport[] = [];
+  if (opts.healthCheck) {
+    const checks = await Promise.all(
+      requested.map((id) =>
+        healthCheckProvider(id, { fetcher: opts.fetcher, timeoutMs: Math.min(timeoutMs, 8_000) }).catch(
+          () => null,
+        ),
+      ),
+    );
+    const filtered: ProviderId[] = [];
+    for (let i = 0; i < requested.length; i++) {
+      const check = checks[i];
+      if (check && check.status === "down") {
+        skippedByHealth.push({
+          provider: requested[i]!,
+          ok: false,
+          count: 0,
+          timeMs: check.metrics.httpLatencyMs,
+          skipped: "disabled",
+          errorKind: "network",
+          errorContext: {
+            healthCheckStatus: check.status,
+            reason: check.reason ?? "endpoint reported down",
+          },
+        });
+      } else {
+        filtered.push(requested[i]!);
+      }
+    }
+    activeProviders = filtered;
+  }
+
   if (opts.dryRun) {
     return {
       candidates: [],
-      providerReports: requested.map((p) => ({
-        provider: p,
-        ok: true,
-        count: 0,
-        timeMs: 0,
-      })),
+      providerReports: [
+        ...skippedByHealth,
+        ...activeProviders.map((p) => ({
+          provider: p,
+          ok: true,
+          count: 0,
+          timeMs: 0,
+        })),
+      ],
       warnings: ["dryRun: no network calls made", ...piiWarning],
     };
   }
@@ -59,7 +99,7 @@ export async function searchImages(
   // Priority ordering based on providerPreference
   // -------------------------------------------------------------------------
   const preference = opts.providerPreference ?? "default";
-  const ordered = orderProviders(requested, preference, timeoutMs);
+  const ordered = orderProviders(activeProviders, preference, timeoutMs);
 
   // Emit a sequence event so telemetry can track dispatch order
   emitProviderSequenceEvent({
@@ -131,7 +171,7 @@ export async function searchImages(
     );
   }
 
-  return { candidates: enriched, providerReports: reports, warnings };
+  return { candidates: enriched, providerReports: [...skippedByHealth, ...reports], warnings };
 }
 
 // ---------------------------------------------------------------------------

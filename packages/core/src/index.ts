@@ -90,6 +90,25 @@ export {
   _resetTelemetry,
 } from "./federation-telemetry.ts";
 export { getBucketState } from "./rate-limit.ts";
+export {
+  healthCheckProvider,
+  getProviderHealthStatus,
+  checkAllProviders,
+  getDegradationMultiplier,
+  getCircuitState,
+  degradeBucketCapacity,
+  PROVIDER_ENDPOINTS,
+  _resetHealthCache,
+  _resetCircuitBreakers,
+  _resetDegradationLevels,
+  degradationLevels,
+} from "./provider-health-check.ts";
+export type {
+  ProviderHealthCheck,
+  HealthStatus,
+  HealthMetrics,
+  HealthCheckOptions,
+} from "./provider-health-check.ts";
 export type {
   ProviderEvent,
   ProviderRankEntry,

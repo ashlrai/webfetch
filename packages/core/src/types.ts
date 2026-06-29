@@ -182,6 +182,14 @@ export interface SearchOptions {
    * Providers not in this list are still run in parallel as normal.
    */
   fallbackChain?: ProviderId[];
+
+  /**
+   * When true, run a live endpoint health-check for each requested provider
+   * before dispatching searches. Providers whose circuit-breaker is open or
+   * whose endpoint returns 5xx are removed from the dispatch list and reported
+   * as skipped in providerReports. Adds one round-trip of latency.
+   */
+  healthCheck?: boolean;
 }
 
 export interface ProviderAuth {
