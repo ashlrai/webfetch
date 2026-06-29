@@ -11,7 +11,13 @@
  * If `sharp` is unavailable (optional peer dep), we fall back to a
  * content-stable aHash computed on the raw byte stream. That fallback is
  * marked with a leading `a:` prefix so callers can tell them apart.
+ *
+ * Structured output: use `perceptualHashStructured` to get `{hash, algorithm, confidence}`.
+ * Back-compat: `perceptualHash` returns the bare hex string as before.
+ * Helpers: `phashToString` extracts the hash string from a structured result.
  */
+
+import type { PerceptualHashResult } from "./types.ts";
 
 const N = 32;
 const SMALL = 8;
@@ -27,17 +33,38 @@ async function loadSharp(): Promise<any | null> {
   }
 }
 
-/** Public entry point. Returns 16-hex-char string (64 bits). */
-export async function perceptualHash(bytes: Uint8Array): Promise<string> {
+/**
+ * Structured perceptual hash. Returns `{hash, algorithm, confidence}`.
+ * Prefer this over `perceptualHash` when consumers need to know which
+ * algorithm ran and how reliable the result is.
+ */
+export async function perceptualHashStructured(
+  bytes: Uint8Array,
+): Promise<PerceptualHashResult> {
   const sharp = await loadSharp();
   if (sharp) {
     try {
-      return await dctHash(sharp, bytes);
+      const hash = await dctHash(sharp, bytes);
+      return { hash, algorithm: "dct-phash", confidence: 1.0 };
     } catch {
       // fall through to aHash on decode errors
     }
   }
-  return fallbackAHash(bytes);
+  const hash = fallbackAHash(bytes);
+  return { hash, algorithm: "ahash-fallback", confidence: 0.5 };
+}
+
+/**
+ * Extract the bare hex string from a `PerceptualHashResult` or a legacy
+ * bare-string hash. Useful when a function accepts either form.
+ */
+export function phashToString(result: PerceptualHashResult | string): string {
+  return typeof result === "string" ? result : result.hash;
+}
+
+/** Back-compat: returns 16-hex-char string (64 bits). Use `perceptualHashStructured` for richer output. */
+export async function perceptualHash(bytes: Uint8Array): Promise<string> {
+  return phashToString(await perceptualHashStructured(bytes));
 }
 
 async function dctHash(sharp: any, bytes: Uint8Array): Promise<string> {

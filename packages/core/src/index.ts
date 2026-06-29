@@ -14,6 +14,8 @@ export { probePage, extractImages } from "./probe-page.ts";
 export { findSimilar } from "./find-similar.ts";
 export {
   perceptualHash,
+  perceptualHashStructured,
+  phashToString,
   dedupeByHash,
   dedupeByUrl,
   hammingDistance,

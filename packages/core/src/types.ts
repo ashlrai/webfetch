@@ -6,6 +6,21 @@
  * straight into that factory's pick/download pipeline without any adapter.
  */
 
+/**
+ * Structured perceptual hash result.
+ *
+ * - `hash`: 16-hex-char (64-bit) fingerprint.
+ * - `algorithm`: `"dct-phash"` when sharp was available (real DCT-II pHash);
+ *   `"ahash-fallback"` when sharp was unavailable and we used the byte-window fallback.
+ * - `confidence`: 0..1. `1.0` for dct-phash (full image decoded + resized);
+ *   `0.5` for ahash-fallback (raw bytes, no resize — less perceptually stable).
+ */
+export interface PerceptualHashResult {
+  hash: string;
+  algorithm: "dct-phash" | "ahash-fallback";
+  confidence: number;
+}
+
 export type License =
   | "CC0"
   | "PUBLIC_DOMAIN"
@@ -77,8 +92,10 @@ export interface ImageCandidate {
   score?: number;
   /** License-confidence (0..1). 1 = structured metadata from authoritative source. */
   confidence?: number;
-  /** Set by dedupe when present. */
+  /** Set by dedupe when present. String form is the legacy bare hex; structured form carries metadata. */
   phash?: string;
+  /** Structured pHash result set by dedupe when computeHashes is used with perceptualHashStructured(). */
+  phashResult?: PerceptualHashResult;
   /** Free-form marker for provider-specific metadata; opaque to callers. */
   raw?: unknown;
   /** When true, this result was sourced via an opt-in browser fallback (see providers/browser.ts). */

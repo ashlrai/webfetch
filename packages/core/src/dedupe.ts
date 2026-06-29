@@ -9,10 +9,10 @@
  */
 
 import { downloadImage } from "./download.ts";
-import { findDuplicates, hammingDistance, perceptualHash } from "./perceptual-hash.ts";
+import { findDuplicates, hammingDistance, perceptualHash, perceptualHashStructured, phashToString } from "./perceptual-hash.ts";
 import type { Fetcher, ImageCandidate } from "./types.ts";
 
-export { perceptualHash, hammingDistance, findDuplicates };
+export { perceptualHash, perceptualHashStructured, phashToString, hammingDistance, findDuplicates };
 
 function normalizeUrl(url: string): string {
   try {
