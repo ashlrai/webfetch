@@ -6,6 +6,7 @@
  */
 
 import {
+  batchClusterByPhash,
   batchFindSimilar,
   compareCandidates,
   computeProviderRecommendations,
@@ -29,6 +30,7 @@ import {
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
+  batchClusterByPhashSchema,
   batchFindSimilarSchema,
   batchFindSimilarWithDistancesSchema,
   compareCandidatesSchema,
@@ -474,6 +476,56 @@ export const TOOLS: ToolDef[] = [
       return {
         content: [{ type: "text", text: digest }],
         structuredContent: report,
+      };
+    },
+  },
+  {
+    name: "batch_cluster_by_phash",
+    description:
+      "Cluster a set of ImageCandidates by perceptual similarity using Hamming distance on their pHashes. " +
+      "Candidates are grouped using single-linkage clustering (connect when Hamming distance ≤ hammingThreshold). " +
+      "Within each cluster, the best candidate is promoted to 'representative' — ranked by: license openness (CC0 > CC_BY > … > UNKNOWN), " +
+      "then phash confidence, then image resolution, then provider priority (wikimedia > openverse > unsplash > …). " +
+      "Returns: clusters (sorted largest-first then by top score), clusterMetrics (avgClusterSize, lonelyCount, discardedCount), " +
+      "and dedupeRate (fraction of candidates that share a cluster with another). " +
+      "Candidates with phashResult.confidence < 0.3 or no pHash are discarded and counted in discardedCount. " +
+      "Set confidenceDecay=true to demote stale cached results: requires raw._cachedAt (ISO string or epoch-ms); applies 0.02/hour decay. " +
+      "Use this tool to: deduplicate visually-identical results across providers, expose deduplication rate in diagnostics, " +
+      "pick the best copy of an image, or reduce redundant downloads before calling download_image. " +
+      "hammingThreshold default 10 (near-duplicate); use 0 for exact-only, 20+ for loose visual similarity.",
+    inputSchema: batchClusterByPhashSchema,
+    async handler(args) {
+      const result = await batchClusterByPhash(args.candidates as any[], {
+        hammingThreshold: args.hammingThreshold,
+        minClusterSize: args.minClusterSize,
+        confidenceDecay: args.confidenceDecay,
+      });
+
+      const lines: string[] = [
+        `Clustered ${args.candidates.length} candidate(s) → ${result.clusters.length} cluster(s). ` +
+        `dedupeRate=${(result.dedupeRate * 100).toFixed(1)}%, ` +
+        `discarded=${result.clusterMetrics.discardedCount}, ` +
+        `singletons=${result.clusterMetrics.lonelyCount}, ` +
+        `avgClusterSize=${result.clusterMetrics.avgClusterSize.toFixed(2)}.`,
+      ];
+
+      for (const cluster of result.clusters.slice(0, 5)) {
+        const rep = cluster.representative;
+        lines.push(
+          `  [size=${cluster.size}, dist=${cluster.avgIntraDistance.toFixed(1)}] ` +
+          `${rep.url} (${rep.license}, src=${rep.source})` +
+          (cluster.alternatives.length > 0
+            ? ` + ${cluster.alternatives.length} alternative(s)`
+            : ""),
+        );
+      }
+      if (result.clusters.length > 5) {
+        lines.push(`  … and ${result.clusters.length - 5} more cluster(s)`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: result,
       };
     },
   },

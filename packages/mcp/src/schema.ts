@@ -217,6 +217,62 @@ export const batchFindSimilarWithDistancesSchema = z.object({
     .describe("Max raw candidates collected per reference before ranking (default 50)."),
 });
 
+/** Inline ImageCandidate shape accepted by batch_cluster_by_phash. */
+export const clusterCandidateInputSchema = z.object({
+  url: z.string().url().describe("Candidate image URL"),
+  source: z.string().describe("Provider id that returned this candidate (e.g. 'wikimedia')"),
+  license: z.string().describe("License tag (e.g. 'CC0', 'UNKNOWN')"),
+  phash: z.string().optional().describe("Pre-computed perceptual hash (16-hex-char)"),
+  phashResult: z
+    .object({
+      hash: z.string(),
+      algorithm: z.enum(["dct-phash", "ahash-fallback"]),
+      confidence: z.number().min(0).max(1),
+    })
+    .optional()
+    .describe("Structured pHash result if available"),
+  phashAlgorithm: z.enum(["dct-phash", "ahash-fallback"]).optional(),
+  confidence: z.number().min(0).max(1).optional().describe("License-confidence (0..1)"),
+  width: z.number().int().optional(),
+  height: z.number().int().optional(),
+  title: z.string().optional(),
+  author: z.string().optional(),
+  score: z.number().optional().describe("Composite ranker score (higher = better)"),
+});
+
+export const batchClusterByPhashSchema = z.object({
+  candidates: z
+    .array(clusterCandidateInputSchema)
+    .min(1)
+    .max(500)
+    .describe(
+      "Array of ImageCandidate objects to cluster — typically from a prior search or reverse-image-search result",
+    ),
+  hammingThreshold: z
+    .number()
+    .int()
+    .min(0)
+    .max(64)
+    .optional()
+    .describe(
+      "Maximum Hamming distance (inclusive) to group two candidates as visually similar. Default 10.",
+    ),
+  minClusterSize: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe(
+      "Only include clusters with at least this many members. Default 1 (include singletons).",
+    ),
+  confidenceDecay: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, apply a 0.02/hour decay to confidence of stale cached results (requires raw._cachedAt ISO timestamp or epoch-ms). Default false.",
+    ),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -231,6 +287,7 @@ export const schemas = {
   compare_candidates: compareCandidatesSchema,
   refine_search_results: refineSearchResultsSchema,
   provider_recommendations: providerRecommendationsSchema,
+  batch_cluster_by_phash: batchClusterByPhashSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;

@@ -33,6 +33,7 @@ describe("mcp tools", () => {
   test("tool names match spec", () => {
     const names = TOOLS.map((t) => t.name).sort();
     expect(names).toEqual([
+      "batch_cluster_by_phash",
       "batch_find_similar",
       "batch_find_similar_with_distances",
       "compare_candidates",

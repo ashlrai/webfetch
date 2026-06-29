@@ -29,6 +29,13 @@ export type {
   BatchFindSimilarResult,
 } from "./batch-find-similar.ts";
 export { findSimilarBatch, classifyDistance } from "./find-similar-batch.ts";
+export { batchClusterByPhash } from "./batch-phash-cluster.ts";
+export type {
+  ClusterGroup as PhashClusterGroup,
+  BatchClusterMetrics,
+  BatchPhashClusterResult,
+  BatchPhashClusterOptions,
+} from "./batch-phash-cluster.ts";
 export {
   perceptualHash,
   perceptualHashStructured,
@@ -76,7 +83,16 @@ export type {
 } from "./license.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
-export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
+export { ALL_PROVIDERS, DEFAULT_PROVIDERS, DEFAULT_PROVIDER_IDS, PROVIDER_IDS, bootstrapRegistry } from "./providers/index.ts";
+export {
+  providerRegistry,
+  createProviderRegistry,
+} from "./provider-registry.ts";
+export type {
+  ProviderCapability,
+  ProviderMetadata,
+  ProviderRegistryInterface,
+} from "./provider-registry.ts";
 export { defaultCacheDir, cachePath, readCache, writeCache, ensureCacheDir } from "./cache.ts";
 export {
   getCacheStats,
