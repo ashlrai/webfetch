@@ -430,10 +430,26 @@ export function selectProvidersForQuery(
   licensePolicy: LicensePolicy = "safe-only",
   userProvidersHint?: ProviderId[],
   mode: ProviderSelectionMode = "default",
+  cacheHitPredictions?: Array<{ provider: ProviderId; rankScore: number }>,
+  preferCachedProviders = false,
 ): ProviderId[] {
   if (providers.length <= 1) return providers;
 
   const weights = WEIGHT_PRESETS[mode];
+
+  // Optional cache-hit prediction blend: when preferCachedProviders is set, mix
+  // each provider's Bayesian cache-hit rankScore into its scorecard composite so
+  // providers likely to serve from cache are tried first.
+  const CACHE_BLEND = 0.35;
+  const cacheRankMap = new Map<ProviderId, number>(
+    (cacheHitPredictions ?? []).map((p) => [p.provider, p.rankScore]),
+  );
+  const blendCache = (provider: ProviderId, base: number): number => {
+    if (!preferCachedProviders) return base;
+    const cacheRank = cacheRankMap.get(provider);
+    if (cacheRank === undefined) return base;
+    return base * (1 - CACHE_BLEND) + cacheRank * CACHE_BLEND;
+  };
 
   // Build score map (cold-start providers get compositeScore=1 — optimistic)
   const scoreMap = new Map<ProviderId, number>();
@@ -441,7 +457,7 @@ export function selectProvidersForQuery(
   for (const s of allScores) {
     // Apply license-policy penalty for open-only / cc0-heavy policies
     let score = _reweightedCompositeScore(s, weights, licensePolicy);
-    scoreMap.set(s.provider, score);
+    scoreMap.set(s.provider, blendCache(s.provider, score));
   }
 
   // Providers not yet in scoreMap → cold start → score 1 (sorted to front by stable logic below)

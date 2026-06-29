@@ -141,7 +141,7 @@ export type {
 } from "./attribution-audit.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
-export { ALL_PROVIDERS, DEFAULT_PROVIDERS, DEFAULT_PROVIDER_IDS, PROVIDER_IDS, bootstrapRegistry } from "./providers/index.ts";
+export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
 export {
   providerRegistry,
   createProviderRegistry,
