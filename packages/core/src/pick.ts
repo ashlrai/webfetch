@@ -15,6 +15,7 @@
 
 import { LICENSE_RANK, isContextSafeLicense, isOpenLicense } from "./license.ts";
 import { getMetadataQualityScore } from "./attribution-audit.ts";
+import type { MetadataAuditTrail } from "./attribution-audit.ts";
 import type {
   ConfidenceGap,
   ImageCandidate,
@@ -90,9 +91,18 @@ export function rankAll(
       pixels: w * h,
       complete: (cand.author ? 1 : 0) + (cand.sourcePageUrl ? 1 : 0) + (cand.title ? 1 : 0),
       conf: effectiveConf,
-      // Prefer candidates whose license was derived from authoritative metadata
-      // (api-metadata > embedded-metadata > heuristic-url > fallback).
-      trailConf: cand.licenseAuditTrail?.confidence ?? 0,
+      // Prefer candidates whose metadata was derived from authoritative sources.
+      // Resolution order:
+      //  1. MetadataAuditTrail.overallQualityScore — richest signal: weighted
+      //     confidence across all attribution fields (author/title/sourcePageUrl).
+      //  2. licenseAuditTrail.confidence — legacy per-license provenance signal.
+      //  3. 0 when neither is present.
+      trailConf: (() => {
+        const metaTrail = (cand as ImageCandidate & { metadataAuditTrail?: MetadataAuditTrail })
+          .metadataAuditTrail;
+        if (metaTrail) return metaTrail.overallQualityScore;
+        return cand.licenseAuditTrail?.confidence ?? 0;
+      })(),
       // Metadata quality score: weighted confidence across author/title/sourcePageUrl fields.
       metaQuality: getMetadataQualityScore(cand),
       idx,

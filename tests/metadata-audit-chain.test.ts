@@ -36,11 +36,13 @@ const mkCandidate = (p: Partial<ImageCandidate>): ImageCandidate => ({
 // ---------------------------------------------------------------------------
 
 describe("METADATA_SOURCE_CONFIDENCE — grade constants", () => {
-  test("api-metadata=1.0, embedded-exif=0.9, html-heuristic=0.7, fallback=0.4", () => {
+  test("api-metadata=1.0, embedded-exif=0.9, html-heuristic=0.7, heuristic-url=0.3, fallback=0.1, user-override=1.0", () => {
     expect(METADATA_SOURCE_CONFIDENCE["api-metadata"]).toBe(1.0);
     expect(METADATA_SOURCE_CONFIDENCE["embedded-exif"]).toBe(0.9);
     expect(METADATA_SOURCE_CONFIDENCE["html-heuristic"]).toBe(0.7);
-    expect(METADATA_SOURCE_CONFIDENCE["fallback"]).toBe(0.4);
+    expect(METADATA_SOURCE_CONFIDENCE["heuristic-url"]).toBe(0.3);
+    expect(METADATA_SOURCE_CONFIDENCE["fallback"]).toBe(0.1);
+    expect(METADATA_SOURCE_CONFIDENCE["user-override"]).toBe(1.0);
   });
 });
 
@@ -228,15 +230,15 @@ describe("auditMetadataChain — mixed field sources", () => {
 // ---------------------------------------------------------------------------
 
 describe("getMetadataQualityScore — ad-hoc scoring (no pre-computed trail)", () => {
-  test("candidate with all three fields → fallback-grade quality (0.4 weighted)", () => {
+  test("candidate with all three fields → fallback-grade quality (0.1 weighted)", () => {
     const cand = mkCandidate({
       author: "X",
       title: "Y",
       sourcePageUrl: "https://example.com",
     });
-    // All fields present but no embedded metadata trail → each scored at fallback grade 0.4
+    // All fields present but no embedded metadata trail → each scored at fallback grade 0.1
     const score = getMetadataQualityScore(cand);
-    expect(score).toBeCloseTo(0.4, 5);
+    expect(score).toBeCloseTo(0.1, 5);
   });
 
   test("candidate with no fields → score=0", () => {

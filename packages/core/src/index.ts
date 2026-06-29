@@ -126,12 +126,18 @@ export {
   auditMetadataChain,
   getMetadataQualityScore,
   METADATA_SOURCE_CONFIDENCE,
+  buildMetadataProvenanceExport,
+  formatProvenanceReport,
 } from "./attribution-audit.ts";
 export type {
   MetadataFieldSource,
   AuditStep,
   MetadataFieldAudit,
   MetadataAuditTrail,
+  MetadataProvenanceRecord,
+  ConsensusHeatmapEntry,
+  ConflictResolutionGuidance,
+  MetadataProvenanceExport,
 } from "./attribution-audit.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";

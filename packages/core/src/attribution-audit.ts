@@ -553,24 +553,30 @@ function safeHost(url: string): string | null {
 /**
  * Source from which a single metadata field value was resolved.
  *
- * Confidence grades:
+ * Confidence grades (authority scores):
  *  - `api-metadata`    → 1.0  (explicit structured field from provider API)
  *  - `embedded-exif`   → 0.9  (parsed from EXIF/IPTC/XMP embedded in the image)
  *  - `html-heuristic`  → 0.7  (inferred via HTML parse / page scrape)
- *  - `fallback`        → 0.4  (last-resort heuristic, no authoritative signal found)
+ *  - `heuristic-url`   → 0.3  (inferred from URL structure / hostname patterns)
+ *  - `fallback`        → 0.1  (last-resort default, no authoritative signal found)
+ *  - `user-override`   → 1.0  (explicit value supplied by the caller; highest trust)
  */
 export type MetadataFieldSource =
   | "api-metadata"
   | "embedded-exif"
   | "html-heuristic"
-  | "fallback";
+  | "heuristic-url"
+  | "fallback"
+  | "user-override";
 
-/** Confidence score associated with each `MetadataFieldSource`. */
+/** Authority score (0..1) associated with each `MetadataFieldSource`. */
 export const METADATA_SOURCE_CONFIDENCE: Record<MetadataFieldSource, number> = {
   "api-metadata": 1.0,
   "embedded-exif": 0.9,
   "html-heuristic": 0.7,
-  fallback: 0.4,
+  "heuristic-url": 0.3,
+  fallback: 0.1,
+  "user-override": 1.0,
 };
 
 /**
@@ -582,10 +588,18 @@ export interface AuditStep {
   source: MetadataFieldSource;
   /** Value observed at this step (empty string when absent/null). */
   value: string;
-  /** Confidence for this step (0..1). */
+  /** Authority score for this step (0..1). */
   confidence: number;
   /** Human-readable note describing what was checked and why it was accepted or skipped. */
   note: string;
+  /** ISO 8601 timestamp of when this step was determined. */
+  timestamp: string;
+  /**
+   * Conflicting values observed from alternate sources at this step.
+   * Populated when multiple sources disagreed on the value for this field.
+   * Each entry records the alternate value and which source provided it.
+   */
+  conflictingValues?: Array<{ value: string; source: MetadataFieldSource }>;
 }
 
 /**
@@ -596,10 +610,17 @@ export interface MetadataFieldAudit {
   source: MetadataFieldSource;
   /** Resolved value (empty string when unavailable). */
   value: string;
-  /** Confidence of the winning source (0..1). */
+  /** Authority score of the winning source (0..1). */
   confidence: number;
+  /** ISO 8601 timestamp of when the winning value was determined. */
+  timestamp: string;
   /** Ordered provenance chain — every source that was checked, winning source first. */
   chain: AuditStep[];
+  /**
+   * Conflicting values observed from sources that were checked but not selected.
+   * Only populated when at least one alternate source returned a different non-empty value.
+   */
+  conflictingValues?: Array<{ value: string; source: MetadataFieldSource }>;
 }
 
 /**
@@ -611,6 +632,8 @@ export interface MetadataFieldAudit {
 export interface MetadataAuditTrail {
   /** Provider that produced the candidate. */
   provider: ProviderId | string;
+  /** ISO 8601 timestamp of when the trail was generated. */
+  generatedAt: string;
   /** Per-field chain-of-custody records. */
   metadataFields: {
     author?: MetadataFieldAudit;
@@ -622,6 +645,68 @@ export interface MetadataAuditTrail {
    * Computed by `getMetadataQualityScore`.
    */
   overallQualityScore: number;
+}
+
+// ---------------------------------------------------------------------------
+// Provenance export types
+// ---------------------------------------------------------------------------
+
+/**
+ * A single row in a JSONL provenance export — one per candidate.
+ */
+export interface MetadataProvenanceRecord {
+  /** Candidate URL. */
+  url: string;
+  /** Provider that produced the candidate. */
+  provider: string;
+  /** Full metadata audit trail. */
+  trail: MetadataAuditTrail;
+}
+
+/**
+ * Consensus heatmap entry — how many providers agree on a given value for a field.
+ */
+export interface ConsensusHeatmapEntry {
+  /** Metadata field name. */
+  field: "author" | "title" | "sourcePageUrl";
+  /** The agreed-upon value. */
+  value: string;
+  /** Number of providers that returned this value. */
+  count: number;
+  /** Fraction of all providers that returned this value (0..1). */
+  agreementRatio: number;
+  /** Providers that returned this value. */
+  providers: string[];
+}
+
+/**
+ * Conflict resolution guidance for a single field when providers disagree.
+ */
+export interface ConflictResolutionGuidance {
+  /** Metadata field with conflict. */
+  field: "author" | "title" | "sourcePageUrl";
+  /** The recommended value (majority winner or highest-authority winner). */
+  recommendedValue: string;
+  /** Human-readable explanation of the conflict and resolution rationale. */
+  guidance: string;
+  /** All competing values with their provider counts. */
+  candidates: Array<{ value: string; providers: string[]; count: number }>;
+}
+
+/**
+ * Full provenance export result for a batch of candidates.
+ */
+export interface MetadataProvenanceExport {
+  /** JSONL lines — one `MetadataProvenanceRecord` per candidate. */
+  jsonlLines: string[];
+  /** Consensus heatmap per field × value. */
+  consensusHeatmap: ConsensusHeatmapEntry[];
+  /** Conflict resolution guidance for fields where providers disagree. */
+  conflictResolution: ConflictResolutionGuidance[];
+  /** Number of candidates included in the export. */
+  candidateCount: number;
+  /** ISO 8601 timestamp of when the export was generated. */
+  generatedAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -644,11 +729,13 @@ const FIELD_WEIGHTS: Record<"author" | "title" | "sourcePageUrl", number> = {
  * candidate, producing a full chain-of-custody `MetadataAuditTrail`.
  *
  * Resolution priority per field:
- *  1. `api-metadata`   — field present directly on the `ImageCandidate` (set by provider)
- *  2. `embedded-exif`  — EXIF/IPTC value surfaced via `candidate.raw`
+ *  1. `user-override`  — explicit override value supplied via `overrides` param (authority 1.0)
+ *  2. `api-metadata`   — field present directly on the `ImageCandidate` (set by provider)
+ *  3. `embedded-exif`  — EXIF/IPTC value surfaced via `candidate.raw`
  *     (looks for `raw.exif.<field>`, `raw.iptc.<field>`, `raw.xmp.<field>`)
- *  3. `html-heuristic` — heuristic value from `candidate.raw` (looks for `raw.html.<field>`)
- *  4. `fallback`       — no authoritative signal; records absence
+ *  4. `html-heuristic` — heuristic value from `candidate.raw` (looks for `raw.html.<field>`)
+ *  5. `heuristic-url`  — value inferred from candidate URL structure
+ *  6. `fallback`       — no authoritative signal; records absence
  *
  * The `rawResponse` parameter is the provider's raw API response (may be the
  * same object as `candidate.raw` or a richer parent object). The function
@@ -658,21 +745,208 @@ const FIELD_WEIGHTS: Record<"author" | "title" | "sourcePageUrl", number> = {
  * @param candidate    The `ImageCandidate` to audit.
  * @param rawResponse  Raw provider response (may be the same as `candidate.raw`).
  * @param provider     Provider id string (used for provenance labelling).
+ * @param overrides    Optional caller-supplied overrides (user-override source, authority 1.0).
  */
 export function auditMetadataChain(
   candidate: ImageCandidate,
   rawResponse: unknown,
   provider: ProviderId | string,
+  overrides?: Partial<Record<"author" | "title" | "sourcePageUrl", string>>,
 ): MetadataAuditTrail {
+  const generatedAt = new Date().toISOString();
   const metadataFields: MetadataAuditTrail["metadataFields"] = {};
 
-  metadataFields.author = auditField("author", candidate, rawResponse);
-  metadataFields.title = auditField("title", candidate, rawResponse);
-  metadataFields.sourcePageUrl = auditField("sourcePageUrl", candidate, rawResponse);
+  metadataFields.author = auditField("author", candidate, rawResponse, generatedAt, overrides?.author);
+  metadataFields.title = auditField("title", candidate, rawResponse, generatedAt, overrides?.title);
+  metadataFields.sourcePageUrl = auditField("sourcePageUrl", candidate, rawResponse, generatedAt, overrides?.sourcePageUrl);
 
   const overallQualityScore = computeQualityScore(metadataFields);
 
-  return { provider, metadataFields, overallQualityScore };
+  return { provider, generatedAt, metadataFields, overallQualityScore };
+}
+
+// ---------------------------------------------------------------------------
+// Provenance export functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a full provenance export for a batch of candidates.
+ *
+ * For each candidate:
+ *  1. Runs `auditMetadataChain` (or re-uses an attached `metadataAuditTrail`).
+ *  2. Emits a JSONL line containing the full `MetadataProvenanceRecord`.
+ *
+ * Then computes:
+ *  - A consensus heatmap showing which providers agree on author/title.
+ *  - Conflict resolution guidance for fields where providers disagree.
+ *
+ * @param candidates  Array of `ImageCandidate` objects (from a search result).
+ * @param rawResponses  Optional map of candidate index → raw API response.
+ */
+export function buildMetadataProvenanceExport(
+  candidates: readonly ImageCandidate[],
+  rawResponses?: Map<number, unknown>,
+): MetadataProvenanceExport {
+  const generatedAt = new Date().toISOString();
+  const records: MetadataProvenanceRecord[] = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const cand = candidates[i]!;
+    const rawResponse = rawResponses?.get(i) ?? cand.raw ?? {};
+
+    // Re-use a pre-computed trail if present, otherwise compute now.
+    const existing = (cand as ImageCandidate & { metadataAuditTrail?: MetadataAuditTrail })
+      .metadataAuditTrail;
+    const trail: MetadataAuditTrail = existing ?? auditMetadataChain(cand, rawResponse, cand.source);
+
+    records.push({ url: cand.url, provider: cand.source, trail });
+  }
+
+  const jsonlLines = records.map((r) => JSON.stringify(r));
+  const consensusHeatmap = buildConsensusHeatmap(records);
+  const conflictResolution = buildConflictResolution(records, consensusHeatmap);
+
+  return {
+    jsonlLines,
+    consensusHeatmap,
+    conflictResolution,
+    candidateCount: records.length,
+    generatedAt,
+  };
+}
+
+/**
+ * Format a `MetadataProvenanceExport` as a human-readable text report.
+ *
+ * Includes:
+ *  - Summary line (N candidates, timestamp)
+ *  - Consensus heatmap table
+ *  - Conflict resolution guidance (if any conflicts exist)
+ */
+export function formatProvenanceReport(exp: MetadataProvenanceExport): string {
+  const lines: string[] = [];
+
+  lines.push(`Metadata Provenance Report`);
+  lines.push(`Generated: ${exp.generatedAt}`);
+  lines.push(`Candidates: ${exp.candidateCount}`);
+  lines.push("");
+
+  if (exp.consensusHeatmap.length === 0) {
+    lines.push("No consensus data (no candidates or all fields absent).");
+  } else {
+    lines.push("Consensus Heatmap:");
+    lines.push("  Field           | Value                          | Providers | Agreement");
+    lines.push("  " + "-".repeat(75));
+    for (const entry of exp.consensusHeatmap) {
+      const fieldPad = entry.field.padEnd(16);
+      const valuePad = entry.value.slice(0, 30).padEnd(30);
+      const countPad = String(entry.count).padStart(9);
+      const pct = (entry.agreementRatio * 100).toFixed(0) + "%";
+      lines.push(`  ${fieldPad}| ${valuePad} | ${countPad} | ${pct}`);
+    }
+  }
+
+  lines.push("");
+
+  if (exp.conflictResolution.length === 0) {
+    lines.push("No conflicts detected — all providers agree on all fields.");
+  } else {
+    lines.push("Conflict Resolution:");
+    for (const cr of exp.conflictResolution) {
+      lines.push(`  [${cr.field}] ${cr.guidance}`);
+      for (const cand of cr.candidates) {
+        const marker = cand.value === cr.recommendedValue ? "  ✓" : "   ";
+        lines.push(`${marker}  "${cand.value}" — ${cand.providers.join(", ")} (${cand.count})`);
+      }
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers for provenance export
+// ---------------------------------------------------------------------------
+
+type AuditableField3 = "author" | "title" | "sourcePageUrl";
+
+function buildConsensusHeatmap(records: MetadataProvenanceRecord[]): ConsensusHeatmapEntry[] {
+  const fields: AuditableField3[] = ["author", "title", "sourcePageUrl"];
+  const totalProviders = records.length;
+  const heatmap: ConsensusHeatmapEntry[] = [];
+
+  for (const field of fields) {
+    // Collect value → providers map
+    const valueMap = new Map<string, string[]>();
+    for (const rec of records) {
+      const audit = rec.trail.metadataFields[field];
+      if (audit && audit.value) {
+        const existing = valueMap.get(audit.value) ?? [];
+        existing.push(rec.provider);
+        valueMap.set(audit.value, existing);
+      }
+    }
+    // Only include values that appear at least once
+    for (const [value, providers] of valueMap.entries()) {
+      heatmap.push({
+        field,
+        value,
+        count: providers.length,
+        agreementRatio: totalProviders > 0 ? providers.length / totalProviders : 0,
+        providers,
+      });
+    }
+  }
+
+  // Sort by field priority, then by count descending
+  const FIELD_ORDER: Record<AuditableField3, number> = { author: 0, title: 1, sourcePageUrl: 2 };
+  heatmap.sort((a, b) => {
+    const fo = FIELD_ORDER[a.field] - FIELD_ORDER[b.field];
+    if (fo !== 0) return fo;
+    return b.count - a.count;
+  });
+
+  return heatmap;
+}
+
+function buildConflictResolution(
+  records: MetadataProvenanceRecord[],
+  heatmap: ConsensusHeatmapEntry[],
+): ConflictResolutionGuidance[] {
+  const fields: AuditableField3[] = ["author", "title", "sourcePageUrl"];
+  const result: ConflictResolutionGuidance[] = [];
+
+  for (const field of fields) {
+    const fieldEntries = heatmap.filter((e) => e.field === field);
+    if (fieldEntries.length <= 1) continue; // no conflict
+
+    // Sort by count descending
+    const sorted = [...fieldEntries].sort((a, b) => b.count - a.count);
+    const winner = sorted[0]!;
+    const total = records.length;
+
+    const guidance =
+      `${winner.count} provider(s) say ${field}="${winner.value}", ` +
+      sorted
+        .slice(1)
+        .map((e) => `${e.count} say "${e.value}"`)
+        .join(", ") +
+      `; "${winner.value}" is likely correct (majority: ${(winner.agreementRatio * 100).toFixed(0)}% of ${total} providers).`;
+
+    result.push({
+      field,
+      recommendedValue: winner.value,
+      guidance,
+      candidates: sorted.map((e) => ({
+        value: e.value,
+        providers: e.providers,
+        count: e.count,
+      })),
+    });
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -724,8 +998,11 @@ export function getMetadataQualityScore(candidate: ImageCandidate): number {
 
 type AuditableField = "author" | "title" | "sourcePageUrl";
 
+// Alias so both spellings work internally
+type AuditableField2 = AuditableField;
+
 /** Extract a string field from an unknown raw object, checking common nested keys. */
-function extractRawField(raw: unknown, field: AuditableField): string | undefined {
+function extractRawField(raw: unknown, field: AuditableField2): string | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
 
@@ -784,31 +1061,59 @@ function extractHtmlField(raw: unknown, field: AuditableField): string | undefin
 
 /**
  * Audit a single metadata field, building a full `MetadataFieldAudit`.
+ *
+ * @param field         The field name to audit.
+ * @param candidate     The ImageCandidate being audited.
+ * @param rawResponse   Provider raw API response.
+ * @param timestamp     ISO 8601 timestamp to embed in each step.
+ * @param userOverride  Optional caller-supplied override value (user-override source).
  */
 function auditField(
   field: AuditableField,
   candidate: ImageCandidate,
   rawResponse: unknown,
+  timestamp: string,
+  userOverride?: string,
 ): MetadataFieldAudit {
   const chain: AuditStep[] = [];
+  // Collect all non-empty values from all sources to detect conflicts
+  const allObserved: Array<{ value: string; source: MetadataFieldSource }> = [];
+
+  // --- Step 0: user-override (highest authority, checked first) ---
+  if (userOverride && userOverride.trim()) {
+    const val = userOverride.trim();
+    const conf = METADATA_SOURCE_CONFIDENCE["user-override"];
+    chain.push({
+      source: "user-override",
+      value: val,
+      confidence: conf,
+      note: `Field "${field}" supplied by caller override (user-override); highest authority.`,
+      timestamp,
+    });
+    return { source: "user-override", value: val, confidence: conf, timestamp, chain };
+  }
 
   // --- Step 1: api-metadata (direct candidate field) ---
   const apiValue = candidate[field as keyof ImageCandidate] as string | undefined;
   if (apiValue && typeof apiValue === "string" && apiValue.trim()) {
+    const val = apiValue.trim();
     const conf = METADATA_SOURCE_CONFIDENCE["api-metadata"];
+    allObserved.push({ value: val, source: "api-metadata" });
     chain.push({
       source: "api-metadata",
-      value: apiValue.trim(),
+      value: val,
       confidence: conf,
       note: `Field "${field}" resolved from provider API metadata on candidate.`,
+      timestamp,
     });
-    return { source: "api-metadata", value: apiValue.trim(), confidence: conf, chain };
+    return { source: "api-metadata", value: val, confidence: conf, timestamp, chain };
   } else {
     chain.push({
       source: "api-metadata",
       value: "",
       confidence: 0,
       note: `Field "${field}" not present in provider API metadata; trying embedded sources.`,
+      timestamp,
     });
   }
 
@@ -819,19 +1124,32 @@ function auditField(
 
   if (embedded) {
     const conf = METADATA_SOURCE_CONFIDENCE["embedded-exif"];
+    allObserved.push({ value: embedded.value, source: "embedded-exif" });
     chain.push({
       source: "embedded-exif",
       value: embedded.value,
       confidence: conf,
       note: `Field "${field}" resolved from ${embedded.ns.toUpperCase()} embedded metadata.`,
+      timestamp,
     });
-    return { source: "embedded-exif", value: embedded.value, confidence: conf, chain };
+    const conflicts = allObserved.filter(
+      (o) => o.source !== "embedded-exif" && o.value !== embedded.value,
+    );
+    return {
+      source: "embedded-exif",
+      value: embedded.value,
+      confidence: conf,
+      timestamp,
+      chain,
+      ...(conflicts.length > 0 ? { conflictingValues: conflicts } : {}),
+    };
   } else {
     chain.push({
       source: "embedded-exif",
       value: "",
       confidence: 0,
       note: `Field "${field}" not found in EXIF/IPTC/XMP metadata; trying HTML heuristic.`,
+      timestamp,
     });
   }
 
@@ -842,32 +1160,45 @@ function auditField(
 
   if (html) {
     const conf = METADATA_SOURCE_CONFIDENCE["html-heuristic"];
+    allObserved.push({ value: html, source: "html-heuristic" });
     chain.push({
       source: "html-heuristic",
       value: html,
       confidence: conf,
       note: `Field "${field}" resolved via HTML heuristic parsing.`,
+      timestamp,
     });
-    return { source: "html-heuristic", value: html, confidence: conf, chain };
+    const conflicts = allObserved.filter(
+      (o) => o.source !== "html-heuristic" && o.value !== html,
+    );
+    return {
+      source: "html-heuristic",
+      value: html,
+      confidence: conf,
+      timestamp,
+      chain,
+      ...(conflicts.length > 0 ? { conflictingValues: conflicts } : {}),
+    };
   } else {
     chain.push({
       source: "html-heuristic",
       value: "",
       confidence: 0,
       note: `Field "${field}" not found via HTML heuristic; recording as absent (fallback).`,
+      timestamp,
     });
   }
 
   // --- Step 4: fallback (field is absent) ---
-  const fallbackConf = METADATA_SOURCE_CONFIDENCE["fallback"];
   chain.push({
     source: "fallback",
     value: "",
     confidence: 0,
     note: `Field "${field}" could not be resolved from any source.`,
+    timestamp,
   });
 
-  return { source: "fallback", value: "", confidence: 0, chain };
+  return { source: "fallback", value: "", confidence: 0, timestamp, chain };
 }
 
 /**

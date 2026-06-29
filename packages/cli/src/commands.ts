@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, FederationPhashAuditReport, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
-import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, buildFederationPhashAuditReport, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS } from "webfetch-core";
+import type { FederationRepairPlan, FederationPhashAuditReport, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult, MetadataProvenanceExport } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, buildFederationPhashAuditReport, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS, buildMetadataProvenanceExport, formatProvenanceReport } from "webfetch-core";
 import type { CacheHitPrediction } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
@@ -2341,6 +2341,82 @@ export async function cmdAuditPhashFederation(
   return 0;
 }
 
+/**
+ * export-metadata-provenance <query>
+ *
+ * Runs a federated search for <query>, then builds a full metadata provenance
+ * export for every result:
+ *   - JSONL output with per-candidate audit trails (one line per candidate)
+ *   - Consensus heatmap showing which providers agree on author/title
+ *   - Conflict resolution guidance when providers disagree
+ *
+ * Flags:
+ *   --json         Emit the full MetadataProvenanceExport JSON object instead of the
+ *                  human-readable report (useful for piping into jq or saving to disk).
+ *   --jsonl        Emit only the raw JSONL lines (one MetadataProvenanceRecord per line).
+ *   --output PATH  Write output to a file instead of stdout.
+ */
+export async function cmdExportMetadataProvenance(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(
+      c.red(
+        "usage: webfetch export-metadata-provenance <query> [--json] [--jsonl] [--output PATH]",
+      ),
+    );
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose } = buildSearchOptions(args, env, cfg);
+  const json = getBool(args.flags, "json");
+  const jsonl = getBool(args.flags, "jsonl");
+  const outputPath = getString(args.flags, "output");
+
+  if (verbose) {
+    io.stderr(c.dim(`Running federated search for "${query}" to build provenance export…`));
+  }
+
+  const bundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
+  const { candidates } = bundle;
+
+  if (candidates.length === 0) {
+    io.stderr(c.yellow(`No results for "${query}".`));
+    return 0;
+  }
+
+  const exp: MetadataProvenanceExport = buildMetadataProvenanceExport(candidates);
+
+  let output: string;
+  if (jsonl) {
+    output = exp.jsonlLines.join("\n");
+  } else if (json) {
+    output = JSON.stringify(exp, null, 2);
+  } else {
+    output = formatProvenanceReport(exp);
+  }
+
+  if (outputPath) {
+    await mkdir(dirname(resolve(outputPath)), { recursive: true });
+    await writeFile(resolve(outputPath), output, "utf8");
+    io.stdout(
+      c.green(
+        `Provenance export written to ${resolve(outputPath)} (${exp.candidateCount} candidates)`,
+      ),
+    );
+  } else {
+    io.stdout(output);
+  }
+
+  return 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -2448,6 +2524,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   "resolve-license-conflicts": cmdResolveLicenseConflicts,
   "dedupe-report": cmdDedupeReport,
   "audit-phash-federation": cmdAuditPhashFederation,
+  "export-metadata-provenance": cmdExportMetadataProvenance,
   warm: cmdWarm,
   help: cmdHelp,
   "--help": cmdHelp,
