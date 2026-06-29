@@ -315,6 +315,22 @@ export interface SearchOptions {
   degradedTimeoutMs?: boolean;
 
   /**
+   * Scorecard-based secondary provider ordering mode.
+   *
+   * When no explicit `providers` list is given, `selectProvidersForQuery`
+   * re-ranks providers using the ProviderScorecard composite score.
+   *
+   * - `'default'`  — balanced composite (successRate × quality × latency-inverse).
+   * - `'quality'`  — maximise result quality + open licenses.
+   * - `'latency'`  — minimise p50 latency above all else.
+   * - `'balance'`  — equal weight on all three dimensions.
+   *
+   * Ignored when `providerPreference` is set to `'fastest'` or `'healthiest'`
+   * (those take precedence).
+   */
+  scorecardSelection?: import("./provider-scorecard.ts").ProviderSelectionMode;
+
+  /**
    * When true and >8 providers are requested, split them into two waves:
    *   - Wave 1 (tier-1): CC0 / PUBLIC_DOMAIN providers — 15 s independent budget.
    *   - Wave 2 (tier-2): platform / editorial / unknown providers — 15 s budget,

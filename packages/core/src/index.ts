@@ -242,6 +242,25 @@ export type {
 } from "./license-reconciliation.ts";
 
 export {
+  recordScorecardEvent,
+  getProviderScore,
+  getAllProviderScores,
+  getScorecardSnapshot,
+  selectProvidersForQuery,
+  computeLicenseDiversity,
+  enableScorecardPersistence,
+  disableScorecardPersistence,
+  loadScorecardFromDisk,
+  _resetScorecard,
+} from "./provider-scorecard.ts";
+export type {
+  ScorecardEvent,
+  ProviderScore,
+  ProviderSelectionMode,
+  SelectionWeights,
+} from "./provider-scorecard.ts";
+
+export {
   trackEvent,
   isTelemetryEnabled,
   installHash,

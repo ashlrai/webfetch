@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat } from "webfetch-core";
+import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode } from "webfetch-core";
 import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
@@ -120,6 +120,15 @@ function buildSearchOptions(
     cfg.limit ??
     BUILTIN_DEFAULTS.limit!;
 
+  // --provider-selection [default|quality|latency|balance]
+  const rawSelection = getString(args.flags, "provider-selection");
+  const scorecardSelection: ProviderSelectionMode | undefined =
+    rawSelection === "quality" || rawSelection === "latency" || rawSelection === "balance"
+      ? rawSelection
+      : rawSelection === "default"
+        ? "default"
+        : undefined;
+
   return {
     opts: {
       providers,
@@ -130,6 +139,7 @@ function buildSearchOptions(
       timeoutMs: getInt(args.flags, "timeout-ms"),
       auth: authFromEnv(env),
       dryRun: getBool(args.flags, "dry-run"),
+      ...(scorecardSelection !== undefined ? { scorecardSelection } : {}),
     },
     limit,
     verbose: getBool(args.flags, "verbose"),

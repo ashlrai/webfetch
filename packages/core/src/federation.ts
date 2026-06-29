@@ -23,6 +23,7 @@ import { healthCheckProvider } from "./provider-health-check.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 import { providerRegistry } from "./provider-registry.ts";
 import { clusterCandidates } from "./semantic-clustering.ts";
+import { recordScorecardEvent, selectProvidersForQuery } from "./provider-scorecard.ts";
 import type {
   ClusterGroup,
   EarlyExitCriteria,
@@ -162,10 +163,25 @@ export async function searchImages(
   }
 
   // -------------------------------------------------------------------------
+  // Secondary scorecard-based ordering (applied before providerPreference
+  // so providerPreference can further re-sort the scorecard-ordered list).
+  // Only active when no explicit providers list was given by the caller.
+  // -------------------------------------------------------------------------
+  let scorecardOrdered = activeProviders;
+  if (!opts.providers && opts.scorecardSelection) {
+    scorecardOrdered = selectProvidersForQuery(
+      activeProviders,
+      opts.licensePolicy ?? "safe-only",
+      undefined,
+      opts.scorecardSelection,
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Priority ordering based on providerPreference
   // -------------------------------------------------------------------------
   const preference = opts.providerPreference ?? "default";
-  const ordered = orderProviders(activeProviders, preference, timeoutMs);
+  const ordered = orderProviders(scorecardOrdered, preference, timeoutMs);
 
   // Emit a sequence event so telemetry can track dispatch order
   emitProviderSequenceEvent({
@@ -563,6 +579,8 @@ async function runProvider(
       errorKind: "ok",
       payloadBytes: JSON.stringify(out).length,
     });
+    // Record scorecard observation for this successful call.
+    recordScorecardEvent(id, true, elapsed, out);
     return out;
   } catch (e) {
     const elapsed = Date.now() - started;
@@ -596,6 +614,8 @@ async function runProvider(
       ...(ctx ? { errorContext: ctx } : {}),
       payloadBytes: 0,
     });
+    // Record scorecard observation for this failed call.
+    recordScorecardEvent(id, false, elapsed, []);
     return [];
   } finally {
     clearTimeout(timer);
