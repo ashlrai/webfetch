@@ -54,6 +54,8 @@ export function rankAll(
     pixels: number;
     complete: number;
     conf: number;
+    /** Audit-trail confidence (0..1). Used as tie-breaker between `conf` and `pixels`. */
+    trailConf: number;
     idx: number;
   };
   const scored: Scored[] = [];
@@ -74,6 +76,9 @@ export function rankAll(
       pixels: w * h,
       complete: (cand.author ? 1 : 0) + (cand.sourcePageUrl ? 1 : 0) + (cand.title ? 1 : 0),
       conf: cand.confidence ?? (contextSafe ? 0.5 : 0),
+      // Prefer candidates whose license was derived from authoritative metadata
+      // (api-metadata > embedded-metadata > heuristic-url > fallback).
+      trailConf: cand.licenseAuditTrail?.confidence ?? 0,
       idx,
     });
   });
@@ -87,6 +92,8 @@ export function rankAll(
     }
     if (a.rank !== b.rank) return a.rank - b.rank;
     if (a.conf !== b.conf) return b.conf - a.conf;
+    // Audit-trail confidence as tie-breaker: higher provenance quality wins.
+    if (a.trailConf !== b.trailConf) return b.trailConf - a.trailConf;
     if (a.pixels !== b.pixels) return b.pixels - a.pixels;
     if (a.complete !== b.complete) return b.complete - a.complete;
     return a.idx - b.idx;

@@ -103,6 +103,13 @@ export interface ImageCandidate {
   phashAlgorithm?: "dct-phash" | "ahash-fallback";
   /** Free-form marker for provider-specific metadata; opaque to callers. */
   raw?: unknown;
+  /**
+   * License provenance audit trail — records how the license was determined and
+   * how trustworthy that determination is. Set by providers / coercion helpers
+   * that use `coerceLicenseWithTrail` or `heuristicLicenseFromUrlWithTrail`.
+   * Used by `rankAll` as a secondary confidence tie-breaker.
+   */
+  licenseAuditTrail?: import("./attribution-audit.ts").LicenseAuditTrail;
   /** When true, this result was sourced via an opt-in browser fallback (see providers/browser.ts). */
   viaBrowserFallback?: boolean;
 }

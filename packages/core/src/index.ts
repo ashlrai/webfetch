@@ -46,6 +46,17 @@ export {
   PLATFORM_LICENSES,
   SAFE_LICENSES,
   LICENSE_RANK,
+  // Attribution audit trail (re-exported via license.ts → attribution-audit.ts)
+  coerceLicenseWithTrail,
+  heuristicLicenseFromUrlWithTrail,
+  validateAttributionLine,
+} from "./license.ts";
+export type {
+  LicenseAuditTrail,
+  LicenseAuditSource,
+  LicenseAuditFlag,
+  AttributionValidationResult,
+  AttributionValidationOptions,
 } from "./license.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";

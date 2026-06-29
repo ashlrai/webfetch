@@ -6,9 +6,24 @@
  *
  * Hard rule: we never ship UNKNOWN — the picker rejects it. A missing license
  * is always treated as unsafe; we never infer "probably fine" silently.
+ *
+ * Audit trail variants (`coerceLicenseWithTrail`, `heuristicLicenseFromUrlWithTrail`)
+ * are defined in attribution-audit.ts and re-exported here for convenience.
  */
 
 import type { License } from "./types.ts";
+export {
+  coerceLicenseWithTrail,
+  heuristicLicenseFromUrlWithTrail,
+  validateAttributionLine,
+} from "./attribution-audit.ts";
+export type {
+  LicenseAuditTrail,
+  LicenseAuditSource,
+  LicenseAuditFlag,
+  AttributionValidationResult,
+  AttributionValidationOptions,
+} from "./attribution-audit.ts";
 
 export const LICENSE_RANK: Record<License, number> = {
   CC0: 1,
