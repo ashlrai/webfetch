@@ -27,6 +27,7 @@ import {
   searchAlbumCover,
   searchArtistImages,
   searchImages,
+  auditImageMetadata,
 } from "webfetch-core";
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
@@ -38,6 +39,7 @@ import {
   comparePhashesSchema,
   computeFederationFallbackSchema,
   downloadImageSchema,
+  extractImageMetadataAuditSchema,
   fetchWithLicenseSchema,
   findSimilarSchema,
   probePageSchema,
@@ -560,6 +562,68 @@ export const TOOLS: ToolDef[] = [
       }
       if (result.clusters.length > 5) {
         lines.push(`  … and ${result.clusters.length - 5} more cluster(s)`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: result,
+      };
+    },
+  },
+  {
+    name: "extract_image_metadata_audit",
+    description:
+      "Extract embedded metadata (EXIF artist/copyright, XMP dc:creator/dc:rights/cc:license/xmpRights:UsageTerms, IPTC record 2) from downloaded image bytes, " +
+      "cross-check against provider-supplied candidate metadata, and return a full ImageMetadataAuditResult with per-field confidence scores and a conflict resolution log. " +
+      "Input: base64-encoded image bytes (obtain via download_image) + the ImageCandidate used to find the image. " +
+      "Conflict detection: compares embedded vs provider values using Levenshtein similarity. " +
+      "When similarity > 0.8 (near-agreement), fields are merged and confidence is boosted to 0.95. " +
+      "When below threshold, the resolveConflicts strategy applies: " +
+      "'conservative' (default) prefers the higher-confidence source (XMP > IPTC > EXIF > provider baseline 0.7); " +
+      "'provider-first' always trusts the provider; 'embedded-first' always trusts the image file. " +
+      "Returns: embeddedMetadata (raw extracted fields), providerMetadata (from candidate), mergedResult (reconciled best view with confidence), " +
+      "conflicts (per-field disagreements with similarity scores and resolution), auditTrail (ordered decision log with timestamps and confidence). " +
+      "Use to: verify provider attribution against the actual image file, catch misattribution, boost confidence for well-annotated images, " +
+      "detect license inconsistencies before publishing, or enrich metadata for open-license assets.",
+    inputSchema: extractImageMetadataAuditSchema,
+    async handler(args) {
+      // Decode base64 → Uint8Array
+      let bytes: Uint8Array;
+      try {
+        const bin = atob(args.imageBase64);
+        bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      } catch {
+        return {
+          content: [{ type: "text", text: "Error: imageBase64 is not valid base64." }],
+          structuredContent: { error: "invalid-base64" },
+          isError: true,
+        };
+      }
+
+      const result = await auditImageMetadata({
+        downloadedBytes: bytes,
+        candidate: args.candidate as any,
+        resolveConflicts: args.resolveConflicts as any,
+      });
+
+      const lines: string[] = [];
+      lines.push(
+        `Audit complete: ${result.conflicts.length} conflict(s), ` +
+        `artist confidence=${result.mergedResult.confidence.artist.toFixed(2)}, ` +
+        `copyright confidence=${result.mergedResult.confidence.copyright.toFixed(2)}, ` +
+        `license confidence=${result.mergedResult.confidence.license.toFixed(2)}.`,
+      );
+      lines.push(`Embedded license: ${result.embeddedMetadata.license} | Provider license: ${result.providerMetadata.license} | Merged: ${result.mergedResult.license}`);
+      if (result.mergedResult.artist) {
+        lines.push(`Artist: ${result.mergedResult.artist}`);
+      }
+      if (result.conflicts.length > 0) {
+        lines.push("Conflicts:");
+        for (const c of result.conflicts) {
+          const simStr = c.similarity !== undefined ? ` (similarity=${c.similarity.toFixed(3)})` : "";
+          lines.push(`  [${c.field}] embedded="${c.embedded}" vs provider="${c.provider}"${simStr} → resolved as ${c.resolution}`);
+        }
       }
 
       return {

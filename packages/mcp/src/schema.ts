@@ -327,6 +327,39 @@ export const computeFederationFallbackSchema = z.object({
     ),
 });
 
+/** Inline ImageCandidate shape accepted by extract_image_metadata_audit. */
+const auditCandidateInputSchema = z.object({
+  url: z.string().url().describe("Candidate image URL"),
+  source: z.string().describe("Provider id that returned this candidate (e.g. 'wikimedia')"),
+  license: z.string().describe("License tag (e.g. 'CC0', 'UNKNOWN')"),
+  author: z.string().optional().describe("Author/creator from the provider"),
+  licenseUrl: z.string().url().optional().describe("URL of the license"),
+  attributionLine: z.string().optional().describe("Provider-supplied attribution string"),
+  title: z.string().optional(),
+  sourcePageUrl: z.string().url().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+export const extractImageMetadataAuditSchema = z.object({
+  imageBase64: z
+    .string()
+    .describe(
+      "Base64-encoded bytes of the downloaded image to audit. Obtain these bytes via download_image first.",
+    ),
+  candidate: auditCandidateInputSchema.describe(
+    "Provider-supplied ImageCandidate metadata to cross-check against the embedded bytes.",
+  ),
+  resolveConflicts: z
+    .enum(["provider-first", "embedded-first", "conservative"])
+    .default("conservative")
+    .describe(
+      "Conflict resolution strategy when embedded and provider metadata disagree. " +
+      "'conservative' (default) prefers the higher-confidence source. " +
+      "'provider-first' always trusts the provider. " +
+      "'embedded-first' always trusts the image file.",
+    ),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -343,6 +376,7 @@ export const schemas = {
   provider_recommendations: providerRecommendationsSchema,
   batch_cluster_by_phash: batchClusterByPhashSchema,
   compute_federation_fallback: computeFederationFallbackSchema,
+  extract_image_metadata_audit: extractImageMetadataAuditSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;

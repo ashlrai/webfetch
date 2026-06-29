@@ -61,6 +61,15 @@ export {
 } from "./perceptual-hash.ts";
 export { readImageMetadata, parseXmp, parseIptc, parseExifBuffer } from "./metadata-reader.ts";
 export type { EmbeddedMetadata } from "./metadata-reader.ts";
+export { auditImageMetadata, levenshteinSimilarity as levenshteinSimilarityAudit } from "./image-metadata-audit.ts";
+export type {
+  ImageMetadataAuditInput,
+  ImageMetadataAuditResult,
+  ProviderMetadataSubset,
+  MergedMetadata,
+  FieldConflict,
+  MetadataAuditEvent,
+} from "./image-metadata-audit.ts";
 export {
   buildAttribution,
   coerceLicense,
