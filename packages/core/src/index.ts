@@ -446,6 +446,14 @@ export type {
 } from "./deduplication-report.ts";
 
 export { batchDeduplicateWithPhashCluster } from "./batch-phash-dedup.ts";
+
+export { CacheWarmer, parseWarmQuery } from "./cache-warmer.ts";
+export type {
+  WarmQuery,
+  WarmthReport,
+  WarmthProviderMetrics,
+  CacheWarmerOptions,
+} from "./cache-warmer.ts";
 export type {
   FederatedAlgorithmBreakdown,
   FederatedCluster,

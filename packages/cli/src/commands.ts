@@ -11,7 +11,8 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
-import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS } from "webfetch-core";
+import type { CacheHitPrediction } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -37,6 +38,7 @@ import {
   writeState,
 } from "./watch.ts";
 import { writeSidecar } from "./xmp.ts";
+import { cmdWarm } from "./commands/warm.ts";
 
 export interface CommandIO {
   stdout: (s: string) => void;
@@ -1091,6 +1093,98 @@ export async function cmdCacheAnalytics(
   return 0;
 }
 
+// ---------- `webfetch cache-predict` ---------------------------------------
+
+/**
+ * `webfetch cache-predict '<query>' [--top N] [--providers a,b,c] [--since 24h] [--json]`
+ *
+ * Show which providers are most likely to yield cache hits for a given query,
+ * ranked by Bayesian posterior P(cache-hit | provider, query-class).
+ *
+ * Flags:
+ *   --top N           Show top N providers (default: all providers).
+ *   --providers a,b   Comma-separated provider ids to evaluate (default: all defaults).
+ *   --since DURATION  History window for avgConfidence (default: 24h).
+ *   --json            Emit raw JSON array of CacheHitPrediction.
+ *   --verbose         Print extra header info.
+ */
+export async function cmdCachePredict(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch cache-predict '<query>' [--top N] [--providers a,b] [--since 24h] [--json]"));
+    return 2;
+  }
+
+  const json = getBool(args.flags, "json");
+  const verbose = getBool(args.flags, "verbose");
+
+  const sinceRaw = getString(args.flags, "since") ?? "24h";
+  const historyWindow = parseSinceFlag(sinceRaw);
+
+  const topRaw = getInt(args.flags, "top");
+  const top = topRaw ?? undefined;
+
+  const providersFlag = getString(args.flags, "providers", "p");
+  const providers: ProviderId[] = providersFlag
+    ? (providersFlag.split(",").map((s) => s.trim()).filter(Boolean) as ProviderId[])
+    : (DEFAULT_PROVIDERS as unknown as ProviderId[]);
+
+  const predictions: CacheHitPrediction[] = predictCacheHits(query, providers, {
+    historyWindow,
+  });
+
+  const shown = top !== undefined ? predictions.slice(0, top) : predictions;
+
+  if (json) {
+    io.stdout(JSON.stringify(shown, null, 2));
+    return 0;
+  }
+
+  if (verbose) {
+    io.stdout(c.bold(`Cache-Hit Predictions  (query: "${query}", window: ${sinceRaw})`));
+    io.stdout(c.dim(`Evaluated ${providers.length} provider(s). Showing ${shown.length}.`));
+    io.stdout("");
+  }
+
+  if (shown.length === 0) {
+    io.stdout(c.yellow("No predictions available (no providers to evaluate)."));
+    return 0;
+  }
+
+  const cols = [
+    { header: "#",           width: 3,  align: "right" as const },
+    { header: "provider",    width: 22 },
+    { header: "P(hit)",      width: 8 },
+    { header: "exp.hits",    width: 10 },
+    { header: "avgConf",     width: 9 },
+    { header: "rankScore",   width: 11 },
+    { header: "data?",       width: 6 },
+  ];
+
+  const rows = shown.map((p, i) => [
+    String(i + 1),
+    p.provider,
+    (p.pCacheHit * 100).toFixed(1) + "%",
+    p.expectedCacheHits.toFixed(2),
+    (p.avgConfidence * 100).toFixed(1) + "%",
+    p.rankScore.toFixed(3),
+    p.hasData ? "yes" : "no",
+  ]);
+
+  io.stdout(renderTable(cols, rows));
+  io.stdout("");
+  io.stdout(
+    c.dim(
+      `Providers with "data?=no" are using the Beta(1,1) prior (uniform). ` +
+      `Run searches to accumulate training data.`,
+    ),
+  );
+  return 0;
+}
+
 // ---------- `webfetch diagnose` -------------------------------------------
 
 /**
@@ -2086,12 +2180,14 @@ ${c.bold("COMMANDS")}
   config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
   signup                                Open https://app.getwebfetch.com/signup in your browser
   cache-analytics [--since 7d]          Query-replay stats, cache-hit diagnostics, provider ranking
+  cache-predict '<query>' [--top N]     Providers most likely to hit cache for a query (Bayesian)
   diagnose <query>                      Run search + show ranked repair steps for provider failures
   phash-diagnostics <query>            Inspect pHash algorithm mix + dedup confidence for a query
   plugin <list|add|test>               Manage runtime provider plugins (third-party image sources)
   audit-license-conflicts <query>      Audit all license conflicts from a federation run [--json] [--severity major]
   resolve-license-conflicts <query>    Recommend license upgrades per provider [--json] [--suggest-upgrades]
   dedupe-report <query>                Cluster dedup quality report: FP/FN risk, confidence, threshold recommendation
+  warm [--input queries.jsonl]         Cache warm-up daemon: pre-populate cache + track hit rates
   help                                  Show this message
   version                               Print version
 
@@ -2144,12 +2240,14 @@ export const COMMANDS: Record<string, Dispatcher> = {
   config: cmdConfig,
   signup: cmdSignup,
   "cache-analytics": cmdCacheAnalytics,
+  "cache-predict": cmdCachePredict,
   diagnose: cmdDiagnose,
   "phash-diagnostics": cmdPhashDiagnostics,
   plugin: cmdPlugin,
   "audit-license-conflicts": cmdAuditLicenseConflicts,
   "resolve-license-conflicts": cmdResolveLicenseConflicts,
   "dedupe-report": cmdDedupeReport,
+  warm: cmdWarm,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
