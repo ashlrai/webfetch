@@ -23,15 +23,20 @@ import {
   listCacheEntries,
   perceptualHashStructured,
   probePage,
+  reconcileLicenses,
+  reconcileLicensesAll,
   refineSearchResults,
   searchAlbumCover,
   searchArtistImages,
   searchImages,
   auditImageMetadata,
+  generateDeduplicationReport,
+  exportClusteringMetrics,
 } from "webfetch-core";
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
+  auditLicenseConsensusSchema,
   batchClusterByPhashSchema,
   batchFindSimilarSchema,
   batchFindSimilarWithDistancesSchema,
@@ -632,4 +637,176 @@ export const TOOLS: ToolDef[] = [
       };
     },
   },
-];
+  {
+    name: "audit_license_consensus",
+    description:
+      "Reconcile licenses across multiple ImageCandidate objects that may represent the same image " +
+      "from different providers (e.g. wikimedia=CC_BY_SA, unsplash=UNSPLASH_LICENSE). " +
+      "Candidates are grouped automatically by pHash proximity (or URL fallback). " +
+      "For each group the tool: (1) computes pairwise Levenshtein similarity on license strings, " +
+      "(2) determines consensus (similarity > 0.85) or flags a conflict, " +
+      "(3) emits a per-provider audit trail with reasoning sourced from licenseAuditTrail when available, " +
+      "(4) returns a composite confidence score that decays with disagreement and low per-candidate confidence, " +
+      "(5) emits a human-readable recommendation for operators and legal review pipelines. " +
+      "Set allGroups:true to return reconciliation for every detected pHash/URL cluster independently. " +
+      "Use after search_images / compare_candidates to understand WHY providers disagree on license, " +
+      "detect licensing ambiguity before publishing, and feed into legal review pipelines.",
+    inputSchema: auditLicenseConsensusSchema,
+    async handler(args) {
+      const candidates = args.candidates as any[];
+
+      const lines: string[] = [];
+
+      if (args.allGroups) {
+        const results = reconcileLicensesAll(candidates);
+        lines.push(`Reconciled ${results.length} group(s) from ${candidates.length} candidate(s).`);
+        for (let i = 0; i < results.length; i++) {
+          const r = results[i]!;
+          lines.push(
+            `  Group ${i + 1}: consensus="${r.consensusLicense}", ` +
+            `confidence=${(r.confidence * 100).toFixed(0)}%, ` +
+            `conflicts=${r.conflictCount}/${r.conflictLog.length} provider(s).`,
+          );
+          if (r.conflictCount > 0) {
+            for (const entry of r.conflictLog.filter((e) => e.assertedLicense !== r.consensusLicense)) {
+              lines.push(`    CONFLICT — provider="${entry.provider}" asserted "${entry.assertedLicense}"`);
+            }
+          }
+        }
+        return {
+          content: [{ type: "text", text: lines.join("\n") }],
+          structuredContent: { groups: results },
+        };
+      }
+
+      const result = reconcileLicenses(candidates);
+      lines.push(
+        `License consensus: "${result.consensusLicense}" ` +
+        `(confidence=${(result.confidence * 100).toFixed(0)}%, ` +
+        `conflicts=${result.conflictCount}/${result.conflictLog.length}).`,
+      );
+      lines.push(result.recommendation);
+      if (result.conflictCount > 0) {
+        lines.push("Conflict log:");
+        for (const entry of result.conflictLog) {
+          const marker = entry.assertedLicense !== result.consensusLicense ? "CONFLICT" : "agree";
+          lines.push(
+            `  [${marker}] provider="${entry.provider}" license="${entry.assertedLicense}" ` +
+            `conf=${(entry.licenseConfidence * 100).toFixed(0)}% — ${entry.reasoning}`,
+          );
+        }
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: result,
+      };
+    },
+  },
+  {
+    name: "analyze_deduplication_quality",
+    description:
+      "Analyze deduplication quality for a set of ImageCandidates by orchestrating semantic + pHash clustering and surfacing actionable metrics. " +
+      "Returns per-cluster false-positive risk (same hash, different visual — threshold too permissive), " +
+      "false-negative risk (same visual split across clusters — threshold too strict due to compression/alt-source), " +
+      "composite confidence (pHash similarity + metadata similarity), provider diversity, and a recommended threshold. " +
+      "Also generates a flat export-ready metrics table. " +
+      "phashThreshold: maximum Hamming distance (default 8) to merge two candidates. " +
+      "semanticWeight: 0..1 weight for title/author metadata similarity vs pHash (default 0.3). " +
+      "confidenceFloor: clusters below this composite confidence are flagged for review (default 0.5). " +
+      "Use after search_images / compare_candidates to decide whether to tighten or loosen the dedup threshold, " +
+      "identify high-risk cluster merges before publishing, and export metrics for ML threshold tuning.",
+    inputSchema: z.object({
+      candidates: z
+        .array(
+          z.object({
+            url: z.string().url(),
+            source: z.string(),
+            license: z.string(),
+            phash: z.string().optional(),
+            phashResult: z
+              .object({
+                hash: z.string(),
+                algorithm: z.enum(["dct-phash", "ahash-fallback"]),
+                confidence: z.number().min(0).max(1),
+              })
+              .optional(),
+            phashAlgorithm: z.enum(["dct-phash", "ahash-fallback"]).optional(),
+            confidence: z.number().min(0).max(1).optional(),
+            score: z.number().optional(),
+            title: z.string().optional(),
+            author: z.string().optional(),
+            width: z.number().int().optional(),
+            height: z.number().int().optional(),
+          }),
+        )
+        .min(1)
+        .max(500)
+        .describe("Array of ImageCandidate objects to analyze — typically from search_images or compare_candidates"),
+      phashThreshold: z
+        .number()
+        .int()
+        .min(1)
+        .max(32)
+        .optional()
+        .describe("Maximum Hamming distance to merge two candidates (default 8). Lower = stricter dedup."),
+      semanticWeight: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe("Weight for title/author metadata similarity vs pHash similarity in composite confidence (default 0.3)."),
+      confidenceFloor: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe("Minimum composite confidence for a cluster to be accepted without review (default 0.5)."),
+      exportFormat: z
+        .enum(["json", "csv"])
+        .optional()
+        .describe("Format for the metrics export table: 'json' (default) or 'csv'."),
+    }),
+    async handler(args) {
+      const report = generateDeduplicationReport(args.candidates as any[], {
+        phashThreshold: args.phashThreshold,
+        semanticWeight: args.semanticWeight,
+        confidenceFloor: args.confidenceFloor,
+      });
+
+      const metricsExport = exportClusteringMetrics(
+        report,
+        (args.exportFormat as "json" | "csv" | undefined) ?? "json",
+      );
+
+      const lines: string[] = [];
+      lines.push(
+        `Deduplication quality: ${report.totalCandidates} candidates → ${report.totalClusters} clusters ` +
+        `(${report.multiCandidateClusters.length} multi-candidate, ${report.singletons.length} singletons). ` +
+        `dedupeRate=${(report.dedupeRate * 100).toFixed(1)}%`,
+      );
+      lines.push(
+        `Overall risk — FP: ${report.falsePositiveRisk}, FN: ${report.falseNegativeRisk}. ` +
+        `Recommended threshold: ${report.recommendedThreshold} (current: ${report.options.phashThreshold}).`,
+      );
+      if (report.multiCandidateClusters.length > 0) {
+        lines.push("Top clusters:");
+        for (const c of report.multiCandidateClusters.slice(0, 5)) {
+          lines.push(
+            `  [cluster ${c.clusterId}] size=${c.size} providers=${c.providerDiversity} ` +
+            `conf=${c.compositeConfidence.toFixed(2)} FP=${c.falsePositiveRisk} FN=${c.falseNegativeRisk} → ${c.recommendation}`,
+          );
+        }
+        if (report.multiCandidateClusters.length > 5) {
+          lines.push(`  … and ${report.multiCandidateClusters.length - 5} more cluster(s)`);
+        }
+      }
+      lines.push(`Metrics export: ${metricsExport.rowCount} row(s) in ${metricsExport.format} format.`);
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: { report, metricsExport },
+      };
+    },
+  },
+]; // end TOOLS

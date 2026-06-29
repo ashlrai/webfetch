@@ -402,3 +402,14 @@ export type {
   SemanticDedupeResult,
   SemanticDedupeOptions,
 } from "./semantic-dedupe.ts";
+
+export { generateDeduplicationReport, exportClusteringMetrics } from "./deduplication-report.ts";
+export type {
+  DeduplicationReportOptions,
+  DeduplicationReport,
+  ClusterReport,
+  ClusterMetricsRow,
+  ClusterMetricsExport,
+  ClusterExportFormat,
+  RiskLevel,
+} from "./deduplication-report.ts";

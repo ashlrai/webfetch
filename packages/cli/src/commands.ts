@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
-import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -1886,6 +1886,168 @@ export async function cmdResolveLicenseConflicts(
   return result.legalReviewNeeded ? 1 : 0;
 }
 
+// ---------- `webfetch dedupe-report` -----------------------------------------
+
+/**
+ * `webfetch dedupe-report <query> [flags]`
+ *
+ * Runs a federated search for <query>, then generates a full deduplication
+ * quality report: per-cluster false-positive / false-negative risk, composite
+ * confidence, provider diversity, and a recommended pHash threshold.
+ *
+ * Flags:
+ *   --phash-threshold N    Hamming distance threshold for clustering (default 8)
+ *   --semantic-weight N    Weight 0..1 for metadata similarity vs pHash (default 0.3)
+ *   --confidence-floor N   Min composite confidence before a cluster needs review (default 0.5)
+ *   --export csv|json      Export clustering metrics in the given format (default: none)
+ *   --export-path PATH     Write the export to a file instead of stdout
+ *   --json                 Emit raw JSON DeduplicationReport
+ *   --verbose              Print provider reports to stderr
+ */
+export async function cmdDedupeReport(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch dedupe-report <query> [--phash-threshold N] [--export csv|json]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose, json } = buildSearchOptions(args, env, cfg);
+
+  const phashThresholdRaw = getInt(args.flags, "phash-threshold");
+  const phashThreshold = phashThresholdRaw !== undefined
+    ? Math.max(1, Math.min(32, phashThresholdRaw))
+    : 8;
+
+  const semanticWeightRaw = getString(args.flags, "semantic-weight");
+  const semanticWeight = semanticWeightRaw !== undefined
+    ? Math.max(0, Math.min(1, parseFloat(semanticWeightRaw)))
+    : 0.3;
+
+  const confidenceFloorRaw = getString(args.flags, "confidence-floor");
+  const confidenceFloor = confidenceFloorRaw !== undefined
+    ? Math.max(0, Math.min(1, parseFloat(confidenceFloorRaw)))
+    : 0.5;
+
+  const exportFmt = getString(args.flags, "export") as "csv" | "json" | undefined;
+  const exportPath = getString(args.flags, "export-path");
+
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
+
+  if (verbose) {
+    for (const w of bundle.warnings) io.stderr(c.yellow(`warning: ${w}`));
+    for (const r of bundle.providerReports) {
+      const detail = r.ok
+        ? c.dim(`${r.count} results in ${r.timeMs}ms`)
+        : c.dim(r.skipped ?? r.error ?? "failed");
+      io.stderr(c.dim(`  ${r.provider}: `) + detail);
+    }
+    io.stderr("");
+  }
+
+  const report = generateDeduplicationReport(bundle.candidates, {
+    phashThreshold,
+    semanticWeight,
+    confidenceFloor,
+  });
+
+  if (json) {
+    io.stdout(JSON.stringify(report, null, 2));
+    return 0;
+  }
+
+  // Human-readable output.
+  io.stdout(c.bold(`Deduplication Quality Report`));
+  io.stdout(
+    c.dim(
+      `Query: "${query}"  |  Candidates: ${report.totalCandidates}  |  ` +
+      `Clusters: ${report.totalClusters}  |  dedupeRate: ${(report.dedupeRate * 100).toFixed(1)}%`,
+    ),
+  );
+  io.stdout(c.dim(`Threshold: ${report.options.phashThreshold}  |  Recommended: ${report.recommendedThreshold}  |  Generated: ${report.generatedAt}`));
+  io.stdout("");
+
+  // Overall risk summary.
+  const fpColor = report.falsePositiveRisk === "high" ? c.red : report.falsePositiveRisk === "medium" ? c.yellow : c.green;
+  const fnColor = report.falseNegativeRisk === "high" ? c.red : report.falseNegativeRisk === "medium" ? c.yellow : c.green;
+  io.stdout(
+    `Overall risk — FP: ${fpColor(report.falsePositiveRisk)}  FN: ${fnColor(report.falseNegativeRisk)}  ` +
+    `Provider diversity: ${report.providerDiversity.toFixed(2)}`,
+  );
+  io.stdout("");
+
+  // Multi-candidate cluster table.
+  if (report.multiCandidateClusters.length > 0) {
+    io.stdout(c.bold(`Multi-candidate clusters (${report.multiCandidateClusters.length}):`));
+    const cols = [
+      { header: "id", width: 4 },
+      { header: "size", width: 5 },
+      { header: "conf", width: 6 },
+      { header: "FP", width: 7 },
+      { header: "FN", width: 7 },
+      { header: "action", width: 8 },
+      { header: "providers", width: 10 },
+      { header: "centroid", width: 55 },
+    ];
+    const rows = report.multiCandidateClusters.map((cl) => {
+      const fpC = cl.falsePositiveRisk === "high" ? c.red : cl.falsePositiveRisk === "medium" ? c.yellow : c.green;
+      const fnC = cl.falseNegativeRisk === "high" ? c.red : cl.falseNegativeRisk === "medium" ? c.yellow : c.green;
+      const actC = cl.recommendation === "accept" ? c.green : cl.recommendation === "review" ? c.yellow : c.red;
+      return [
+        cl.clusterId,
+        String(cl.size),
+        cl.compositeConfidence.toFixed(2),
+        fpC(cl.falsePositiveRisk),
+        fnC(cl.falseNegativeRisk),
+        actC(cl.recommendation),
+        String(cl.providerDiversity),
+        cl.centroid.url.slice(0, 54),
+      ];
+    });
+    io.stdout(renderTable(cols, rows));
+    io.stdout("");
+  } else {
+    io.stdout(c.dim("No multi-candidate clusters found — all candidates are unique."));
+    io.stdout("");
+  }
+
+  // Threshold recommendation.
+  if (report.recommendedThreshold !== report.options.phashThreshold) {
+    const direction = report.recommendedThreshold < report.options.phashThreshold ? "stricter" : "more permissive";
+    io.stdout(
+      c.yellow(
+        `Threshold recommendation: change from ${report.options.phashThreshold} → ${report.recommendedThreshold} ` +
+        `(${direction}) based on pairwise distance distribution.`,
+      ),
+    );
+    io.stdout(c.dim(`  Re-run with: webfetch dedupe-report "${query}" --phash-threshold ${report.recommendedThreshold}`));
+    io.stdout("");
+  }
+
+  // Export metrics if requested.
+  if (exportFmt) {
+    const exported = exportClusteringMetrics(report, exportFmt);
+    if (exportPath) {
+      const { writeFile, mkdir } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+      await mkdir(dirname(resolve(exportPath)), { recursive: true });
+      await writeFile(resolve(exportPath), exported.content, "utf8");
+      io.stdout(c.green(`Exported ${exported.rowCount} row(s) (${exported.format}) → ${resolve(exportPath)}`));
+    } else {
+      io.stdout(c.bold(`Metrics export (${exported.format}, ${exported.rowCount} rows):`));
+      io.stdout(exported.content);
+    }
+  }
+
+  return 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -1929,6 +2091,7 @@ ${c.bold("COMMANDS")}
   plugin <list|add|test>               Manage runtime provider plugins (third-party image sources)
   audit-license-conflicts <query>      Audit all license conflicts from a federation run [--json] [--severity major]
   resolve-license-conflicts <query>    Recommend license upgrades per provider [--json] [--suggest-upgrades]
+  dedupe-report <query>                Cluster dedup quality report: FP/FN risk, confidence, threshold recommendation
   help                                  Show this message
   version                               Print version
 
@@ -1986,6 +2149,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   plugin: cmdPlugin,
   "audit-license-conflicts": cmdAuditLicenseConflicts,
   "resolve-license-conflicts": cmdResolveLicenseConflicts,
+  "dedupe-report": cmdDedupeReport,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
