@@ -377,6 +377,192 @@ export function getProviderRanking(
 }
 
 // ---------------------------------------------------------------------------
+// Provider health recommendations
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-provider health status derived from the 5-minute event window and
+ * rate-limit bucket state.
+ *
+ * - `healthy`    — low error rate, bucket available.
+ * - `degraded`   — elevated error rate (>20%) but not fully failed.
+ * - `saturated`  — rate-limit bucket is exhausted; should back off.
+ * - `unavailable`— 100% error rate over ≥3 calls in the window.
+ */
+export type ProviderHealthStatus = "healthy" | "degraded" | "saturated" | "unavailable";
+
+/** A single entry in the ranked provider recommendation list. */
+export interface ProviderRecommendation {
+  /** Provider identifier. */
+  id: ProviderId;
+  /** Composite health status. */
+  status: ProviderHealthStatus;
+  /**
+   * Composite score in [0, 1] used for ranking.
+   * score = (1 - errorRate) * throughputWeight * latencyWeight - saturationPenalty
+   * Higher is better.
+   */
+  score: number;
+  /** Median (p50) latency in ms over the window (0 if no data). */
+  latencyP50Ms: number;
+  /** Error rate in [0, 1] over the window (0 if no data). */
+  errorRate: number;
+  /** Total successful result count over the window. */
+  throughput: number;
+  /**
+   * Estimated recovery time in ms from rate-limit saturation (0 when not
+   * saturated). Derived from the token-bucket waitTimeMs.
+   */
+  estimatedRecoveryMs: number;
+  /** Rank position (1 = best). */
+  rank: number;
+}
+
+/** Suggested fallback chain + per-provider health dashboard. */
+export interface ProviderRecommendations {
+  /**
+   * Providers ranked best → worst by composite score
+   * (latency_p50, error_rate, throughput weighted together).
+   */
+  rankedProviders: ProviderRecommendation[];
+  /**
+   * Suggested fallback chain ordered by reliability.
+   * Only includes providers with status healthy or degraded; saturated/unavailable
+   * providers are omitted from the chain.
+   */
+  suggestedFallbackChain: ProviderId[];
+  /** Window these recommendations were computed over. */
+  windowMs: number;
+  generatedAt: number;
+}
+
+/** Full federation health report: diagnostics + recommendations. */
+export interface FederationHealthReport {
+  diagnostics: FederationDiagnostics;
+  recommendations: ProviderRecommendations;
+}
+
+/**
+ * Compute p50 (median) of a numeric array. Returns 0 for empty arrays.
+ */
+function percentile50(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid]!;
+  return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
+}
+
+/**
+ * Derive ProviderHealthStatus from error rate and saturation state.
+ */
+function deriveStatus(
+  errorRate: number,
+  saturated: boolean,
+  sampleCount: number,
+): ProviderHealthStatus {
+  if (saturated) return "saturated";
+  if (sampleCount >= 3 && errorRate >= 1.0) return "unavailable";
+  if (errorRate > 0.2) return "degraded";
+  return "healthy";
+}
+
+/**
+ * Analyze the 5-minute event window and compute ranked provider
+ * recommendations with suggested fallback chains.
+ *
+ * Scoring formula per provider:
+ *   latencyWeight = 1 / (1 + latencyP50Ms / 1000)   — sigmoid-shaped latency penalty
+ *   throughputNorm = min(throughput / 10, 1)          — normalised (10 results = full score)
+ *   baseScore = (1 - errorRate) * latencyWeight * (0.7 + 0.3 * throughputNorm)
+ *   score = saturated ? 0 : baseScore
+ */
+export function computeProviderRecommendations(
+  windowMs = WINDOW_MS,
+): ProviderRecommendations {
+  const diag = getFederationDiagnostics(windowMs);
+  const events = windowEvents(windowMs);
+
+  // Build per-provider latency arrays for p50 computation
+  const latencyMap = new Map<ProviderId, number[]>();
+  for (const e of events) {
+    let arr = latencyMap.get(e.providerId);
+    if (!arr) {
+      arr = [];
+      latencyMap.set(e.providerId, arr);
+    }
+    arr.push(e.durationMs);
+  }
+
+  const now = Date.now();
+  const recommendations: ProviderRecommendation[] = [];
+
+  for (const stat of diag.providerStats) {
+    const latencies = latencyMap.get(stat.id) ?? [];
+    const latencyP50Ms = percentile50(latencies);
+
+    const status = deriveStatus(stat.errorRate, stat.saturated, latencies.length);
+
+    // Scoring
+    const latencyWeight = 1 / (1 + latencyP50Ms / 1000);
+    const throughputNorm = Math.min(stat.resultCount / 10, 1);
+    const baseScore = (1 - stat.errorRate) * latencyWeight * (0.7 + 0.3 * throughputNorm);
+    const score = stat.saturated ? 0 : Math.max(0, Math.min(1, baseScore));
+
+    // Recovery estimate from bucket state
+    const bs = getBucketState(stat.id);
+    const estimatedRecoveryMs = bs.saturated ? bs.waitTimeMs : 0;
+
+    recommendations.push({
+      id: stat.id,
+      status,
+      score,
+      latencyP50Ms,
+      errorRate: stat.errorRate,
+      throughput: stat.resultCount,
+      estimatedRecoveryMs,
+      rank: 0, // filled below
+    });
+  }
+
+  // Sort by score descending; ties broken by latencyP50Ms ascending
+  recommendations.sort((a, b) => {
+    const sDiff = b.score - a.score;
+    if (Math.abs(sDiff) > 1e-9) return sDiff;
+    return a.latencyP50Ms - b.latencyP50Ms;
+  });
+
+  // Stamp 1-based ranks
+  recommendations.forEach((r, i) => {
+    r.rank = i + 1;
+  });
+
+  // Suggested fallback chain: healthy/degraded providers only, in rank order
+  const suggestedFallbackChain: ProviderId[] = recommendations
+    .filter((r) => r.status === "healthy" || r.status === "degraded")
+    .map((r) => r.id);
+
+  return {
+    rankedProviders: recommendations,
+    suggestedFallbackChain,
+    windowMs,
+    generatedAt: now,
+  };
+}
+
+/**
+ * Produce a complete federation health report combining diagnostics and
+ * recommendations in a single call. Safe to call frequently — pure in-memory,
+ * no I/O.
+ */
+export function getFederationHealthReport(windowMs = WINDOW_MS): FederationHealthReport {
+  return {
+    diagnostics: getFederationDiagnostics(windowMs),
+    recommendations: computeProviderRecommendations(windowMs),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Reset helper (test-only)
 // ---------------------------------------------------------------------------
 

@@ -41,6 +41,7 @@ describe("mcp tools", () => {
       "fetch_with_license",
       "find_similar",
       "get_federation_diagnostics",
+      "get_federation_health_report",
       "inspect_cache",
       "probe_page",
       "refine_search_results",

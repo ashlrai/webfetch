@@ -74,6 +74,8 @@ export {
   getFederationDiagnostics,
   getProviderRanking,
   getProviderSequenceEvents,
+  computeProviderRecommendations,
+  getFederationHealthReport,
   _resetTelemetry,
 } from "./federation-telemetry.ts";
 export { getBucketState } from "./rate-limit.ts";
@@ -85,6 +87,10 @@ export type {
   ProviderStats,
   FederationSummary,
   FederationDiagnostics,
+  ProviderHealthStatus,
+  ProviderRecommendation,
+  ProviderRecommendations,
+  FederationHealthReport,
 } from "./federation-telemetry.ts";
 export {
   recordSearchEvent,

@@ -14,6 +14,7 @@ import {
   findSimilar,
   getCacheStats,
   getFederationDiagnostics,
+  getFederationHealthReport,
   hammingDistance,
   listCacheEntries,
   perceptualHashStructured,
@@ -189,6 +190,27 @@ export const TOOLS: ToolDef[] = [
     async handler(args) {
       const diag = getFederationDiagnostics(args.windowMs);
       return renderJson(diag);
+    },
+  },
+  {
+    name: "get_federation_health_report",
+    description:
+      "Returns a comprehensive federation health report combining real-time diagnostics with actionable provider recommendations over a sliding 5-minute window. " +
+      "Includes: per-provider health status (healthy/degraded/saturated/unavailable), ranked provider list by composite score (latency_p50, error_rate, throughput), " +
+      "suggested fallbackChain ordered by reliability (excludes saturated/unavailable providers), estimated recovery time from rate-limit buckets, " +
+      "and the full diagnostics dashboard. Use this instead of get_federation_diagnostics when you need both health analysis and routing recommendations in a single call.",
+    inputSchema: z.object({
+      windowMs: z
+        .number()
+        .int()
+        .min(1000)
+        .max(3_600_000)
+        .optional()
+        .describe("Sliding window size in ms (default 300000 = 5 minutes)"),
+    }),
+    async handler(args) {
+      const report = getFederationHealthReport(args.windowMs);
+      return renderJson(report);
     },
   },
   {

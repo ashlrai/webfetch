@@ -20,8 +20,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 // src/ imports — used by unit + searchImages integration tests
 import {
   _resetTelemetry,
+  computeProviderRecommendations,
   emitProviderEvent,
   getFederationDiagnostics,
+  getFederationHealthReport,
 } from "../packages/core/src/federation-telemetry.ts";
 import { _resetBuckets, getBucket } from "../packages/core/src/rate-limit.ts";
 import { searchImages } from "../packages/core/src/federation.ts";
@@ -470,5 +472,359 @@ describe("GET /v1/federation-diagnostics HTTP endpoint", () => {
     expect(typeof stat.nextTokenAt).toBe("number");
     // The event was rate-limited kind so providersRateLimited >= 1
     expect(j.data.summary.providersRateLimited).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: computeProviderRecommendations + getFederationHealthReport
+// ---------------------------------------------------------------------------
+
+describe("computeProviderRecommendations unit", () => {
+  beforeEach(() => {
+    _resetTelemetry();
+    _resetBuckets();
+  });
+
+  // Helper: emit N events for a provider
+  function emitEvents(
+    providerId: "wikimedia" | "openverse" | "pexels" | "unsplash" | "bing",
+    opts: { ok: boolean; durationMs: number; resultCount?: number },
+    count = 1,
+  ) {
+    const now = Date.now();
+    for (let i = 0; i < count; i++) {
+      emitProviderEvent({
+        providerId,
+        startedAt: now - opts.durationMs,
+        endedAt: now,
+        durationMs: opts.durationMs,
+        resultCount: opts.ok ? (opts.resultCount ?? 5) : 0,
+        ok: opts.ok,
+        errorKind: opts.ok ? "ok" : "network",
+        payloadBytes: opts.ok ? 512 : 0,
+      });
+    }
+  }
+
+  test("empty buffer returns empty rankedProviders and empty fallback chain", () => {
+    const rec = computeProviderRecommendations();
+    expect(rec.rankedProviders).toEqual([]);
+    expect(rec.suggestedFallbackChain).toEqual([]);
+    expect(typeof rec.windowMs).toBe("number");
+    expect(typeof rec.generatedAt).toBe("number");
+  });
+
+  test("healthy provider gets status=healthy", () => {
+    emitEvents("wikimedia", { ok: true, durationMs: 200 }, 5);
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "wikimedia");
+    expect(entry).toBeDefined();
+    expect(entry!.status).toBe("healthy");
+    expect(entry!.errorRate).toBe(0);
+    expect(entry!.rank).toBe(1);
+  });
+
+  test("100%-failure provider (≥3 samples) gets status=unavailable", () => {
+    emitEvents("openverse", { ok: false, durationMs: 300 }, 4);
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "openverse");
+    expect(entry).toBeDefined();
+    expect(entry!.status).toBe("unavailable");
+    expect(entry!.score).toBe(0);
+  });
+
+  test("elevated error rate (>20%) but not 100% gets status=degraded", () => {
+    // 1 success, 4 failures → errorRate=0.8 → degraded
+    emitEvents("pexels", { ok: true, durationMs: 200 }, 1);
+    emitEvents("pexels", { ok: false, durationMs: 200 }, 4);
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "pexels");
+    expect(entry).toBeDefined();
+    expect(entry!.status).toBe("degraded");
+    expect(entry!.errorRate).toBeCloseTo(0.8, 1);
+  });
+
+  test("saturated bucket gets status=saturated and score=0", () => {
+    // Drain the unsplash bucket fully
+    const bucket = getBucket("unsplash");
+    for (let i = 0; i < 10; i++) bucket.tryTake();
+
+    emitEvents("unsplash", { ok: false, durationMs: 100 }, 1);
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "unsplash");
+    expect(entry).toBeDefined();
+    expect(entry!.status).toBe("saturated");
+    expect(entry!.score).toBe(0);
+    expect(entry!.estimatedRecoveryMs).toBeGreaterThan(0);
+  });
+
+  test("latency p50 computed correctly from event window", () => {
+    const now = Date.now();
+    // Emit events with durations [100, 200, 300, 400, 500] → p50 = 300
+    const durations = [100, 200, 300, 400, 500];
+    for (const durationMs of durations) {
+      emitProviderEvent({
+        providerId: "wikimedia",
+        startedAt: now - durationMs,
+        endedAt: now,
+        durationMs,
+        resultCount: 3,
+        ok: true,
+        errorKind: "ok",
+        payloadBytes: 256,
+      });
+    }
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "wikimedia");
+    expect(entry).toBeDefined();
+    expect(entry!.latencyP50Ms).toBe(300);
+  });
+
+  test("latency p50 computed for even-length array", () => {
+    const now = Date.now();
+    // [100, 200, 300, 400] → p50 = (200+300)/2 = 250
+    const durations = [100, 200, 300, 400];
+    for (const durationMs of durations) {
+      emitProviderEvent({
+        providerId: "wikimedia",
+        startedAt: now - durationMs,
+        endedAt: now,
+        durationMs,
+        resultCount: 2,
+        ok: true,
+        errorKind: "ok",
+        payloadBytes: 128,
+      });
+    }
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "wikimedia");
+    expect(entry).toBeDefined();
+    expect(entry!.latencyP50Ms).toBe(250);
+  });
+
+  test("healthy provider ranked above degraded provider", () => {
+    // wikimedia: all successes, fast
+    emitEvents("wikimedia", { ok: true, durationMs: 100 }, 5);
+    // openverse: mostly failures
+    emitEvents("openverse", { ok: true, durationMs: 150 }, 1);
+    emitEvents("openverse", { ok: false, durationMs: 150 }, 4);
+
+    const rec = computeProviderRecommendations();
+    const wikiRank = rec.rankedProviders.find((r) => r.id === "wikimedia")!.rank;
+    const openRank = rec.rankedProviders.find((r) => r.id === "openverse")!.rank;
+    expect(wikiRank).toBeLessThan(openRank);
+  });
+
+  test("lower latency improves ranking when health scores are equal", () => {
+    // Both 100% healthy, but wikimedia is faster
+    emitEvents("wikimedia", { ok: true, durationMs: 50 }, 3);
+    emitEvents("pexels", { ok: true, durationMs: 800 }, 3);
+
+    const rec = computeProviderRecommendations();
+    const wikiEntry = rec.rankedProviders.find((r) => r.id === "wikimedia")!;
+    const pexelsEntry = rec.rankedProviders.find((r) => r.id === "pexels")!;
+    // wikimedia should rank ahead due to lower latency
+    expect(wikiEntry.rank).toBeLessThan(pexelsEntry.rank);
+  });
+
+  test("suggestedFallbackChain excludes saturated and unavailable providers", () => {
+    // wikimedia: healthy
+    emitEvents("wikimedia", { ok: true, durationMs: 200 }, 5);
+
+    // openverse: unavailable (100% failures)
+    emitEvents("openverse", { ok: false, durationMs: 300 }, 4);
+
+    // unsplash: saturated
+    const bucket = getBucket("unsplash");
+    for (let i = 0; i < 10; i++) bucket.tryTake();
+    emitEvents("unsplash", { ok: false, durationMs: 100 }, 1);
+
+    // pexels: degraded (should still appear in chain)
+    emitEvents("pexels", { ok: true, durationMs: 150 }, 1);
+    emitEvents("pexels", { ok: false, durationMs: 150 }, 2);
+
+    const rec = computeProviderRecommendations();
+    expect(rec.suggestedFallbackChain).toContain("wikimedia");
+    expect(rec.suggestedFallbackChain).toContain("pexels");
+    expect(rec.suggestedFallbackChain).not.toContain("openverse");
+    expect(rec.suggestedFallbackChain).not.toContain("unsplash");
+  });
+
+  test("suggestedFallbackChain is ordered by rank (best first)", () => {
+    // wikimedia: fast + healthy
+    emitEvents("wikimedia", { ok: true, durationMs: 80 }, 5);
+    // bing: healthy but slower
+    emitEvents("bing", { ok: true, durationMs: 600 }, 5);
+
+    const rec = computeProviderRecommendations();
+    const chain = rec.suggestedFallbackChain;
+    const wikiIdx = chain.indexOf("wikimedia");
+    const bingIdx = chain.indexOf("bing");
+    expect(wikiIdx).toBeGreaterThanOrEqual(0);
+    expect(bingIdx).toBeGreaterThanOrEqual(0);
+    expect(wikiIdx).toBeLessThan(bingIdx);
+  });
+
+  test("throughput (resultCount) contributes to score", () => {
+    // Both providers healthy + same latency; but wikimedia has higher throughput
+    const now = Date.now();
+    for (let i = 0; i < 5; i++) {
+      emitProviderEvent({
+        providerId: "wikimedia",
+        startedAt: now - 200,
+        endedAt: now,
+        durationMs: 200,
+        resultCount: 10, // high throughput
+        ok: true,
+        errorKind: "ok",
+        payloadBytes: 1024,
+      });
+      emitProviderEvent({
+        providerId: "pexels",
+        startedAt: now - 200,
+        endedAt: now,
+        durationMs: 200,
+        resultCount: 1, // low throughput
+        ok: true,
+        errorKind: "ok",
+        payloadBytes: 128,
+      });
+    }
+
+    const rec = computeProviderRecommendations();
+    const wikiEntry = rec.rankedProviders.find((r) => r.id === "wikimedia")!;
+    const pexelsEntry = rec.rankedProviders.find((r) => r.id === "pexels")!;
+    expect(wikiEntry.score).toBeGreaterThan(pexelsEntry.score);
+  });
+
+  test("estimatedRecoveryMs is 0 for non-saturated providers", () => {
+    emitEvents("wikimedia", { ok: true, durationMs: 200 }, 3);
+    const rec = computeProviderRecommendations();
+    const entry = rec.rankedProviders.find((r) => r.id === "wikimedia")!;
+    expect(entry.estimatedRecoveryMs).toBe(0);
+  });
+
+  test("rank field is sequential 1-based integers", () => {
+    emitEvents("wikimedia", { ok: true, durationMs: 100 }, 3);
+    emitEvents("openverse", { ok: true, durationMs: 200 }, 3);
+    emitEvents("pexels", { ok: true, durationMs: 300 }, 3);
+
+    const rec = computeProviderRecommendations();
+    const ranks = rec.rankedProviders.map((r) => r.rank).sort((a, b) => a - b);
+    expect(ranks).toEqual([1, 2, 3]);
+  });
+
+  test("windowMs and generatedAt are present and correct", () => {
+    const before = Date.now();
+    const rec = computeProviderRecommendations(120_000);
+    const after = Date.now();
+    expect(rec.windowMs).toBe(120_000);
+    expect(rec.generatedAt).toBeGreaterThanOrEqual(before);
+    expect(rec.generatedAt).toBeLessThanOrEqual(after);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: getFederationHealthReport
+// ---------------------------------------------------------------------------
+
+describe("getFederationHealthReport unit", () => {
+  beforeEach(() => {
+    _resetTelemetry();
+    _resetBuckets();
+  });
+
+  test("returns both diagnostics and recommendations keys", () => {
+    const report = getFederationHealthReport();
+    expect(report).toHaveProperty("diagnostics");
+    expect(report).toHaveProperty("recommendations");
+  });
+
+  test("diagnostics shape matches getFederationDiagnostics output", () => {
+    const now = Date.now();
+    emitProviderEvent({
+      providerId: "wikimedia",
+      startedAt: now - 300,
+      endedAt: now,
+      durationMs: 300,
+      resultCount: 4,
+      ok: true,
+      errorKind: "ok",
+      payloadBytes: 512,
+    });
+
+    const report = getFederationHealthReport();
+    expect(Array.isArray(report.diagnostics.providerStats)).toBe(true);
+    expect(typeof report.diagnostics.summary.totalRequests).toBe("number");
+    expect(report.diagnostics.summary.totalRequests).toBe(1);
+    expect(Array.isArray(report.diagnostics.warnings)).toBe(true);
+    expect(typeof report.diagnostics.windowMs).toBe("number");
+    expect(typeof report.diagnostics.generatedAt).toBe("number");
+  });
+
+  test("recommendations shape is correct", () => {
+    const now = Date.now();
+    emitProviderEvent({
+      providerId: "pexels",
+      startedAt: now - 150,
+      endedAt: now,
+      durationMs: 150,
+      resultCount: 6,
+      ok: true,
+      errorKind: "ok",
+      payloadBytes: 800,
+    });
+
+    const report = getFederationHealthReport();
+    expect(Array.isArray(report.recommendations.rankedProviders)).toBe(true);
+    expect(Array.isArray(report.recommendations.suggestedFallbackChain)).toBe(true);
+    expect(typeof report.recommendations.windowMs).toBe("number");
+    expect(typeof report.recommendations.generatedAt).toBe("number");
+
+    const entry = report.recommendations.rankedProviders.find((r) => r.id === "pexels");
+    expect(entry).toBeDefined();
+    expect(entry!.status).toBe("healthy");
+    expect(entry!.rank).toBe(1);
+    expect(entry!.latencyP50Ms).toBe(150);
+  });
+
+  test("diagnostics and recommendations reflect same window", () => {
+    const report = getFederationHealthReport(60_000);
+    expect(report.diagnostics.windowMs).toBe(60_000);
+    expect(report.recommendations.windowMs).toBe(60_000);
+  });
+
+  test("saturated provider appears in diagnostics and gets score=0 in recommendations", () => {
+    const bucket = getBucket("wikimedia");
+    for (let i = 0; i < 30; i++) bucket.tryTake();
+
+    const now = Date.now();
+    emitProviderEvent({
+      providerId: "wikimedia",
+      startedAt: now - 100,
+      endedAt: now,
+      durationMs: 100,
+      resultCount: 0,
+      ok: false,
+      errorKind: "rate-limited",
+      payloadBytes: 0,
+    });
+
+    const report = getFederationHealthReport();
+
+    // Diagnostics should show saturated
+    const diagStat = report.diagnostics.providerStats.find((s) => s.id === "wikimedia");
+    expect(diagStat).toBeDefined();
+    expect(diagStat!.saturated).toBe(true);
+
+    // Recommendations should reflect saturation
+    const recEntry = report.recommendations.rankedProviders.find((r) => r.id === "wikimedia");
+    expect(recEntry).toBeDefined();
+    expect(recEntry!.status).toBe("saturated");
+    expect(recEntry!.score).toBe(0);
+    expect(recEntry!.estimatedRecoveryMs).toBeGreaterThan(0);
+
+    // Not in fallback chain
+    expect(report.recommendations.suggestedFallbackChain).not.toContain("wikimedia");
   });
 });
