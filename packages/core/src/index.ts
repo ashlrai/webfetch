@@ -28,11 +28,16 @@ export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";
 export { findSimilar } from "./find-similar.ts";
-export { batchFindSimilar } from "./batch-find-similar.ts";
+export { batchFindSimilar, batchFindSimilarWithFederation } from "./batch-find-similar.ts";
 export type {
   BatchFindSimilarInput,
   BatchFindSimilarOutput,
   BatchFindSimilarResult,
+  FederatedImageInput,
+  FederatedImageResult,
+  BatchProviderSummary,
+  BatchFederationOutput,
+  BatchFederationOptions,
 } from "./batch-find-similar.ts";
 export { findSimilarBatch, classifyDistance } from "./find-similar-batch.ts";
 export { batchClusterByPhash } from "./batch-phash-cluster.ts";
@@ -111,11 +116,22 @@ export { ALL_PROVIDERS, DEFAULT_PROVIDERS, DEFAULT_PROVIDER_IDS, PROVIDER_IDS, b
 export {
   providerRegistry,
   createProviderRegistry,
+  registerProvider,
+  loadProvidersFromModules,
+  resolveProviderAuth,
+  listPluginProviders,
+  getPluginProvider,
+  unregisterPluginProvider,
+  _clearPluginRegistry,
 } from "./provider-registry.ts";
 export type {
   ProviderCapability,
   ProviderMetadata,
   ProviderRegistryInterface,
+  ProviderPluginDescriptor,
+  ModuleLoadResult,
+  ResolvedProviderAuth,
+  ResolveProviderAuthOptions,
 } from "./provider-registry.ts";
 export { defaultCacheDir, cachePath, readCache, writeCache, ensureCacheDir } from "./cache.ts";
 export {
