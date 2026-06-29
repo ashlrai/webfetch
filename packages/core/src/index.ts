@@ -231,7 +231,10 @@ export {
   getHotQueries,
   recomputeProviderRecommendations,
   exportCacheMetrics,
+  predictCacheHits,
+  recordCacheHitPrediction,
   _resetAnalytics,
+  _resetPredictionModel,
 } from "./cache-analytics.ts";
 export type {
   CandidateHit,
@@ -247,6 +250,8 @@ export type {
   CacheAwareProviderRec,
   CacheMetricsRow,
   CacheMetricsExport,
+  CacheHitPrediction,
+  PredictCacheHitsOptions,
 } from "./cache-analytics.ts";
 export { analyzePhashQuality } from "./phash-diagnostics.ts";
 export type {
@@ -413,3 +418,12 @@ export type {
   ClusterExportFormat,
   RiskLevel,
 } from "./deduplication-report.ts";
+
+export { batchDeduplicateWithPhashCluster } from "./batch-phash-dedup.ts";
+export type {
+  FederatedAlgorithmBreakdown,
+  FederatedCluster,
+  FederatedDedupReport,
+  BatchDeduplicateWithPhashClusterResult,
+  BatchDeduplicateWithPhashClusterOptions,
+} from "./batch-phash-dedup.ts";
