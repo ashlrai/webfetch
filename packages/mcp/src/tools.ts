@@ -18,6 +18,7 @@ import {
   listCacheEntries,
   perceptualHashStructured,
   probePage,
+  refineSearchResults,
   searchAlbumCover,
   searchArtistImages,
   searchImages,
@@ -32,6 +33,7 @@ import {
   fetchWithLicenseSchema,
   findSimilarSchema,
   probePageSchema,
+  refineSearchResultsSchema,
   searchAlbumCoverSchema,
   searchArtistImagesSchema,
   searchImagesSchema,
@@ -239,6 +241,95 @@ export const TOOLS: ToolDef[] = [
           : undefined;
       const result = await exportCache(args.cacheDir, args.outputPath, filter);
       return renderJson(result);
+    },
+  },
+  {
+    name: "refine_search_results",
+    description:
+      "Post-process a SearchResultBundle to identify low-confidence candidates and emit a RefinementPlan. " +
+      "For each low-confidence or UNKNOWN-license candidate the tool assigns one of three actions: " +
+      "'probe-page' (fetch sourcePageUrl for richer metadata), 'upgrade-provider' (retry with a provider " +
+      "that returns structured license data), or 'fallback-to-open-only' (restrict licensePolicy to eliminate " +
+      "UNKNOWN results). Also returns an ordered upgradePath of licensePolicy changes ranked by expected " +
+      "confidence gain, and lists providers observed to have high confidence for similar queries via " +
+      "federation diagnostics. Pass candidateIndex to additionally probe that specific candidate's " +
+      "sourcePageUrl for fresh metadata.",
+    inputSchema: refineSearchResultsSchema,
+    async handler(args) {
+      const bundle = {
+        candidates: args.candidates as any[],
+        providerReports: args.providerReports ?? [],
+        warnings: args.warnings ?? [],
+      };
+
+      // Gather high-confidence providers from federation diagnostics.
+      const diag = getFederationDiagnostics();
+      const highConfidenceProviders = diag.providerStats
+        .filter((s) => s.errorRate < 0.2 && s.resultCount > 0)
+        .sort((a, b) => a.avgLatencyMs - b.avgLatencyMs)
+        .map((s) => s.id);
+
+      // Build the base refinement plan.
+      const plan = refineSearchResults(bundle as any, {
+        confidenceThreshold: args.confidenceThreshold,
+        highConfidenceProviders,
+      });
+
+      // Optionally probe a specific candidate's sourcePageUrl.
+      let probeResult: unknown = null;
+      if (args.candidateIndex !== undefined) {
+        const cand = bundle.candidates[args.candidateIndex];
+        if (cand?.sourcePageUrl) {
+          try {
+            const fetched = await fetchWithLicense(cand.sourcePageUrl, { probe: false });
+            probeResult = {
+              sourcePageUrl: cand.sourcePageUrl,
+              detectedLicense: fetched.license,
+              detectedConfidence: fetched.confidence,
+              author: fetched.author,
+              attributionLine: fetched.attributionLine,
+            };
+          } catch (err) {
+            probeResult = {
+              sourcePageUrl: cand.sourcePageUrl,
+              error: String(err),
+            };
+          }
+        } else {
+          probeResult = {
+            note: `Candidate at index ${args.candidateIndex} has no sourcePageUrl to probe`,
+          };
+        }
+      }
+
+      const lines: string[] = [
+        `Refinement plan: ${plan.summary.lowConfidenceCount}/${plan.summary.totalCandidates} low-confidence candidate(s) (gapRatio=${plan.summary.gapRatio.toFixed(2)}, unknownLicense=${plan.summary.unknownLicenseCount}).`,
+      ];
+      if (plan.confidenceGaps.length > 0) {
+        lines.push("Gaps:");
+        plan.confidenceGaps.slice(0, 5).forEach((g) => {
+          lines.push(
+            `  [${g.candidateIndex}] ${g.suggestedAction} — ${g.reason}`,
+          );
+        });
+        if (plan.confidenceGaps.length > 5) {
+          lines.push(`  ... and ${plan.confidenceGaps.length - 5} more`);
+        }
+      }
+      const topUpgrade = plan.upgradePath[0];
+      if (topUpgrade) {
+        lines.push(
+          `Top upgrade: licensePolicy="${topUpgrade.targetLicensePolicy}" (+${(topUpgrade.expectedConfidenceGain * 100).toFixed(0)}% confidence gain). ${topUpgrade.rationale}`,
+        );
+      }
+      if (highConfidenceProviders.length > 0) {
+        lines.push(`High-confidence providers: ${highConfidenceProviders.slice(0, 5).join(", ")}`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: { plan, probeResult },
+      };
     },
   },
   {

@@ -43,6 +43,7 @@ describe("mcp tools", () => {
       "get_federation_diagnostics",
       "inspect_cache",
       "probe_page",
+      "refine_search_results",
       "search_album_cover",
       "search_artist_images",
       "search_images",

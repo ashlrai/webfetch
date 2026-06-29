@@ -245,6 +245,65 @@ export interface ProviderDedupeReport {
   merged: ImageCandidate[];
 }
 
+/**
+ * A single gap entry in a RefinementPlan — describes one low-confidence
+ * candidate and the recommended action to improve confidence.
+ */
+export interface ConfidenceGap {
+  /** Index of the candidate in the SearchResultBundle.candidates array. */
+  candidateIndex: number;
+  /** The candidate itself (convenience copy). */
+  candidate: ImageCandidate;
+  /** Current license-confidence score (0..1). */
+  currentConfidence: number;
+  /** Recommended action to improve confidence. */
+  suggestedAction: "probe-page" | "upgrade-provider" | "fallback-to-open-only";
+  /** Human-readable reason for this suggestion. */
+  reason: string;
+}
+
+/**
+ * One step in the upgrade path — describes which target policy to try and
+ * the expected confidence gain from switching.
+ */
+export interface UpgradePathStep {
+  /** The license policy to target when re-running the search. */
+  targetLicensePolicy: LicensePolicy;
+  /** Estimated fractional confidence gain (0..1) from applying this step. */
+  expectedConfidenceGain: number;
+  /** Human-readable description of the trade-off. */
+  rationale: string;
+}
+
+/**
+ * Refinement plan produced by `refineSearchResults()`.
+ *
+ * Agents can use this to decide whether to re-query, probe source pages for
+ * richer metadata, or accept lower-confidence results under a relaxed policy.
+ */
+export interface RefinementPlan {
+  /** Gaps identified in the current result set (one per low-confidence candidate). */
+  confidenceGaps: ConfidenceGap[];
+  /**
+   * Ordered upgrade-path suggestions — from highest expected gain to lowest.
+   * Empty when all results already meet the confidence threshold.
+   */
+  upgradePath: UpgradePathStep[];
+  /**
+   * Providers observed to deliver high-confidence results for similar queries
+   * (drawn from federation diagnostics when available).
+   */
+  highConfidenceProviders: string[];
+  /** Summary counts. */
+  summary: {
+    totalCandidates: number;
+    lowConfidenceCount: number;
+    unknownLicenseCount: number;
+    /** Fraction of candidates below the confidence threshold. */
+    gapRatio: number;
+  };
+}
+
 export type Fetcher = typeof fetch;
 
 export interface Provider {

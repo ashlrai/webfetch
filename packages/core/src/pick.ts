@@ -14,7 +14,14 @@
  */
 
 import { LICENSE_RANK, isContextSafeLicense, isOpenLicense } from "./license.ts";
-import type { ImageCandidate, LicensePolicy } from "./types.ts";
+import type {
+  ConfidenceGap,
+  ImageCandidate,
+  LicensePolicy,
+  RefinementPlan,
+  SearchResultBundle,
+  UpgradePathStep,
+} from "./types.ts";
 
 export interface PickConstraints {
   minWidth?: number;
@@ -93,4 +100,131 @@ export function rankAll(
 
 function normalizeLicensePolicy(policy: LicensePolicy): Exclude<LicensePolicy, "safe-only"> {
   return policy === "safe-only" ? "context-safe" : policy;
+}
+
+// ---------------------------------------------------------------------------
+// Refinement — post-process a SearchResultBundle to identify gaps and suggest
+// actions an agent can take to improve license-confidence.
+// ---------------------------------------------------------------------------
+
+/** Confidence below this threshold is considered "low" for refinement purposes. */
+const LOW_CONFIDENCE_THRESHOLD = 0.5;
+
+/**
+ * Analyse a `SearchResultBundle` and produce a `RefinementPlan` that tells
+ * agents which candidates need attention and what actions would help.
+ *
+ * Decision logic:
+ *  - Candidates with `license === "UNKNOWN"` → `fallback-to-open-only`
+ *  - Candidates with `confidence < LOW_CONFIDENCE_THRESHOLD` that have a
+ *    `sourcePageUrl` → `probe-page` (fetch the page for richer metadata)
+ *  - Remaining low-confidence candidates → `upgrade-provider`
+ *
+ * The `upgradePath` is built from the observed gap ratio:
+ *  - When > 50% of results are low-confidence → suggest `open-only` first
+ *  - Always suggest `prefer-safe` as a lighter-weight step
+ *  - Always suggest `context-safe` / `any` for completeness
+ *
+ * @param bundle     The SearchResultBundle to analyse.
+ * @param opts.confidenceThreshold  Override the default 0.5 threshold.
+ * @param opts.highConfidenceProviders  Provider ids already known to be reliable
+ *   (e.g. from federation diagnostics). Passed through into the plan.
+ */
+export function refineSearchResults(
+  bundle: SearchResultBundle,
+  opts: {
+    confidenceThreshold?: number;
+    highConfidenceProviders?: string[];
+  } = {},
+): RefinementPlan {
+  const threshold = opts.confidenceThreshold ?? LOW_CONFIDENCE_THRESHOLD;
+  const { candidates } = bundle;
+
+  const confidenceGaps: ConfidenceGap[] = [];
+  let unknownCount = 0;
+
+  candidates.forEach((cand, idx) => {
+    const conf = cand.confidence ?? (isContextSafeLicense(cand.license) ? 0.5 : 0);
+    const isLowConf = conf < threshold;
+    const isUnknown = cand.license === "UNKNOWN";
+
+    if (isUnknown) unknownCount++;
+
+    if (!isLowConf && !isUnknown) return;
+
+    let suggestedAction: ConfidenceGap["suggestedAction"];
+    let reason: string;
+
+    if (isUnknown) {
+      suggestedAction = "fallback-to-open-only";
+      reason =
+        "License is UNKNOWN — switch to open-only policy to guarantee CC/public-domain results only.";
+    } else if (cand.sourcePageUrl) {
+      suggestedAction = "probe-page";
+      reason = `Low confidence (${conf.toFixed(2)}) but sourcePageUrl is available — probing the source page may surface structured license metadata.`;
+    } else {
+      suggestedAction = "upgrade-provider";
+      reason = `Low confidence (${conf.toFixed(2)}) and no sourcePageUrl — try a provider with authoritative structured metadata (e.g. wikimedia, openverse, unsplash).`;
+    }
+
+    confidenceGaps.push({
+      candidateIndex: idx,
+      candidate: cand,
+      currentConfidence: conf,
+      suggestedAction,
+      reason,
+    });
+  });
+
+  const total = candidates.length;
+  const lowCount = confidenceGaps.length;
+  const gapRatio = total > 0 ? lowCount / total : 0;
+
+  // Build upgrade path ordered by expected confidence gain (highest first).
+  const upgradePath: UpgradePathStep[] = [];
+
+  if (gapRatio > 0.5 || unknownCount > 0) {
+    upgradePath.push({
+      targetLicensePolicy: "open-only",
+      expectedConfidenceGain: 0.9,
+      rationale:
+        "Restricting to open-only (CC/public-domain) sources eliminates UNKNOWN results entirely — providers like Wikimedia and Openverse supply structured per-file license metadata.",
+    });
+  }
+
+  upgradePath.push({
+    targetLicensePolicy: "prefer-safe",
+    expectedConfidenceGain: 0.4,
+    rationale:
+      "prefer-safe keeps all results but sorts low-confidence ones to the back — a lighter step that preserves coverage while surfacing safer results first.",
+  });
+
+  if (gapRatio <= 0.5 && unknownCount === 0) {
+    // Already mostly good — suggest context-safe as a mild tightening.
+    upgradePath.push({
+      targetLicensePolicy: "context-safe",
+      expectedConfidenceGain: 0.2,
+      rationale:
+        "context-safe drops only UNKNOWN results while retaining editorial/platform-licensed images — small confidence gain with minimal coverage loss.",
+    });
+  }
+
+  upgradePath.push({
+    targetLicensePolicy: "any",
+    expectedConfidenceGain: 0,
+    rationale:
+      "Accepting any license maximises coverage but makes no confidence guarantee — only appropriate when the caller will independently verify each result.",
+  });
+
+  return {
+    confidenceGaps,
+    upgradePath,
+    highConfidenceProviders: opts.highConfidenceProviders ?? [],
+    summary: {
+      totalCandidates: total,
+      lowConfidenceCount: lowCount,
+      unknownLicenseCount: unknownCount,
+      gapRatio,
+    },
+  };
 }

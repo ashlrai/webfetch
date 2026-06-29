@@ -7,7 +7,7 @@
 
 export * from "./types.ts";
 export { searchImages } from "./federation.ts";
-export { pickBest, rankAll } from "./pick.ts";
+export { pickBest, rankAll, refineSearchResults } from "./pick.ts";
 export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts";
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";

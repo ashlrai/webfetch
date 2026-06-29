@@ -136,6 +136,48 @@ export const compareCandidatesSchema = z.object({
     ),
 });
 
+/** Inline ImageCandidate shape used by refine_search_results. */
+const refineCandidateInputSchema = z.object({
+  url: z.string().url(),
+  source: z.string(),
+  license: z.string(),
+  confidence: z.number().min(0).max(1).optional(),
+  sourcePageUrl: z.string().url().optional(),
+  width: z.number().int().optional(),
+  height: z.number().int().optional(),
+  title: z.string().optional(),
+  author: z.string().optional(),
+  score: z.number().optional(),
+});
+
+export const refineSearchResultsSchema = z.object({
+  candidates: z
+    .array(refineCandidateInputSchema)
+    .min(1)
+    .max(500)
+    .describe(
+      "Array of ImageCandidate objects from a prior search_images / search_artist_images call",
+    ),
+  providerReports: z.array(z.any()).optional().describe("ProviderReport array from the same bundle"),
+  warnings: z.array(z.string()).optional().describe("Warnings array from the same bundle"),
+  candidateIndex: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Zero-based index of a specific candidate to probe. When provided, the tool fetches its sourcePageUrl for additional license metadata.",
+    ),
+  confidenceThreshold: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(
+      "Confidence score below which a candidate is flagged as low-confidence (default 0.5)",
+    ),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -147,6 +189,7 @@ export const schemas = {
   probe_page: probePageSchema,
   compare_phashes: comparePhashesSchema,
   compare_candidates: compareCandidatesSchema,
+  refine_search_results: refineSearchResultsSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;
