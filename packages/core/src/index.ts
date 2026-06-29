@@ -230,6 +230,10 @@ export {
   reconcileLicenses,
   reconcileLicensesAll,
   levenshteinSimilarity as levenshteinSimilarityReconcile,
+  buildEvidenceChain,
+  scoreLicenseConsensus,
+  recommendLicenseUpgrade,
+  reconcileLicensesBatch,
 } from "./license-reconciliation.ts";
 
 export {
@@ -246,8 +250,13 @@ export type {
   ImageExportMetadata,
 } from "./metadata-export.ts";
 export type {
+  LicenseEvidenceItem,
   LicenseConflictEntry,
   LicenseReconciliationResult,
+  LicenseConsensusScore,
+  LicenseUpgradeRecommendation,
+  BatchReconciliationEntry,
+  BatchReconciliationResult,
 } from "./license-reconciliation.ts";
 
 export {
