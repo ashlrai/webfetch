@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
-import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry } from "webfetch-core";
+import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat } from "webfetch-core";
+import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -205,6 +205,13 @@ function shouldPick(args: ParsedArgs, io: CommandIO): boolean {
   return tty && !getBool(args.flags, "json");
 }
 
+function resolveExportFormat(args: ParsedArgs): ExportFormat | undefined {
+  const raw = getString(args.flags, "export-format");
+  if (!raw) return undefined;
+  if (raw === "xmp" || raw === "exif" || raw === "json" || raw === "all") return raw as ExportFormat;
+  return "xmp"; // default on unrecognised value
+}
+
 async function downloadCandidate(
   cand: ImageCandidate,
   args: ParsedArgs,
@@ -224,7 +231,16 @@ async function downloadCandidate(
   }
   const wantsSidecar = cfg.sidecar !== false && !getBool(args.flags, "no-sidecar");
   let sidecar: string | undefined;
-  if (wantsSidecar) sidecar = await writeSidecar(finalPath, cand);
+  if (wantsSidecar) {
+    const exportFormat = resolveExportFormat(args) ?? "xmp";
+    const exportResult = await exportImageMetadata(finalPath, cand, r.bytes, {
+      format: exportFormat,
+      downloadedAt: new Date().toISOString(),
+      mime: r.mime,
+      sha256: r.sha256,
+    });
+    sidecar = exportResult.xmpPath ?? exportResult.jsonPath;
+  }
   io.stdout(
     `${c.green("Saved:")} ${finalPath} ${c.dim(`(${formatBytes(r.bytes.byteLength)}, ${r.mime})`)}${sidecar ? c.dim(` +sidecar ${sidecar}`) : ""}`,
   );
@@ -362,8 +378,10 @@ export async function cmdDownload(args: ParsedArgs, io: CommandIO = DEFAULT_IO):
   const wantsSidecar = cfg.sidecar !== false && !getBool(args.flags, "no-sidecar");
   let sidecarPath: string | undefined;
   if (wantsSidecar) {
-    const cand: Partial<ImageCandidate> = {
+    const exportFormat = resolveExportFormat(args) ?? "xmp";
+    const cand: ImageCandidate = {
       url,
+      source: (r as any).source ?? "unknown",
       license: (r as any).license ?? "UNKNOWN",
       author: (r as any).author,
       attributionLine: (r as any).attributionLine,
@@ -371,7 +389,13 @@ export async function cmdDownload(args: ParsedArgs, io: CommandIO = DEFAULT_IO):
       licenseUrl: (r as any).licenseUrl,
       title: (r as any).title,
     };
-    sidecarPath = await writeSidecar(finalPath, cand);
+    const exportResult = await exportImageMetadata(finalPath, cand, r.bytes, {
+      format: exportFormat,
+      downloadedAt: new Date().toISOString(),
+      mime: r.mime,
+      sha256: r.sha256,
+    });
+    sidecarPath = exportResult.xmpPath ?? exportResult.jsonPath;
   }
 
   const rec = {

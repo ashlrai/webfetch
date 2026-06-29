@@ -218,6 +218,30 @@ export type {
 } from "./phash-diagnostics.ts";
 
 export {
+  reconcileLicenses,
+  reconcileLicensesAll,
+  levenshteinSimilarity as levenshteinSimilarityReconcile,
+} from "./license-reconciliation.ts";
+
+export {
+  exportImageMetadata,
+  buildXmpSidecar,
+  buildJsonSidecar,
+  embedExifUserComment,
+  licenseUrl as metadataLicenseUrl,
+} from "./metadata-export.ts";
+export type {
+  ExportFormat,
+  ExportMetadataOptions,
+  ExportResult,
+  ImageExportMetadata,
+} from "./metadata-export.ts";
+export type {
+  LicenseConflictEntry,
+  LicenseReconciliationResult,
+} from "./license-reconciliation.ts";
+
+export {
   trackEvent,
   isTelemetryEnabled,
   installHash,
