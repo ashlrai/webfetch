@@ -43,6 +43,18 @@ export type { ArtistImageKind } from "./hints/index.ts";
 export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
 export { defaultCacheDir } from "./cache.ts";
 export {
+  emitProviderEvent,
+  getFederationDiagnostics,
+  _resetTelemetry,
+} from "./federation-telemetry.ts";
+export { getBucketState } from "./rate-limit.ts";
+export type {
+  ProviderEvent,
+  ProviderStats,
+  FederationSummary,
+  FederationDiagnostics,
+} from "./federation-telemetry.ts";
+export {
   trackEvent,
   isTelemetryEnabled,
   installHash,

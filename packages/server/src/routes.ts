@@ -18,6 +18,7 @@ import {
   downloadImage,
   fetchWithLicense,
   findSimilar,
+  getFederationDiagnostics,
   probePage,
   searchAlbumCover,
   searchArtistImages,
@@ -186,9 +187,20 @@ export function getProviders(): Response {
       data: {
         all,
         defaults: DEFAULT_PROVIDERS,
-        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar"],
+        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/federation-diagnostics"],
       },
     }),
     { status: 200, headers: { "content-type": "application/json; charset=utf-8" } },
   );
+}
+
+export function getFederationDiagnosticsResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const windowMsParam = url.searchParams.get("windowMs");
+  const windowMs = windowMsParam ? Number(windowMsParam) : undefined;
+  if (windowMs !== undefined && (isNaN(windowMs) || windowMs < 1000 || windowMs > 3_600_000)) {
+    return jsonErr("windowMs must be between 1000 and 3600000", 422);
+  }
+  const diag = getFederationDiagnostics(windowMs);
+  return jsonOk(diag);
 }

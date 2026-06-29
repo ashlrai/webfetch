@@ -14,6 +14,18 @@ interface Bucket {
   lastRefill: number;
 }
 
+/** Live snapshot of a provider's token-bucket state. */
+export interface BucketState {
+  /** Tokens available right now (fractional, capped at capacity). */
+  tokensAvailable: number;
+  /** Milliseconds a caller would wait before the next token is ready (0 if a token is available). */
+  waitTimeMs: number;
+  /** Unix-ms timestamp at which the bucket will next have ≥1 token (equals Date.now() when available). */
+  nextRefillAt: number;
+  /** True when no token is available — callers should back off or shed load. */
+  saturated: boolean;
+}
+
 const DEFAULTS: Record<ProviderId, { capacity: number; perSec: number }> = {
   wikimedia: { capacity: 20, perSec: 20 },
   openverse: { capacity: 5, perSec: 5 },
@@ -84,7 +96,35 @@ export function getBucket(p: ProviderId) {
       }
       bucket.tokens -= 1;
     },
+    /** Returns a live snapshot of the bucket without consuming a token. */
+    state(): BucketState {
+      refill();
+      const tokensAvailable = bucket.tokens;
+      const saturated = tokensAvailable < 1;
+      const waitTimeMs = saturated
+        ? Math.max(1, Math.ceil((1 - tokensAvailable) / bucket.refillRate))
+        : 0;
+      return {
+        tokensAvailable,
+        waitTimeMs,
+        nextRefillAt: saturated ? Date.now() + waitTimeMs : Date.now(),
+        saturated,
+      };
+    },
+    /** True when no token is currently available — use to short-circuit federation. */
+    saturated(): boolean {
+      refill();
+      return bucket.tokens < 1;
+    },
   };
+}
+
+/**
+ * Convenience wrapper: get the current bucket state for a provider without
+ * acquiring a token. Safe to call from federation or observability layers.
+ */
+export function getBucketState(p: ProviderId): BucketState {
+  return getBucket(p).state();
 }
 
 export function _resetBuckets(): void {

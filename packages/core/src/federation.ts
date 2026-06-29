@@ -11,6 +11,7 @@
  */
 
 import { dedupeByUrl } from "./dedupe.ts";
+import { emitProviderEvent } from "./federation-telemetry.ts";
 import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
@@ -124,7 +125,18 @@ async function runProvider(
 
   try {
     const out = await provider.search(query, providerOpts);
-    reports.push({ provider: id, ok: true, count: out.length, timeMs: Date.now() - started, errorKind: "ok" });
+    const elapsed = Date.now() - started;
+    reports.push({ provider: id, ok: true, count: out.length, timeMs: elapsed, errorKind: "ok" });
+    emitProviderEvent({
+      providerId: id,
+      startedAt: started,
+      endedAt: started + elapsed,
+      durationMs: elapsed,
+      resultCount: out.length,
+      ok: true,
+      errorKind: "ok",
+      payloadBytes: JSON.stringify(out).length,
+    });
     return out;
   } catch (e) {
     const elapsed = Date.now() - started;
@@ -139,6 +151,18 @@ async function runProvider(
       error: msg,
       errorKind: kind,
       ...(ctx ? { errorContext: ctx } : {}),
+    });
+    emitProviderEvent({
+      providerId: id,
+      startedAt: started,
+      endedAt: started + elapsed,
+      durationMs: elapsed,
+      resultCount: 0,
+      ok: false,
+      errorKind: kind,
+      errorMessage: msg,
+      ...(ctx ? { errorContext: ctx } : {}),
+      payloadBytes: 0,
     });
     return [];
   } finally {

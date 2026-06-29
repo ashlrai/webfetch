@@ -36,6 +36,7 @@ describe("mcp tools", () => {
       "download_image",
       "fetch_with_license",
       "find_similar",
+      "get_federation_diagnostics",
       "probe_page",
       "search_album_cover",
       "search_artist_images",

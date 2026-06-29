@@ -9,6 +9,7 @@ import {
   downloadImage,
   fetchWithLicense,
   findSimilar,
+  getFederationDiagnostics,
   probePage,
   searchAlbumCover,
   searchArtistImages,
@@ -120,6 +121,24 @@ export const TOOLS: ToolDef[] = [
     async handler(args) {
       const r = await probePage(args.url, { respectRobots: args.respectRobots });
       return renderJson(r);
+    },
+  },
+  {
+    name: "get_federation_diagnostics",
+    description:
+      "Returns real-time aggregated provider telemetry over a sliding 5-minute window. Shows per-provider avg latency, result counts, error rates, last-success timestamp, and rate-limit bucket state (saturated / nextTokenAt). Use to detect slow/failing providers, spot rate-limit saturation, and optimize provider selection mid-run. windowMs defaults to 5 minutes (300000).",
+    inputSchema: z.object({
+      windowMs: z
+        .number()
+        .int()
+        .min(1000)
+        .max(3_600_000)
+        .optional()
+        .describe("Sliding window size in ms (default 300000 = 5 minutes)"),
+    }),
+    async handler(args) {
+      const diag = getFederationDiagnostics(args.windowMs);
+      return renderJson(diag);
     },
   },
 ];
