@@ -143,6 +143,10 @@ export {
   getProviderSequenceEvents,
   computeProviderRecommendations,
   getFederationHealthReport,
+  getFederationTrends,
+  detectProviderAnomalies,
+  exportFederationAudit,
+  getFederationDiagnosticsTrends,
   _resetTelemetry,
 } from "./federation-telemetry.ts";
 export { getBucketState } from "./rate-limit.ts";
@@ -182,6 +186,11 @@ export type {
   LicenseCoverageHeatmap,
   PerQueryAdvice,
   CostBenefitEntry,
+  LatencyPercentiles,
+  ProviderWindowTrend,
+  FederationTrendReport,
+  AnomalyEvent,
+  FederationDiagnosticsTrendsResult,
 } from "./federation-telemetry.ts";
 export {
   recordSearchEvent,
@@ -291,3 +300,18 @@ export type {
   TelemetryPayload,
   Fetcher as TelemetryFetcher,
 } from "./telemetry.ts";
+
+export {
+  clusterCandidatesBySemantic,
+  buildHammingMatrix,
+  agglomerativeCluster,
+  selectCentroid,
+  extractDescription,
+} from "./semantic-dedupe.ts";
+export type {
+  AlternateUrl,
+  SemanticDedupeCluster,
+  SemanticDedupeCandidate,
+  SemanticDedupeResult,
+  SemanticDedupeOptions,
+} from "./semantic-dedupe.ts";

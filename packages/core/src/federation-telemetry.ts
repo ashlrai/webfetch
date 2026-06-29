@@ -1127,6 +1127,354 @@ export function getFederationHealthReport(windowMs = WINDOW_MS): FederationHealt
 }
 
 // ---------------------------------------------------------------------------
+// Historical health-trend analyzer
+// ---------------------------------------------------------------------------
+
+/** Latency percentiles for a provider over one time window. */
+export interface LatencyPercentiles {
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+/** Per-provider trend data aggregated over a single window. */
+export interface ProviderWindowTrend {
+  /** Provider identifier. */
+  providerId: ProviderId;
+  /** Window length in ms (e.g. 300_000 for 5 min). */
+  windowMs: number;
+  /** Human-readable label for this window (e.g. "5min", "1hr", "24hr"). */
+  windowLabel: string;
+  /** Number of events in this window. */
+  sampleCount: number;
+  /** Latency percentiles over this window (all 0 if no data). */
+  latencyPercentiles: LatencyPercentiles;
+  /** Error rate in [0, 1] over this window. */
+  errorRate: number;
+  /** Total result count returned by this provider in this window. */
+  resultCount: number;
+  /** Whether the rate-limit bucket is currently saturated. */
+  saturated: boolean;
+}
+
+/** Per-provider trend report across all three windows. */
+export interface FederationTrendReport {
+  /** Provider identifier. */
+  providerId: ProviderId;
+  /** Window snapshots: 5min, 1hr, 24hr. */
+  windows: ProviderWindowTrend[];
+}
+
+/** Anomaly event flagged by detectProviderAnomalies(). */
+export interface AnomalyEvent {
+  /** Provider that triggered the anomaly. */
+  providerId: ProviderId;
+  /** Machine-readable anomaly kind. */
+  kind:
+    | "latency-spike"        // p50→p95 delta >50% of p50 baseline
+    | "sustained-errors"     // error rate >10% for >2 min
+    | "result-count-drop"    // result count dropped >60% vs last successful batch
+    | "rate-limit-exhaustion"; // saturated flag is true
+  /** Human-readable description. */
+  description: string;
+  /** Unix-ms when the anomaly was detected. */
+  detectedAt: number;
+  /** Additional numeric context (threshold, observed value, etc.). */
+  context: Record<string, number>;
+}
+
+/** Result shape of the /v1/federation-diagnostics-trends endpoint. */
+export interface FederationDiagnosticsTrendsResult {
+  trends: FederationTrendReport[];
+  anomalies: AnomalyEvent[];
+  lastUpdatedMs: number;
+}
+
+// Ordered windows: 5 min, 1 hr, 24 hr
+const TREND_WINDOWS: Array<{ ms: number; label: string }> = [
+  { ms: 5 * 60 * 1000,       label: "5min" },
+  { ms: 60 * 60 * 1000,      label: "1hr"  },
+  { ms: 24 * 60 * 60 * 1000, label: "24hr" },
+];
+
+/** Compute a specific percentile from a sorted array (already sorted ascending). */
+function percentileFromSorted(sorted: number[], pct: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0]!;
+  const idx = (pct / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo]!;
+  const frac = idx - lo;
+  return Math.round(sorted[lo]! * (1 - frac) + sorted[hi]! * frac);
+}
+
+/**
+ * Compute per-provider latency percentiles (p50/p95/p99) and error-rate trends
+ * over 5min / 1hr / 24hr sliding windows.
+ */
+export function getFederationTrends(): FederationTrendReport[] {
+  const allEvts = allEvents();
+  const now = Date.now();
+
+  // Collect all provider IDs that appear in any window
+  const providerSet = new Set<ProviderId>(allEvts.map((e) => e.providerId));
+
+  const reports: FederationTrendReport[] = [];
+
+  for (const providerId of providerSet) {
+    const windows: ProviderWindowTrend[] = [];
+
+    for (const win of TREND_WINDOWS) {
+      const cutoff = now - win.ms;
+      const evts = allEvts.filter(
+        (e) => e.providerId === providerId && e.startedAt >= cutoff,
+      );
+
+      const durations = evts.map((e) => e.durationMs).sort((a, b) => a - b);
+      const errors = evts.filter((e) => !e.ok).length;
+      const resultCount = evts.reduce((s, e) => s + e.resultCount, 0);
+      const errorRate = evts.length > 0 ? errors / evts.length : 0;
+
+      const bs = getBucketState(providerId);
+
+      windows.push({
+        providerId,
+        windowMs: win.ms,
+        windowLabel: win.label,
+        sampleCount: evts.length,
+        latencyPercentiles: {
+          p50: percentileFromSorted(durations, 50),
+          p95: percentileFromSorted(durations, 95),
+          p99: percentileFromSorted(durations, 99),
+        },
+        errorRate: Math.round(errorRate * 1000) / 1000,
+        resultCount,
+        saturated: bs.saturated,
+      });
+    }
+
+    reports.push({ providerId, windows });
+  }
+
+  return reports;
+}
+
+/**
+ * Detect anomalies across all providers using the 5-min window as the baseline.
+ *
+ * Flags:
+ *  - latency-spike:        p95 > p50 * 1.5 (i.e. >50% jump from baseline)
+ *  - sustained-errors:     error rate >10% and the earliest failing event in the
+ *                          window is >2 min old (sustained for >2 min)
+ *  - result-count-drop:    latest batch result count dropped >60% vs prior batch
+ *  - rate-limit-exhaustion: saturated bucket
+ */
+export function detectProviderAnomalies(windowMs = WINDOW_MS): AnomalyEvent[] {
+  const now = Date.now();
+  const allEvts = allEvents();
+  const anomalies: AnomalyEvent[] = [];
+
+  // Collect providers active in the given window
+  const cutoff = now - windowMs;
+  const recentEvts = allEvts.filter((e) => e.startedAt >= cutoff);
+  const providerSet = new Set<ProviderId>(recentEvts.map((e) => e.providerId));
+
+  for (const providerId of providerSet) {
+    const evts = recentEvts.filter((e) => e.providerId === providerId);
+    const durations = evts.map((e) => e.durationMs).sort((a, b) => a - b);
+    const errors = evts.filter((e) => !e.ok);
+    const errorRate = evts.length > 0 ? errors.length / evts.length : 0;
+
+    // 1. Latency spike: p95 > 1.5 × p50
+    const p50 = percentileFromSorted(durations, 50);
+    const p95 = percentileFromSorted(durations, 95);
+    if (p50 > 0 && p95 > p50 * 1.5 && durations.length >= 3) {
+      const delta = p95 - p50;
+      const pctIncrease = Math.round((delta / p50) * 100);
+      anomalies.push({
+        providerId,
+        kind: "latency-spike",
+        description:
+          `${providerId}: latency spike detected — p95 (${p95}ms) is ${pctIncrease}% above p50 (${p50}ms)`,
+        detectedAt: now,
+        context: { p50, p95, deltaMs: delta, thresholdPct: 50 },
+      });
+    }
+
+    // 2. Sustained errors: rate >10% AND earliest error >2 min ago
+    const TWO_MIN_MS = 2 * 60 * 1000;
+    if (errorRate > 0.1 && errors.length > 0) {
+      const earliestError = Math.min(...errors.map((e) => e.startedAt));
+      const sustainedMs = now - earliestError;
+      if (sustainedMs > TWO_MIN_MS) {
+        anomalies.push({
+          providerId,
+          kind: "sustained-errors",
+          description:
+            `${providerId}: error rate ${Math.round(errorRate * 100)}% sustained for ${Math.round(sustainedMs / 1000)}s (threshold: >10% for >2min)`,
+          detectedAt: now,
+          context: {
+            errorRate: Math.round(errorRate * 1000) / 1000,
+            sustainedMs: Math.round(sustainedMs),
+            thresholdPct: 10,
+            thresholdMs: TWO_MIN_MS,
+          },
+        });
+      }
+    }
+
+    // 3. Result count drop: compare last two successful batches
+    const successEvts = evts.filter((e) => e.ok && e.resultCount > 0);
+    if (successEvts.length >= 2) {
+      const sorted = [...successEvts].sort((a, b) => a.startedAt - b.startedAt);
+      const prev = sorted[sorted.length - 2]!;
+      const last = sorted[sorted.length - 1]!;
+      if (prev.resultCount > 0) {
+        const dropFrac = (prev.resultCount - last.resultCount) / prev.resultCount;
+        if (dropFrac > 0.6) {
+          anomalies.push({
+            providerId,
+            kind: "result-count-drop",
+            description:
+              `${providerId}: result count dropped ${Math.round(dropFrac * 100)}% ` +
+              `(from ${prev.resultCount} to ${last.resultCount})`,
+            detectedAt: now,
+            context: {
+              prevCount: prev.resultCount,
+              lastCount: last.resultCount,
+              dropFraction: Math.round(dropFrac * 1000) / 1000,
+              thresholdFraction: 0.6,
+            },
+          });
+        }
+      }
+    }
+
+    // 4. Rate-limit exhaustion
+    const bs = getBucketState(providerId);
+    if (bs.saturated) {
+      anomalies.push({
+        providerId,
+        kind: "rate-limit-exhaustion",
+        description:
+          `${providerId}: rate-limit bucket exhausted — next token available in ${bs.waitTimeMs}ms`,
+        detectedAt: now,
+        context: { waitTimeMs: bs.waitTimeMs, tokensAvailable: bs.tokensAvailable },
+      });
+    }
+  }
+
+  return anomalies;
+}
+
+/**
+ * Export the full event history (from allEvents()) with anomaly markers for
+ * debugging / compliance. By default exports the last windowMs of events;
+ * pass windowMs=Infinity to export all.
+ *
+ * @param format  'json' → JSON string, 'csv' → RFC-4180 CSV string.
+ * @param windowMs  Time window to include (default: last 24 hr). Pass 0 to export all.
+ */
+export function exportFederationAudit(
+  format: "json" | "csv",
+  windowMs?: number,
+): string {
+  const effectiveWindow = windowMs === undefined ? 24 * 60 * 60 * 1000 : windowMs;
+  const now = Date.now();
+  const cutoff = effectiveWindow === 0 ? 0 : now - effectiveWindow;
+  const evts = allEvents().filter((e) => e.startedAt >= cutoff);
+
+  // Compute anomaly provider set for marker injection
+  const anomalies = detectProviderAnomalies(
+    effectiveWindow === 0 ? 24 * 60 * 60 * 1000 : effectiveWindow,
+  );
+  const anomalyProviders = new Set<string>(anomalies.map((a) => `${a.providerId}:${a.kind}`));
+
+  if (format === "json") {
+    const rows = evts.map((e) => {
+      const markers = anomalies
+        .filter((a) => a.providerId === e.providerId)
+        .map((a) => a.kind);
+      return { ...e, anomalyMarkers: markers };
+    });
+    return JSON.stringify(
+      {
+        exportedAt: now,
+        windowMs: effectiveWindow,
+        eventCount: rows.length,
+        anomalyCount: anomalies.length,
+        events: rows,
+      },
+      null,
+      2,
+    );
+  }
+
+  // CSV format
+  const CSV_HEADERS = [
+    "providerId",
+    "startedAt",
+    "endedAt",
+    "durationMs",
+    "resultCount",
+    "ok",
+    "errorKind",
+    "errorMessage",
+    "payloadBytes",
+    "anomalyMarkers",
+  ];
+
+  function csvEscape(val: unknown): string {
+    const s = val === undefined || val === null ? "" : String(val);
+    // Quote if contains comma, double-quote, newline
+    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  }
+
+  const lines: string[] = [CSV_HEADERS.join(",")];
+  for (const e of evts) {
+    const markers = anomalies
+      .filter((a) => a.providerId === e.providerId)
+      .map((a) => a.kind)
+      .join("|");
+    lines.push(
+      [
+        csvEscape(e.providerId),
+        csvEscape(e.startedAt),
+        csvEscape(e.endedAt),
+        csvEscape(e.durationMs),
+        csvEscape(e.resultCount),
+        csvEscape(e.ok),
+        csvEscape(e.errorKind ?? ""),
+        csvEscape(e.errorMessage ?? ""),
+        csvEscape(e.payloadBytes),
+        csvEscape(markers),
+      ].join(","),
+    );
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Combined diagnostics-trends result: trends + anomalies + timestamp.
+ * Used by the /v1/federation-diagnostics-trends HTTP endpoint.
+ */
+export function getFederationDiagnosticsTrends(
+  windowMs = WINDOW_MS,
+): FederationDiagnosticsTrendsResult {
+  const trends = getFederationTrends();
+  const anomalies = detectProviderAnomalies(windowMs);
+  return {
+    trends,
+    anomalies,
+    lastUpdatedMs: Date.now(),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Reset helper (test-only)
 // ---------------------------------------------------------------------------
 

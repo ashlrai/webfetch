@@ -12,6 +12,7 @@ import {
   getCacheEntriesResponse,
   getCacheStatsResponse,
   getFederationDiagnosticsResponse,
+  getFederationDiagnosticsTrendsResponse,
   getFederationStrategyResponse,
   getProviderRecommendationsResponse,
   getProviders,
@@ -84,6 +85,13 @@ export function startServer(opts: ServerOptions) {
           url.pathname === "/v1/provider-recommendations")
       ) {
         return withHeaders(getProviderRecommendationsResponse(req), cors);
+      }
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/federation-diagnostics-trends" ||
+          url.pathname === "/v1/federation-diagnostics-trends")
+      ) {
+        return withHeaders(getFederationDiagnosticsTrendsResponse(req), cors);
       }
       if (
         req.method === "GET" &&

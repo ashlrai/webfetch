@@ -22,17 +22,21 @@ import {
   computeProviderRecommendations,
   downloadImage,
   exportCache,
+  exportFederationAudit,
   fetchWithLicense,
   findSimilar,
   getCacheAnalyticsSnapshot,
   getCacheStats,
   getFederationDiagnostics,
+  getFederationDiagnosticsTrends,
   getProviderRanking,
   hammingDistance,
   importCache,
   listCacheEntries,
   perceptualHashStructured,
   probePage,
+  reconcileLicenses,
+  reconcileLicensesAll,
   searchAlbumCover,
   searchArtistImages,
   searchImages,
@@ -40,6 +44,7 @@ import {
 import { z } from "zod";
 import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {
+  auditLicenseConsensusSchema,
   batchFindSimilarSchema,
   comparePhashesSchema,
   downloadImageSchema,
@@ -50,7 +55,7 @@ import {
   searchAlbumCoverSchema,
   searchArtistImagesSchema,
   searchImagesSchema,
-} from "./schema.ts";
+} from "./schema.ts"; // local server schema — mirrors mcp schema + server-only additions
 
 // ---------------------------------------------------------------------------
 // pHash diagnostics schema
@@ -251,6 +256,13 @@ const handlers: Record<string, Handler> = {
   "/analyze-phash-quality": wrap(analyzePhashQualitySchema, async (a) => {
     return analyzePhashQuality(a.candidates as any[]);
   }),
+  "/audit-license-consensus": wrap(auditLicenseConsensusSchema, async (a) => {
+    const candidates = a.candidates as any[];
+    if (a.allGroups) {
+      return { groups: reconcileLicensesAll(candidates) };
+    }
+    return reconcileLicenses(candidates);
+  }),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -329,6 +341,7 @@ export function getProviders(): Response {
           "/cache/entries",
           "/cache/export",
           "/cache/import",
+          "/audit-license-consensus",
         ],
       },
     }),
@@ -436,4 +449,15 @@ export function getFederationStrategyResponse(req: Request): Response {
 
   const ranking = getProviderRanking(providerIds, windowMs);
   return jsonOk(ranking);
+}
+
+export function getFederationDiagnosticsTrendsResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const windowMsParam = url.searchParams.get("windowMs");
+  const windowMs = windowMsParam ? Number(windowMsParam) : undefined;
+  if (windowMs !== undefined && (isNaN(windowMs) || windowMs < 1000 || windowMs > 86_400_000)) {
+    return jsonErr("windowMs must be between 1000 and 86400000 (24 hours)", 422);
+  }
+  const result = getFederationDiagnosticsTrends(windowMs);
+  return jsonOk(result);
 }
