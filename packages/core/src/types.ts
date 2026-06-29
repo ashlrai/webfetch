@@ -12,13 +12,23 @@
  * - `hash`: 16-hex-char (64-bit) fingerprint.
  * - `algorithm`: `"dct-phash"` when sharp was available (real DCT-II pHash);
  *   `"ahash-fallback"` when sharp was unavailable and we used the byte-window fallback.
- * - `confidence`: 0..1. `1.0` for dct-phash (full image decoded + resized);
- *   `0.5` for ahash-fallback (raw bytes, no resize — less perceptually stable).
+ * - `confidence`: 0..1. Base is `1.0` for dct-phash, `0.5` for ahash-fallback.
+ *   May be reduced below the algorithm base by decay factors (e.g. network/timeout
+ *   degradation via `applyTimeoutConfidenceDecay`). Never exceeds the algorithm base.
+ * - `algorithmBase`: the unmodified algorithm base confidence (1.0 or 0.5) before
+ *   any decay is applied. Callers can use this to distinguish "base was reduced" from
+ *   "algorithm was ahash to begin with".
+ * - `decayFactor`: cumulative decay multiplier applied so far (1.0 = no decay).
+ *   Stored for audit / debugging; not intended for direct arithmetic by callers.
  */
 export interface PerceptualHashResult {
   hash: string;
   algorithm: "dct-phash" | "ahash-fallback";
   confidence: number;
+  /** Algorithm base confidence before any decay (1.0 for dct-phash, 0.5 for ahash-fallback). */
+  algorithmBase?: number;
+  /** Cumulative decay multiplier (1.0 = no decay applied). */
+  decayFactor?: number;
 }
 
 export type License =
@@ -339,6 +349,19 @@ export interface SearchOptions {
    * Prevents a slow tier-2 provider from starving tier-1 results.
    */
   providerQueueing?: boolean;
+
+  /**
+   * When true, apply semantic deduplication after ranking: cluster candidates
+   * by pHash Hamming distance (agglomerative average-linkage, threshold=8) and
+   * return one representative per unique visual.
+   *
+   * Populates `SearchResultBundle.semanticDedupeResult` with the full cluster
+   * report. `SearchResultBundle.candidates` is replaced with the flat list of
+   * cluster centroids + singletons (sorted by score descending).
+   *
+   * CLI flag: `--semantic-dedupe`
+   */
+  semanticDedupe?: boolean;
 }
 
 export interface ProviderAuth {
@@ -386,6 +409,13 @@ export interface SearchResultBundle {
    * no results, or produced low-confidence results.
    */
   repairPlan?: FederationRepairPlan;
+  /**
+   * Populated when `SearchOptions.semanticDedupe` is true.
+   * Contains the full agglomerative clustering report: one entry per cluster
+   * of visually similar images, plus singletons and a flat representative list.
+   * When present, `candidates` has been replaced with `allRepresentatives`.
+   */
+  semanticDedupeResult?: import("./semantic-dedupe.ts").SemanticDedupeResult;
 }
 
 /**

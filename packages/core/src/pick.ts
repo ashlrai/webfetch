@@ -70,12 +70,22 @@ export function rankAll(
     if (w > 0 && w < minW) return;
     if (h > 0 && h < minH) return;
 
+    // Resolve phash confidence: prefer phashResult.confidence (carries decay
+    // information) over the top-level confidence field for tie-breaking.
+    // This ensures that candidates from timed-out providers (which have had
+    // their phashResult.confidence decayed by 15%) rank behind undecayed ones.
+    const phashConf = cand.phashResult?.confidence ?? null;
+    const licenseConf = cand.confidence ?? (contextSafe ? 0.5 : 0);
+    // Use the lower of license confidence and phash confidence when both are
+    // present, so any decay in either dimension is reflected in the sort key.
+    const effectiveConf = phashConf !== null ? Math.min(licenseConf, phashConf) : licenseConf;
+
     scored.push({
       cand,
       rank: LICENSE_RANK[cand.license],
       pixels: w * h,
       complete: (cand.author ? 1 : 0) + (cand.sourcePageUrl ? 1 : 0) + (cand.title ? 1 : 0),
-      conf: cand.confidence ?? (contextSafe ? 0.5 : 0),
+      conf: effectiveConf,
       // Prefer candidates whose license was derived from authoritative metadata
       // (api-metadata > embedded-metadata > heuristic-url > fallback).
       trailConf: cand.licenseAuditTrail?.confidence ?? 0,

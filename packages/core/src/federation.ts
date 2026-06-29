@@ -11,6 +11,7 @@
  */
 
 import { dedupeByUrl } from "./dedupe.ts";
+import { decayProviderCandidateConfidence } from "./perceptual-hash.ts";
 import {
   emitProviderEvent,
   emitProviderSequenceEvent,
@@ -23,6 +24,7 @@ import { healthCheckProvider } from "./provider-health-check.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
 import { providerRegistry } from "./provider-registry.ts";
 import { clusterCandidates } from "./semantic-clustering.ts";
+import { clusterCandidatesBySemantic } from "./semantic-dedupe.ts";
 import { recordScorecardEvent, selectProvidersForQuery } from "./provider-scorecard.ts";
 import type {
   ClusterGroup,
@@ -37,6 +39,7 @@ import type {
   SearchOptions,
   SearchResultBundle,
 } from "./types.ts";
+import type { SemanticDedupeResult } from "./semantic-dedupe.ts";
 
 // ---------------------------------------------------------------------------
 // Session-scoped timeout history (for degradedTimeoutMs)
@@ -242,7 +245,17 @@ export async function searchImages(
     // If the provider failed/timed-out, continue to the next in chain
   }
 
-  const flat = allResults;
+  // Apply phashResult confidence decay for providers that timed out during this
+  // federation call. Each timed-out provider's candidates get a 15% confidence
+  // reduction so downstream dedupe/pick ranks them behind non-degraded candidates.
+  let flat = allResults;
+  if (opts.degradedTimeoutMs) {
+    for (const [providerId, timeoutCount] of _timeoutHistory) {
+      if (timeoutCount > 0) {
+        flat = decayProviderCandidateConfidence(flat, providerId);
+      }
+    }
+  }
   const deduped = dedupeByUrl(flat);
   const ranked = rankAll(deduped, {
     licensePolicy: opts.licensePolicy ?? "safe-only",
@@ -283,6 +296,18 @@ export async function searchImages(
   }
 
   // -------------------------------------------------------------------------
+  // Optional semantic deduplication (opt-in via opts.semanticDedupe)
+  // When active, candidates is replaced with one representative per unique visual.
+  // -------------------------------------------------------------------------
+  let semanticDedupeResult: SemanticDedupeResult | undefined;
+  let finalCandidates = enriched;
+  if (opts.semanticDedupe) {
+    semanticDedupeResult = clusterCandidatesBySemantic(enriched);
+    // SemanticDedupeCandidate extends ImageCandidate; cast to the enriched shape.
+    finalCandidates = semanticDedupeResult.allRepresentatives as typeof enriched;
+  }
+
+  // -------------------------------------------------------------------------
   // Optional federation repair plan (opt-in via opts.repairPlan)
   // -------------------------------------------------------------------------
   const allReports = [...skippedByHealth, ...reports];
@@ -290,7 +315,7 @@ export async function searchImages(
   if (opts.repairPlan) {
     repairPlan = getFederationRepairPlan({
       reports: allReports,
-      candidates: enriched,
+      candidates: finalCandidates,
       licensePolicy: opts.licensePolicy ?? "safe-only",
       timeoutMs: opts.timeoutMs ?? 15_000,
       requestedProviders: requested as ProviderId[],
@@ -298,10 +323,11 @@ export async function searchImages(
   }
 
   return {
-    candidates: enriched,
+    candidates: finalCandidates,
     providerReports: allReports,
     warnings,
     ...(candidateClusters !== undefined ? { candidateClusters } : {}),
+    ...(semanticDedupeResult !== undefined ? { semanticDedupeResult } : {}),
     ...(repairPlan !== undefined ? { repairPlan } : {}),
   };
 }

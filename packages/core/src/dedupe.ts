@@ -14,7 +14,14 @@
  */
 
 import { downloadImage } from "./download.ts";
-import { findDuplicates, hammingDistance, perceptualHash, perceptualHashStructured, phashToString } from "./perceptual-hash.ts";
+import {
+  findDuplicates,
+  hammingDistance,
+  perceptualHash,
+  perceptualHashStructured,
+  phashToString,
+  routePerceptualHashByConfidence,
+} from "./perceptual-hash.ts";
 import { LICENSE_RANK } from "./license.ts";
 import type {
   DedupeGroupMember,
@@ -28,7 +35,7 @@ import type {
   SearchResultBundle,
 } from "./types.ts";
 
-export { perceptualHash, perceptualHashStructured, phashToString, hammingDistance, findDuplicates };
+export { perceptualHash, perceptualHashStructured, phashToString, hammingDistance, findDuplicates, routePerceptualHashByConfidence };
 
 function normalizeUrl(url: string): string {
   try {
@@ -112,7 +119,19 @@ async function dedupeByHashAsync(
       withHashes.push(c);
     }
   }
-  return dedupeByHashSync(withHashes, threshold);
+
+  // Route low-confidence candidates (< 0.6) through aHash verification first
+  // to avoid expensively re-computing DCT on already-degraded candidates.
+  // Low-confidence candidates are verified via their existing aHash (phash field)
+  // before being admitted to the full DCT deduplication pass.
+  const { highConfidence, lowConfidence } = routePerceptualHashByConfidence(withHashes);
+
+  // Low-confidence candidates: dedupe against themselves first (cheap), then
+  // merge surviving members into the high-confidence deduplication pass.
+  const lowDeduped = dedupeByHashSync(lowConfidence, threshold);
+  const combined = [...highConfidence, ...lowDeduped];
+
+  return dedupeByHashSync(combined, threshold);
 }
 
 function dedupeByHashSync(candidates: ImageCandidate[], threshold: number): ImageCandidate[] {

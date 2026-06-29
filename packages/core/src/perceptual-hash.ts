@@ -39,9 +39,15 @@ async function loadSharp(): Promise<any | null> {
 }
 
 /**
- * Structured perceptual hash. Returns `{hash, algorithm, confidence}`.
+ * Structured perceptual hash. Returns `{hash, algorithm, confidence, algorithmBase, decayFactor}`.
  * Prefer this over `perceptualHash` when consumers need to know which
  * algorithm ran and how reliable the result is.
+ *
+ * - DCT path (sharp available): confidence=1.0, algorithmBase=1.0, decayFactor=1.0.
+ * - aHash fallback: confidence=0.5, algorithmBase=0.5, decayFactor=1.0.
+ *
+ * Confidence may later be reduced by `applyTimeoutConfidenceDecay` without
+ * changing `algorithmBase`. The `decayFactor` tracks cumulative reduction.
  */
 export async function perceptualHashStructured(
   bytes: Uint8Array,
@@ -50,13 +56,106 @@ export async function perceptualHashStructured(
   if (sharp) {
     try {
       const hash = await dctHash(sharp, bytes);
-      return { hash, algorithm: "dct-phash", confidence: 1.0 };
+      return { hash, algorithm: "dct-phash", confidence: 1.0, algorithmBase: 1.0, decayFactor: 1.0 };
     } catch {
       // fall through to aHash on decode errors
     }
   }
   const hash = fallbackAHash(bytes);
-  return { hash, algorithm: "ahash-fallback", confidence: 0.5 };
+  return { hash, algorithm: "ahash-fallback", confidence: 0.5, algorithmBase: 0.5, decayFactor: 1.0 };
+}
+
+// ---------------------------------------------------------------------------
+// Confidence decay helpers
+// ---------------------------------------------------------------------------
+
+/** The decay multiplier applied when a provider has hit its degradedTimeoutMs threshold. */
+export const TIMEOUT_CONFIDENCE_DECAY = 0.85;
+
+/**
+ * Apply a 15% confidence decay to a `PerceptualHashResult` due to a provider
+ * timeout condition. Called by `federation.ts` when `degradedTimeoutMs` fires.
+ *
+ * Rules:
+ * - Multiplies `confidence` by `TIMEOUT_CONFIDENCE_DECAY` (0.85).
+ * - Accumulates `decayFactor` (starts at 1.0; each call multiplies by 0.85).
+ * - `confidence` is clamped to [0, algorithmBase] — it can never exceed the
+ *   algorithm's base value (1.0 for dct-phash, 0.5 for ahash-fallback).
+ * - Returns a new object; does not mutate the input.
+ */
+export function applyTimeoutConfidenceDecay(
+  result: PerceptualHashResult,
+): PerceptualHashResult {
+  const base = result.algorithmBase ?? (result.algorithm === "dct-phash" ? 1.0 : 0.5);
+  const prevDecay = result.decayFactor ?? 1.0;
+  const newDecay = prevDecay * TIMEOUT_CONFIDENCE_DECAY;
+  const newConfidence = Math.min(base, Math.max(0, result.confidence * TIMEOUT_CONFIDENCE_DECAY));
+  return {
+    ...result,
+    confidence: newConfidence,
+    algorithmBase: base,
+    decayFactor: newDecay,
+  };
+}
+
+/**
+ * Apply `applyTimeoutConfidenceDecay` to every candidate from a specific
+ * provider in a flat candidate list, returning a new array.
+ *
+ * Used by `federation.ts` after a degradedTimeoutMs event to reduce confidence
+ * of all `phashResult` objects on candidates from the timed-out provider.
+ *
+ * Candidates without a `phashResult` are passed through unchanged.
+ */
+export function decayProviderCandidateConfidence<
+  T extends { source: string; phashResult?: PerceptualHashResult },
+>(candidates: T[], providerId: string): T[] {
+  return candidates.map((c) => {
+    if (c.source !== providerId || !c.phashResult) return c;
+    const decayed = applyTimeoutConfidenceDecay(c.phashResult);
+    return { ...c, phashResult: decayed };
+  });
+}
+
+/**
+ * Low-confidence threshold below which `routePerceptualHashByConfidence`
+ * routes candidates through a cheaper aHash verification pass.
+ */
+export const LOW_CONFIDENCE_THRESHOLD = 0.6;
+
+/**
+ * Route perceptual hash candidates by confidence tier.
+ *
+ * Purpose: during `dedupeByHashAsync` (or equivalent batch operations), avoid
+ * expensively recomputing DCT hashes for candidates whose existing hash is
+ * already low-confidence (< 0.6). Instead, route them through a cheaper
+ * aHash-level verification pass first.
+ *
+ * Returns two groups:
+ * - `highConfidence` — candidates whose `phashResult.confidence >= threshold`
+ *   (or who have no `phashResult` — treated as unknown/full quality).
+ * - `lowConfidence`  — candidates whose `phashResult.confidence < threshold`;
+ *   these should be verified via aHash before any DCT re-computation.
+ *
+ * @param candidates  Flat list of candidates with optional `phashResult`.
+ * @param threshold   Confidence threshold (default: `LOW_CONFIDENCE_THRESHOLD` = 0.6).
+ */
+export function routePerceptualHashByConfidence<
+  T extends { phashResult?: PerceptualHashResult },
+>(
+  candidates: T[],
+  threshold = LOW_CONFIDENCE_THRESHOLD,
+): { highConfidence: T[]; lowConfidence: T[] } {
+  const highConfidence: T[] = [];
+  const lowConfidence: T[] = [];
+  for (const c of candidates) {
+    if (c.phashResult !== undefined && c.phashResult.confidence < threshold) {
+      lowConfidence.push(c);
+    } else {
+      highConfidence.push(c);
+    }
+  }
+  return { highConfidence, lowConfidence };
 }
 
 /**
