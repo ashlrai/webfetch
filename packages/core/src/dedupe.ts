@@ -6,11 +6,27 @@
  *   2. Perceptual hash (pHash) — a true DCT-based pHash via `sharp` when
  *      available; gracefully falls back to a byte-window aHash when not.
  *      See `perceptual-hash.ts` for the algorithm.
+ *
+ * Extended API: `dedupeWithPhashGrouping` builds a Hamming-distance similarity
+ * graph across all candidates, merges same-image results from multiple providers
+ * into canonical candidates with deduplicated metadata, confidence aggregation,
+ * and alternate URL tracking.
  */
 
 import { downloadImage } from "./download.ts";
 import { findDuplicates, hammingDistance, perceptualHash, perceptualHashStructured, phashToString } from "./perceptual-hash.ts";
-import type { DedupeGroupMember, DuplicateGroup, Fetcher, ImageCandidate, ProviderDedupeReport, SearchResultBundle } from "./types.ts";
+import { LICENSE_RANK } from "./license.ts";
+import type {
+  DedupeGroupMember,
+  DedupeWithPhashGroupingOptions,
+  DuplicateGroup,
+  Fetcher,
+  ImageCandidate,
+  PhashCanonicalCandidate,
+  PhashGroupingResult,
+  ProviderDedupeReport,
+  SearchResultBundle,
+} from "./types.ts";
 
 export { perceptualHash, perceptualHashStructured, phashToString, hammingDistance, findDuplicates };
 
@@ -243,4 +259,306 @@ export function compareCandidates(
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   return { duplicateGroups, merged };
+}
+
+// ---------------------------------------------------------------------------
+// dedupeWithPhashGrouping — multi-provider pHash similarity graph + canonical
+// candidate synthesis with metadata union, confidence aggregation, and
+// alternate URL tracking.
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a phash algorithm-quality weight: dct-phash → 1.0, ahash-fallback → 0.5,
+ * no hash → 0 (no contribution). Mirrors the algorithm confidence values in
+ * perceptual-hash.ts but derived from the candidate fields.
+ */
+function phashAlgorithmConfidence(c: ImageCandidate): number {
+  if (c.phashResult) return c.phashResult.confidence;
+  if (c.phashAlgorithm === "dct-phash") return 1.0;
+  if (c.phashAlgorithm === "ahash-fallback") return 0.5;
+  if (c.phash) return 0.5; // bare hash, unknown algorithm — treat as fallback quality
+  return 0;
+}
+
+/**
+ * Map a License to a 0..1 score where lower LICENSE_RANK → more open → higher score.
+ * CC0 (rank 1) → 1.0; UNKNOWN (rank 99) → ~0.
+ */
+function licenseScore(c: ImageCandidate): number {
+  const rank = LICENSE_RANK[c.license] ?? 99;
+  // Invert rank: rank 1 → 1.0, rank 99 → ~0.01. Cap at 1.
+  return Math.max(0, Math.min(1, 1 / rank));
+}
+
+/**
+ * Compute aggregated confidence for a group of candidates.
+ *
+ * Formula: phashWeight × avgPhashConfidence + (1 - phashWeight) × bestLicenseScore
+ *
+ * This rewards groups where all members used the high-quality DCT hash AND at
+ * least one member has a well-known open license.
+ */
+function aggregateGroupConfidence(
+  members: ImageCandidate[],
+  phashWeight: number,
+): number {
+  if (members.length === 0) return 0;
+
+  const avgPhash =
+    members.reduce((s, c) => s + phashAlgorithmConfidence(c), 0) / members.length;
+  const bestLicense = members.reduce((best, c) => Math.max(best, licenseScore(c)), 0);
+
+  return phashWeight * avgPhash + (1 - phashWeight) * bestLicense;
+}
+
+/**
+ * Merge metadata fields from a group of candidates into the representative.
+ * Strategy: first non-empty value wins for each field.
+ */
+function mergeMetadata(
+  rep: ImageCandidate,
+  members: ImageCandidate[],
+): Pick<ImageCandidate, "author" | "title" | "sourcePageUrl" | "licenseUrl" | "attributionLine"> {
+  let author = rep.author;
+  let title = rep.title;
+  let sourcePageUrl = rep.sourcePageUrl;
+  let licenseUrl = rep.licenseUrl;
+  let attributionLine = rep.attributionLine;
+
+  for (const m of members) {
+    if (!author && m.author) author = m.author;
+    if (!title && m.title) title = m.title;
+    if (!sourcePageUrl && m.sourcePageUrl) sourcePageUrl = m.sourcePageUrl;
+    if (!licenseUrl && m.licenseUrl) licenseUrl = m.licenseUrl;
+    if (!attributionLine && m.attributionLine) attributionLine = m.attributionLine;
+  }
+
+  return { author, title, sourcePageUrl, licenseUrl, attributionLine };
+}
+
+/**
+ * Batch-efficient optional sharp pooling: when computeHashes is requested,
+ * this function populates missing phashes across all candidates in a single
+ * pass, reusing a single dynamically-loaded sharp reference.
+ *
+ * Returns a new array with hashes filled in (candidates that failed to hash
+ * are returned unchanged).
+ */
+async function fillMissingHashes(
+  candidates: ImageCandidate[],
+  opts: Pick<DedupeWithPhashGroupingOptions, "fetcher" | "userAgent" | "signal">,
+): Promise<ImageCandidate[]> {
+  // Identify indices that need hashing.
+  const toHash = candidates
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !c.phash);
+
+  if (toHash.length === 0) return candidates;
+
+  // Clone the array so we don't mutate the input.
+  const result = [...candidates];
+
+  // Process in parallel (bounded by Promise.allSettled — no rate-limiting needed
+  // at this layer; callers should use AbortSignal for cancellation).
+  await Promise.allSettled(
+    toHash.map(async ({ c, i }) => {
+      try {
+        const dl = await downloadImage(c.url, {
+          fetcher: opts.fetcher,
+          userAgent: opts.userAgent,
+          signal: opts.signal,
+        });
+        const hashResult = await perceptualHashStructured(dl.bytes);
+        result[i] = {
+          ...c,
+          phash: hashResult.hash,
+          phashResult: hashResult,
+          phashAlgorithm: hashResult.algorithm,
+        };
+      } catch {
+        // Leave unchanged on failure — graceful degradation.
+      }
+    }),
+  );
+
+  return result;
+}
+
+/**
+ * Build a Hamming-distance similarity graph across all candidates, merge
+ * same-image results from multiple providers into canonical candidates with:
+ *
+ * - **Deduplicated metadata**: `author`, `title`, `sourcePageUrl`, `licenseUrl`,
+ *   and `attributionLine` are merged via first-non-empty wins across all group members.
+ * - **Confidence aggregation**: `aggregatedConfidence` combines pHash algorithm
+ *   quality (weighted by `opts.phashWeight`, default 0.6) with the best license
+ *   rank score in the group.
+ * - **Alternate URL tracking**: `alternateUrls` lists every non-canonical URL
+ *   found in the group; `providers` lists all contributing provider ids.
+ * - **Batch-efficient sharp pooling**: when `opts.computeHashes` is true, missing
+ *   hashes are downloaded + computed in a single parallel pass before grouping.
+ *
+ * Candidates without any pHash that are not grouped by URL are returned as
+ * `singletons` (unchanged). URL-equivalent variants (cache-busting params stripped)
+ * are pre-collapsed before the pHash graph is built to avoid false positives.
+ *
+ * @example
+ * ```ts
+ * const { canonical, singletons } = await dedupeWithPhashGrouping(candidates, {
+ *   hammingThreshold: 8,
+ *   computeHashes: true,
+ * });
+ * const allUnique = [...canonical, ...singletons];
+ * ```
+ */
+export async function dedupeWithPhashGrouping(
+  candidates: ImageCandidate[],
+  opts: DedupeWithPhashGroupingOptions = {},
+): Promise<PhashGroupingResult> {
+  const threshold = opts.hammingThreshold ?? 8;
+  const phashWeight = Math.max(0, Math.min(1, opts.phashWeight ?? 0.6));
+
+  // Step 1: URL-level pre-collapse to avoid treating CDN variants as distinct images.
+  // We keep track of the original candidates by normalized URL → first index seen.
+  const urlToFirst = new Map<string, number>();
+  const urlGroups = new Map<number, number[]>(); // first-index → all indices with same norm URL
+
+  for (let i = 0; i < candidates.length; i++) {
+    const norm = normalizeUrl(candidates[i]!.url);
+    const first = urlToFirst.get(norm);
+    if (first === undefined) {
+      urlToFirst.set(norm, i);
+      urlGroups.set(i, [i]);
+    } else {
+      urlGroups.get(first)!.push(i);
+    }
+  }
+
+  // Deduplicated representative set (one per unique URL).
+  const repIndices = [...urlGroups.keys()];
+  let repCandidates: ImageCandidate[] = repIndices.map((i) => candidates[i]!);
+
+  // Step 2: Optionally compute missing hashes (batch pass with sharp reuse).
+  if (opts.computeHashes) {
+    repCandidates = await fillMissingHashes(repCandidates, {
+      fetcher: opts.fetcher,
+      userAgent: opts.userAgent,
+      signal: opts.signal,
+    });
+  }
+
+  // Step 3: Build pHash similarity graph using Union-Find.
+  const n = repCandidates.length;
+  const parent = repCandidates.map((_, i) => i);
+
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]!]!;
+      x = parent[x]!;
+    }
+    return x;
+  }
+  function union(a: number, b: number): void {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[rb] = ra;
+  }
+
+  // pHash pairs within threshold.
+  const pairs = findDuplicates(repCandidates, threshold);
+  for (const [i, j] of pairs) {
+    union(i, j);
+  }
+
+  // Step 4: Collect groups by root.
+  const groupMap = new Map<number, number[]>(); // root → member indices in repCandidates
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!groupMap.has(root)) groupMap.set(root, []);
+    groupMap.get(root)!.push(i);
+  }
+
+  // Step 5: Build canonical candidates and DuplicateGroup records.
+  const canonicalList: PhashCanonicalCandidate[] = [];
+  const singletonList: ImageCandidate[] = [];
+  const duplicateGroups: DuplicateGroup[] = [];
+
+  for (const [, memberRepIndices] of groupMap) {
+    // Gather all original candidates for every URL-group in this pHash cluster.
+    const allOriginalMembers: ImageCandidate[] = [];
+    for (const ri of memberRepIndices) {
+      const origIdx = repIndices[ri]!;
+      const urlGroup = urlGroups.get(origIdx)!;
+      for (const oi of urlGroup) {
+        allOriginalMembers.push(candidates[oi]!);
+      }
+    }
+
+    if (memberRepIndices.length === 1 && allOriginalMembers.length === 1) {
+      // True singleton — not part of any duplicate group.
+      singletonList.push(allOriginalMembers[0]!);
+      continue;
+    }
+
+    // Pick representative: highest score, then first in memberRepIndices order.
+    const repRi = memberRepIndices.reduce((best, ri) => {
+      const bScore = repCandidates[best]?.score ?? 0;
+      const iScore = repCandidates[ri]?.score ?? 0;
+      return iScore > bScore ? ri : best;
+    }, memberRepIndices[0]!);
+
+    const rep = repCandidates[repRi]!;
+
+    // Merge metadata from all members.
+    const merged = mergeMetadata(rep, allOriginalMembers);
+
+    // Compute aggregated confidence.
+    const aggregatedConfidence = aggregateGroupConfidence(allOriginalMembers, phashWeight);
+
+    // Collect alternate URLs and all provider ids.
+    const allUrls = allOriginalMembers.map((m) => m.url);
+    const alternateUrls = allUrls.filter((u) => u !== rep.url);
+    const providers = [...new Set(allOriginalMembers.map((m) => m.source))];
+
+    const canonical: PhashCanonicalCandidate = {
+      ...rep,
+      ...merged,
+      providers,
+      alternateUrls,
+      aggregatedConfidence,
+    };
+    canonicalList.push(canonical);
+
+    // Build DuplicateGroup for callers who want the raw cluster data.
+    // Only emit groups with 2+ distinct effective members.
+    const effectiveMemberCount = allOriginalMembers.length;
+    if (effectiveMemberCount >= 2) {
+      // Determine the reason and confidence.
+      const allSameUrl = new Set(allOriginalMembers.map((m) => normalizeUrl(m.url))).size === 1;
+      const reason: "url" | "phash" = allSameUrl ? "url" : "phash";
+      const confidence =
+        reason === "url"
+          ? 1.0
+          : aggregateGroupConfidence(allOriginalMembers, phashWeight);
+
+      const members: DedupeGroupMember[] = allOriginalMembers.map((m, idx) => ({
+        index: candidates.indexOf(m),
+        url: m.url,
+        provider: m.source,
+        phash: m.phash,
+      }));
+
+      duplicateGroups.push({ members, reason, confidence });
+    }
+  }
+
+  // Sort canonical by score descending, then singletons by score descending.
+  canonicalList.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  singletonList.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  return {
+    canonical: canonicalList,
+    groups: duplicateGroups,
+    singletons: singletonList,
+  };
 }

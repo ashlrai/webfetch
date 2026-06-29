@@ -246,6 +246,72 @@ export interface ProviderDedupeReport {
 }
 
 /**
+ * A canonical candidate produced by `dedupeWithPhashGrouping()`.
+ *
+ * The representative is the highest-scored (or first-seen) member of the
+ * pHash cluster. Metadata from all group members is merged in:
+ * - `author`, `title`, `sourcePageUrl` — first non-empty value wins.
+ * - `alternateUrls` — every URL in the group except the canonical one.
+ * - `providers` — all source provider ids that returned this visual.
+ * - `confidence` — aggregated from phash algorithm quality and best license rank.
+ */
+export interface PhashCanonicalCandidate extends ImageCandidate {
+  /** All provider ids that returned this visual (includes the representative's source). */
+  providers: string[];
+  /** All non-canonical URLs for this visual (from duplicate group members). */
+  alternateUrls: string[];
+  /**
+   * Aggregated confidence: weighted combination of phash algorithm quality
+   * and the best license rank in the group (lower rank = more open = higher
+   * weight). Range 0..1.
+   */
+  aggregatedConfidence: number;
+}
+
+/**
+ * Result of `dedupeWithPhashGrouping()`.
+ *
+ * - `canonical` — one entry per unique visual, with metadata merged from all providers.
+ * - `groups`    — the underlying DuplicateGroup clusters (same shape as compareCandidates).
+ * - `singletons` — candidates that were not part of any duplicate group (pass-through, unchanged).
+ */
+export interface PhashGroupingResult {
+  canonical: PhashCanonicalCandidate[];
+  groups: DuplicateGroup[];
+  singletons: ImageCandidate[];
+}
+
+/**
+ * Options for `dedupeWithPhashGrouping()`.
+ */
+export interface DedupeWithPhashGroupingOptions {
+  /**
+   * Maximum Hamming distance (inclusive) to consider two pHashes as the same
+   * visual. Default: 8 (slightly more permissive than compareCandidates default
+   * of 6 to handle minor re-encoding differences across providers).
+   */
+  hammingThreshold?: number;
+  /**
+   * When true, download and compute pHashes for candidates that don't have one.
+   * Expensive — only enable when high deduplication accuracy matters more than speed.
+   * Default: false.
+   */
+  computeHashes?: boolean;
+  /** Injectable fetch implementation. Used when computeHashes is true. */
+  fetcher?: Fetcher;
+  /** User-Agent header passed to the downloader when computeHashes is true. */
+  userAgent?: string;
+  /** AbortSignal for cancelling in-flight hash computation. */
+  signal?: AbortSignal;
+  /**
+   * Weight (0..1) given to the phash algorithm confidence when computing
+   * `aggregatedConfidence`. The remainder (1 - phashWeight) is given to the
+   * license rank score. Default: 0.6.
+   */
+  phashWeight?: number;
+}
+
+/**
  * A single gap entry in a RefinementPlan — describes one low-confidence
  * candidate and the recommended action to improve confidence.
  */
