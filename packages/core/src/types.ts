@@ -197,6 +197,25 @@ export interface SemanticClusteringOptions {
   requireBothSignals?: boolean;
 }
 
+/**
+ * Criteria for early-exit in `raceProviders` mode.
+ *
+ * - `count` — stop collecting once this many qualifying results have arrived.
+ * - `tier`  — which license tier qualifies:
+ *     `"cc0"`       → CC0 + PUBLIC_DOMAIN only.
+ *     `"open"`      → CC0, PUBLIC_DOMAIN, CC_BY, CC_BY_SA.
+ *     `"safe"`      → all licenses that pass the `"safe-only"` policy
+ *                     (CC0, PD, CC_BY, CC_BY_SA, Unsplash, Pexels, Pixabay,
+ *                      Flickr CC, Burst).
+ *     `"any"`       → any license (effectively just a count threshold).
+ */
+export interface EarlyExitCriteria {
+  /** Minimum number of qualifying results to trigger early exit. */
+  count: number;
+  /** License tier that a result must satisfy to count toward the threshold. */
+  tier: "cc0" | "open" | "safe" | "any";
+}
+
 export interface SearchOptions {
   providers?: ProviderId[];
   safeSearch?: SafeSearchMode;
@@ -262,6 +281,48 @@ export interface SearchOptions {
    * Off by default — opt in when you need actionable failure diagnostics.
    */
   repairPlan?: boolean;
+
+  // ---------------------------------------------------------------------------
+  // Parallel Federation Enhancements (v5+)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * When set, short-circuit federation as soon as this many results whose
+   * license matches the given license tier have been collected.
+   * Only active when `raceProviders` is true.
+   *
+   * Example: `{ count: 5, tier: "cc0" }` stops as soon as 5 CC0/PUBLIC_DOMAIN
+   * results have arrived across all in-flight providers.
+   */
+  earlyExitCriteria?: EarlyExitCriteria;
+
+  /**
+   * When true, providers are run with `Promise.race`-style early-exit support:
+   * as soon as `earlyExitCriteria` is satisfied the remaining in-flight
+   * provider requests are aborted and results returned immediately.
+   * Falls back to normal parallel behaviour when `earlyExitCriteria` is absent.
+   */
+  raceProviders?: boolean;
+
+  /**
+   * When true, apply degraded-timeout penalties to providers that have timed
+   * out in this session:
+   *   - 1 recent timeout  → provider budget reduced to 50% of `timeoutMs`.
+   *   - 2+ recent timeouts → provider is skipped entirely until session reset.
+   *
+   * Timeout history is tracked in-process (session-scoped; resets on restart).
+   */
+  degradedTimeoutMs?: boolean;
+
+  /**
+   * When true and >8 providers are requested, split them into two waves:
+   *   - Wave 1 (tier-1): CC0 / PUBLIC_DOMAIN providers — 15 s independent budget.
+   *   - Wave 2 (tier-2): platform / editorial / unknown providers — 15 s budget,
+   *     starts as soon as wave 1 completes (or its budget expires).
+   *
+   * Prevents a slow tier-2 provider from starving tier-1 results.
+   */
+  providerQueueing?: boolean;
 }
 
 export interface ProviderAuth {
@@ -646,6 +707,17 @@ export interface BatchFindSimilarBundleResult {
 }
 
 export type Fetcher = typeof fetch;
+
+// ---------------------------------------------------------------------------
+// Provider Registry types (re-exported from provider-registry.ts for
+// consumers that import from the single "webfetch-core" entry-point).
+// ---------------------------------------------------------------------------
+
+export type {
+  ProviderCapability,
+  ProviderMetadata,
+  ProviderRegistryInterface as ProviderRegistry,
+} from "./provider-registry.ts";
 
 export interface Provider {
   id: ProviderId;

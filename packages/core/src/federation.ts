@@ -21,18 +21,79 @@ import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { healthCheckProvider } from "./provider-health-check.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
+import { providerRegistry } from "./provider-registry.ts";
 import { clusterCandidates } from "./semantic-clustering.ts";
 import type {
   ClusterGroup,
+  EarlyExitCriteria,
   ErrorKind,
   FederationRepairPlan,
   ImageCandidate,
+  License,
   Provider,
   ProviderId,
   ProviderReport,
   SearchOptions,
   SearchResultBundle,
 } from "./types.ts";
+
+// ---------------------------------------------------------------------------
+// Session-scoped timeout history (for degradedTimeoutMs)
+// Maps ProviderId → number of timeouts in this process lifetime.
+// Exported only for test reset; callers should not mutate directly.
+// ---------------------------------------------------------------------------
+
+const _timeoutHistory = new Map<ProviderId, number>();
+
+/** Reset timeout history — intended for tests only. */
+export function _resetTimeoutHistory(): void {
+  _timeoutHistory.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Provider tier classification for providerQueueing
+// Tier-1: CC0 / Public-Domain sources. Tier-2: everything else.
+// ---------------------------------------------------------------------------
+
+const TIER1_PROVIDERS = new Set<ProviderId>([
+  "wikimedia",
+  "openverse",
+  "internet-archive",
+  "smithsonian",
+  "nasa",
+  "met-museum",
+  "library-of-congress",
+  "wellcome-collection",
+  "rawpixel",
+  "burst",
+]);
+
+// ---------------------------------------------------------------------------
+// License tier helpers for raceProviders / earlyExitCriteria
+// ---------------------------------------------------------------------------
+
+const CC0_LICENSES = new Set<License>(["CC0", "PUBLIC_DOMAIN"]);
+const OPEN_LICENSES = new Set<License>(["CC0", "PUBLIC_DOMAIN", "CC_BY", "CC_BY_SA"]);
+const SAFE_LICENSES = new Set<License>([
+  "CC0",
+  "PUBLIC_DOMAIN",
+  "CC_BY",
+  "CC_BY_SA",
+  "UNSPLASH_LICENSE",
+  "PEXELS_LICENSE",
+  "PIXABAY_LICENSE",
+]);
+
+function licenseMatchesTier(
+  license: License,
+  tier: EarlyExitCriteria["tier"],
+): boolean {
+  if (tier === "any") return true;
+  if (tier === "cc0") return CC0_LICENSES.has(license);
+  if (tier === "open") return OPEN_LICENSES.has(license);
+  if (tier === "safe") return SAFE_LICENSES.has(license);
+  return false;
+}
 
 export async function searchImages(
   query: string,
@@ -125,13 +186,34 @@ export async function searchImages(
   const reports: ProviderReport[] = [];
   const allResults: ImageCandidate[] = [];
 
-  // Run parallel providers concurrently
-  const parallelResults = await Promise.all(
-    parallelProviders.map((id) =>
-      runProvider(id, query, opts, resolveTimeout(id, timeoutMs, opts), reports),
-    ),
-  );
-  allResults.push(...parallelResults.flat());
+  // -------------------------------------------------------------------------
+  // Feature: providerQueueing — split >8 providers into two independent waves.
+  // -------------------------------------------------------------------------
+  if (opts.providerQueueing && parallelProviders.length > 8) {
+    const wave1 = parallelProviders.filter((id) => TIER1_PROVIDERS.has(id));
+    const wave2 = parallelProviders.filter((id) => !TIER1_PROVIDERS.has(id));
+    const WAVE_BUDGET = 15_000;
+
+    const wave1Results = await runWave(wave1, query, opts, WAVE_BUDGET, reports);
+    allResults.push(...wave1Results);
+
+    const wave2Results = await runWave(wave2, query, opts, WAVE_BUDGET, reports);
+    allResults.push(...wave2Results);
+  } else if (opts.raceProviders && opts.earlyExitCriteria) {
+    // -----------------------------------------------------------------------
+    // Feature: raceProviders — parallel with early-exit on N high-quality results.
+    // -----------------------------------------------------------------------
+    const raceResults = await raceProviders(parallelProviders, query, opts, timeoutMs, reports);
+    allResults.push(...raceResults);
+  } else {
+    // Default: run parallel providers concurrently (original behaviour).
+    const parallelResults = await Promise.all(
+      parallelProviders.map((id) =>
+        runProvider(id, query, opts, resolveTimeout(id, timeoutMs, opts), reports),
+      ),
+    );
+    allResults.push(...parallelResults.flat());
+  }
 
   // Run fallback chain sequentially — stop as soon as one succeeds
   for (const id of fallbackChain) {
@@ -260,21 +342,160 @@ function orderProviders(
  *
  * Adaptive timeout = clamp(avgLatency * 2.5, minAdaptiveMs, timeoutMs).
  * Falls back to the global timeoutMs when no latency data is available.
+ *
+ * When `degradedTimeoutMs` is true, applies session-scoped penalties:
+ *   - 1 recorded timeout  → 50% of the resolved budget.
+ *   - 2+ recorded timeouts → returns -1 (signals: skip this provider).
  */
 function resolveTimeout(
   id: ProviderId,
   globalTimeoutMs: number,
   opts: SearchOptions,
 ): number {
-  if (!opts.adaptiveTimeoutMs) return globalTimeoutMs;
+  // --- adaptive base ---
+  let base = globalTimeoutMs;
+  if (opts.adaptiveTimeoutMs) {
+    const MIN_ADAPTIVE_MS = 2_000;
+    const diag = getFederationDiagnostics();
+    const stat = diag.providerStats.find((s) => s.id === id);
+    if (stat && stat.avgLatencyMs > 0) {
+      const adaptive = Math.round(stat.avgLatencyMs * 2.5);
+      base = Math.min(globalTimeoutMs, Math.max(MIN_ADAPTIVE_MS, adaptive));
+    }
+  }
 
-  const MIN_ADAPTIVE_MS = 2_000; // never go below 2 s
-  const diag = getFederationDiagnostics();
-  const stat = diag.providerStats.find((s) => s.id === id);
-  if (!stat || stat.avgLatencyMs === 0) return globalTimeoutMs;
+  // --- degraded timeout penalties ---
+  if (opts.degradedTimeoutMs) {
+    const timeouts = _timeoutHistory.get(id) ?? 0;
+    if (timeouts >= 2) return -1; // skip entirely
+    if (timeouts === 1) base = Math.round(base * 0.5);
+  }
 
-  const adaptive = Math.round(stat.avgLatencyMs * 2.5);
-  return Math.min(globalTimeoutMs, Math.max(MIN_ADAPTIVE_MS, adaptive));
+  return base;
+}
+
+// ---------------------------------------------------------------------------
+// Feature: raceProviders — parallel dispatch with early-exit on N results.
+// ---------------------------------------------------------------------------
+
+/**
+ * Run all `ids` in parallel. Return as soon as `earlyExitCriteria` is
+ * satisfied (or all providers complete). Remaining in-flight requests are
+ * aborted via a shared AbortController when the threshold is reached.
+ */
+async function raceProviders(
+  ids: ProviderId[],
+  query: string,
+  opts: SearchOptions,
+  timeoutMs: number,
+  reports: ProviderReport[],
+): Promise<ImageCandidate[]> {
+  if (ids.length === 0) return [];
+
+  const criteria = opts.earlyExitCriteria!;
+  const sharedAbort = new AbortController();
+  // Compose outer signal so callers can still cancel the whole federation.
+  const outerSignal = opts.signal;
+  const onOuterAbort = () => sharedAbort.abort();
+  outerSignal?.addEventListener("abort", onOuterAbort);
+
+  // Shared mutable accumulator guarded by simple counter checks (single-threaded JS).
+  const collected: ImageCandidate[] = [];
+  let qualifyingCount = 0;
+  let settled = false;
+
+  const raceOpts: SearchOptions = { ...opts, signal: sharedAbort.signal };
+
+  const providerPromises = ids.map(async (id) => {
+    const effectiveTimeout = resolveTimeout(id, timeoutMs, opts);
+    if (effectiveTimeout === -1) {
+      // Provider is degraded-skipped; report it.
+      reports.push({
+        provider: id,
+        ok: false,
+        count: 0,
+        timeMs: 0,
+        skipped: "disabled",
+        errorKind: "timeout",
+        errorContext: { degradedSkip: true, reason: "2+ session timeouts" },
+      });
+      return;
+    }
+    const results = await runProvider(id, query, raceOpts, effectiveTimeout, reports);
+    collected.push(...results);
+    // Count qualifying results and abort remaining if threshold met.
+    if (!settled) {
+      for (const c of results) {
+        if (licenseMatchesTier(c.license, criteria.tier)) {
+          qualifyingCount++;
+        }
+      }
+      if (qualifyingCount >= criteria.count) {
+        settled = true;
+        sharedAbort.abort();
+      }
+    }
+  });
+
+  // Wait for all to settle (aborted providers resolve quickly via AbortError).
+  await Promise.allSettled(providerPromises);
+  outerSignal?.removeEventListener("abort", onOuterAbort);
+  return collected;
+}
+
+// ---------------------------------------------------------------------------
+// Feature: providerQueueing — two independent waves with separate budgets.
+// ---------------------------------------------------------------------------
+
+/**
+ * Run a set of providers with an independent time budget.
+ * If a provider's resolveTimeout returns -1 (degraded-skip), it is omitted.
+ */
+async function runWave(
+  ids: ProviderId[],
+  query: string,
+  opts: SearchOptions,
+  waveBudgetMs: number,
+  reports: ProviderReport[],
+): Promise<ImageCandidate[]> {
+  if (ids.length === 0) return [];
+
+  const waveAbort = new AbortController();
+  const waveTimer = setTimeout(() => waveAbort.abort(), waveBudgetMs);
+  const outerSignal = opts.signal;
+  const onOuterAbort = () => waveAbort.abort();
+  outerSignal?.addEventListener("abort", onOuterAbort);
+
+  // Per-provider timeout is the caller-supplied timeoutMs (or the wave budget,
+  // whichever is smaller). This ensures a slow provider in a wave cannot
+  // exceed the global timeout budget even if the wave budget is larger.
+  const perProviderTimeout = Math.min(opts.timeoutMs ?? waveBudgetMs, waveBudgetMs);
+  const waveOpts: SearchOptions = { ...opts, signal: waveAbort.signal };
+
+  try {
+    const results = await Promise.all(
+      ids.map((id) => {
+        const effectiveTimeout = resolveTimeout(id, perProviderTimeout, opts);
+        if (effectiveTimeout === -1) {
+          reports.push({
+            provider: id,
+            ok: false,
+            count: 0,
+            timeMs: 0,
+            skipped: "disabled",
+            errorKind: "timeout",
+            errorContext: { degradedSkip: true, reason: "2+ session timeouts" },
+          });
+          return Promise.resolve([] as ImageCandidate[]);
+        }
+        return runProvider(id, query, waveOpts, effectiveTimeout, reports);
+      }),
+    );
+    return results.flat();
+  } finally {
+    clearTimeout(waveTimer);
+    outerSignal?.removeEventListener("abort", onOuterAbort);
+  }
 }
 
 async function runProvider(
@@ -284,7 +505,25 @@ async function runProvider(
   timeoutMs: number,
   reports: ProviderReport[],
 ): Promise<ImageCandidate[]> {
-  const provider: Provider | undefined = ALL_PROVIDERS[id];
+  // degradedTimeoutMs: skip providers with 2+ recorded timeouts (resolveTimeout
+  // returns -1 for those, but runProvider may also be called directly from the
+  // fallback chain — guard here too).
+  if (timeoutMs === -1) {
+    reports.push({
+      provider: id,
+      ok: false,
+      count: 0,
+      timeMs: 0,
+      skipped: "disabled",
+      errorKind: "timeout",
+      errorContext: { degradedSkip: true, reason: "2+ session timeouts" },
+    });
+    return [];
+  }
+  // Prefer registry lookup (supports dynamically registered providers); fall
+  // back to the static ALL_PROVIDERS map for callers that bypass the registry.
+  const provider: Provider | undefined =
+    providerRegistry.has(id) ? providerRegistry.get(id) : ALL_PROVIDERS[id];
   if (!provider) {
     reports.push({ provider: id, ok: false, count: 0, timeMs: 0, error: "unknown provider", errorKind: "network" });
     return [];
@@ -330,6 +569,12 @@ async function runProvider(
     const msg = (e as Error).message ?? "unknown";
     const kind = classifyError(e, ctl.signal.aborted);
     const ctx = kind === "http-4xx" || kind === "http-5xx" ? extractHttpContext(e) : undefined;
+
+    // Track timeouts for degradedTimeoutMs feature.
+    if (kind === "timeout" && opts.degradedTimeoutMs) {
+      _timeoutHistory.set(id, (_timeoutHistory.get(id) ?? 0) + 1);
+    }
+
     reports.push({
       provider: id,
       ok: false,
