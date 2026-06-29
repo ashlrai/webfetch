@@ -17,6 +17,7 @@ import {
   DEFAULT_PROVIDERS,
   analyzePhashQuality,
   auditImageMetadata,
+  auditLicenseConflictBatch,
   batchFindSimilar,
   clearCacheEntry,
   computeProviderRecommendations,
@@ -35,6 +36,7 @@ import {
   listCacheEntries,
   perceptualHashStructured,
   probePage,
+  reconcileLicenseConflictsBatch,
   reconcileLicenses,
   reconcileLicensesAll,
   searchAlbumCover,
@@ -45,6 +47,7 @@ import { z } from "zod";
 import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {
   auditLicenseConsensusSchema,
+  auditLicenseConflictsSchema,
   batchFindSimilarSchema,
   comparePhashesSchema,
   downloadImageSchema,
@@ -52,6 +55,7 @@ import {
   fetchWithLicenseSchema,
   findSimilarSchema,
   probePageSchema,
+  resolveLicenseConflictsSchema,
   searchAlbumCoverSchema,
   searchArtistImagesSchema,
   searchImagesSchema,
@@ -263,6 +267,19 @@ const handlers: Record<string, Handler> = {
     }
     return reconcileLicenses(candidates);
   }),
+  "/audit-license-conflicts": wrap(auditLicenseConflictsSchema, async (a) => {
+    return auditLicenseConflictBatch(a.candidates as any[], {
+      detailedTrail: a.detailedTrail,
+      severityFilter: a.severityFilter as any,
+    });
+  }),
+  "/resolve-license-conflicts": wrap(resolveLicenseConflictsSchema, async (a) => {
+    return reconcileLicenseConflictsBatch(a.candidates as any[], {
+      minAuthorityScore: a.minAuthorityScore,
+      maxResults: a.maxResults,
+      includeTrail: a.includeTrail,
+    });
+  }),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -342,6 +359,8 @@ export function getProviders(): Response {
           "/cache/export",
           "/cache/import",
           "/audit-license-consensus",
+          "/audit-license-conflicts",
+          "/resolve-license-conflicts",
         ],
       },
     }),

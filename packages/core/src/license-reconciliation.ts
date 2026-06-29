@@ -919,6 +919,375 @@ export function auditLicenseConflict(candidates: ImageCandidate[]): LicenseConfl
 }
 
 // ---------------------------------------------------------------------------
+// Batch conflict resolution — new public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Options for `reconcileLicenseConflictsBatch`.
+ *
+ * - `minAuthorityScore`  — filter out upgrade paths whose authority-weighted
+ *   consensus score is below this threshold (default 0).
+ * - `maxResults`         — cap the number of ranked upgrade paths returned
+ *   (default: unlimited).
+ * - `includeTrail`       — when true, include the full evidence chain for
+ *   each conflicting provider in every entry (default false).
+ */
+export interface BatchConflictResolutionOptions {
+  minAuthorityScore?: number;
+  maxResults?: number;
+  includeTrail?: boolean;
+}
+
+/**
+ * One ranked upgrade path entry returned by `reconcileLicenseConflictsBatch`.
+ *
+ * - `groupKey`           — stable dedupe-group identifier.
+ * - `candidateUrls`      — all image URLs in this group.
+ * - `providers`          — contributing provider ids.
+ * - `consensusLicense`   — authority-weighted consensus license for this group.
+ * - `authorityScore`     — 0..1; fraction of authority weight behind consensus.
+ * - `upgradeRecommendation` — suggested upgrade path (may be `upgradeApplicable:false`).
+ * - `conflictJustification` — narrative explaining why this consensus was chosen.
+ * - `evidenceTrail`      — per-provider evidence (present when `includeTrail:true`).
+ */
+export interface ConflictUpgradePath {
+  groupKey: string;
+  candidateUrls: string[];
+  providers: string[];
+  consensusLicense: License;
+  authorityScore: number;
+  upgradeRecommendation: LicenseUpgradeRecommendation;
+  conflictJustification: string;
+  evidenceTrail?: LicenseConflictEntry[];
+}
+
+/**
+ * Result of `reconcileLicenseConflictsBatch`.
+ *
+ * - `upgradePaths`       — ranked list of conflict groups with upgrade paths,
+ *   ordered by authority-score descending (most-confident first).
+ * - `totalCandidates`    — total number of input candidates processed.
+ * - `totalGroups`        — total dedupe groups found.
+ * - `conflictingGroups`  — groups that had at least one license conflict.
+ * - `legalReviewNeeded`  — true when any group has critical/major conflicts.
+ */
+export interface BatchConflictResolutionResult {
+  upgradePaths: ConflictUpgradePath[];
+  totalCandidates: number;
+  totalGroups: number;
+  conflictingGroups: number;
+  legalReviewNeeded: boolean;
+}
+
+/**
+ * Accept a list of candidates with conflicting provider licenses, score
+ * consensus via evidence-chain authority weighting, and return ranked upgrade
+ * paths.
+ *
+ * This is a higher-level batch wrapper that combines `reconcileLicensesBatch`,
+ * `scoreLicenseConsensus`, and `recommendLicenseUpgrade` into a single pass
+ * optimised for federation-run diagnostics.
+ *
+ * @param candidates - Array of `ImageCandidate` objects (any mix of providers).
+ * @param options    - Optional tuning parameters.
+ * @returns `BatchConflictResolutionResult` with ranked upgrade paths.
+ */
+export function reconcileLicenseConflictsBatch(
+  candidates: ImageCandidate[],
+  options: BatchConflictResolutionOptions = {},
+): BatchConflictResolutionResult {
+  const { minAuthorityScore = 0, maxResults, includeTrail = false } = options;
+
+  if (candidates.length === 0) {
+    return {
+      upgradePaths: [],
+      totalCandidates: 0,
+      totalGroups: 0,
+      conflictingGroups: 0,
+      legalReviewNeeded: false,
+    };
+  }
+
+  const groups = groupCandidates(candidates);
+  groups.sort((a, b) => b.length - a.length);
+
+  const paths: ConflictUpgradePath[] = [];
+  let legalReviewNeeded = false;
+
+  for (const group of groups) {
+    const first = group[0]!;
+    const groupKey =
+      first.phash && first.phash.length >= 8
+        ? `phash:${first.phash.slice(0, 8).toLowerCase()}`
+        : `url:${first.url}`;
+
+    const reconciled = reconcileGroup(group);
+    const consensus = scoreLicenseConsensus(group);
+    const upgrade = recommendLicenseUpgrade(group, reconciled);
+
+    if (consensus.authorityScore < minAuthorityScore) continue;
+
+    // Check for legal review requirement via the conflict audit.
+    const audit = auditLicenseConflict(group);
+    if (audit.legalReviewRequired) legalReviewNeeded = true;
+
+    const entry: ConflictUpgradePath = {
+      groupKey,
+      candidateUrls: group.map((c) => c.url),
+      providers: [...new Set(group.map((c) => c.source))],
+      consensusLicense: consensus.consensusLicense,
+      authorityScore: consensus.authorityScore,
+      upgradeRecommendation: upgrade,
+      conflictJustification: consensus.conflictJustification,
+    };
+
+    if (includeTrail) {
+      entry.evidenceTrail = reconciled.conflictLog;
+    }
+
+    paths.push(entry);
+  }
+
+  // Sort by authorityScore descending (highest confidence first).
+  paths.sort((a, b) => b.authorityScore - a.authorityScore);
+
+  const conflictingGroups = paths.filter(
+    (p) => p.providers.length > 1 &&
+      new Set(
+        groups
+          .find((g) => {
+            const f = g[0]!;
+            const k =
+              f.phash && f.phash.length >= 8
+                ? `phash:${f.phash.slice(0, 8).toLowerCase()}`
+                : `url:${f.url}`;
+            return k === p.groupKey;
+          })
+          ?.map((c) => c.license) ?? [],
+      ).size > 1,
+  ).length;
+
+  return {
+    upgradePaths: maxResults !== undefined ? paths.slice(0, maxResults) : paths,
+    totalCandidates: candidates.length,
+    totalGroups: groups.length,
+    conflictingGroups,
+    legalReviewNeeded,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Batch conflict audit — structured event stream
+// ---------------------------------------------------------------------------
+
+/**
+ * A structured conflict event emitted by `auditLicenseConflictBatch`.
+ *
+ * - `eventId`           — monotonically increasing event index (0-based).
+ * - `groupKey`          — dedupe-group key where the conflict was detected.
+ * - `candidateUrls`     — all URLs in this group.
+ * - `conflictSeverity`  — classification of the conflict.
+ * - `conflictingProviders` — provider ids whose license assertion differed.
+ * - `consensusLicense`  — the license chosen as consensus.
+ * - `auditNarrative`    — human-readable summary of the conflict.
+ * - `legalReviewRequired` — true for major/critical conflicts.
+ * - `authorityTrail`    — per-provider authority weight + license asserted,
+ *   ordered highest-authority-first.  Always present (empty when no conflict).
+ */
+export interface LicenseConflictEvent {
+  eventId: number;
+  groupKey: string;
+  candidateUrls: string[];
+  conflictSeverity: LicenseConflictAudit["conflictSeverity"];
+  conflictingProviders: string[];
+  consensusLicense: License;
+  auditNarrative: string;
+  legalReviewRequired: boolean;
+  authorityTrail: Array<{
+    provider: string;
+    assertedLicense: License;
+    authorityWeight: number;
+    evidence: LicenseEvidenceItem[];
+  }>;
+}
+
+/**
+ * Options for `auditLicenseConflictBatch`.
+ *
+ * - `detailedTrail`     — when true, include the full evidence chain for every
+ *   provider in each event's `authorityTrail` (default true).
+ * - `severityFilter`    — when set, only emit events at or above this severity
+ *   level.  Severity order: none < minor < major < critical.
+ */
+export interface BatchConflictAuditOptions {
+  detailedTrail?: boolean;
+  severityFilter?: LicenseConflictAudit["conflictSeverity"];
+}
+
+/**
+ * Result of `auditLicenseConflictBatch`.
+ *
+ * - `events`            — structured conflict events, one per dedupe group that
+ *   matched the severity filter (ordered group-largest-first).
+ * - `totalGroups`       — total dedupe groups processed.
+ * - `totalCandidates`   — total candidates processed.
+ * - `criticalCount`     — number of critical conflicts.
+ * - `majorCount`        — number of major conflicts.
+ * - `minorCount`        — number of minor conflicts.
+ * - `legalReviewNeeded` — true when any critical/major conflict exists.
+ * - `generatedAt`       — ISO-8601 timestamp of when this audit was run.
+ */
+export interface BatchConflictAuditResult {
+  events: LicenseConflictEvent[];
+  totalGroups: number;
+  totalCandidates: number;
+  criticalCount: number;
+  majorCount: number;
+  minorCount: number;
+  legalReviewNeeded: boolean;
+  generatedAt: string;
+}
+
+/** Numeric severity rank used for filter comparison. */
+const SEVERITY_RANK: Record<LicenseConflictAudit["conflictSeverity"], number> = {
+  none: 0,
+  minor: 1,
+  major: 2,
+  critical: 3,
+};
+
+/**
+ * Provider authority weight lookup (mirrors PROVIDER_AUTHORITY but exposed
+ * inline so the batch audit can embed weights in the trail).
+ */
+function providerAuthorityWeight(providerId: string): number {
+  const AUTHORITY: Record<string, number> = {
+    wikimedia: 0.95,
+    openverse: 0.85,
+    "met-museum": 0.90,
+    smithsonian: 0.90,
+    europeana: 0.85,
+    "library-of-congress": 0.90,
+    "wellcome-collection": 0.85,
+    "internet-archive": 0.80,
+    nasa: 0.90,
+    rawpixel: 0.75,
+    unsplash: 0.80,
+    pexels: 0.80,
+    pixabay: 0.80,
+    flickr: 0.60,
+    burst: 0.70,
+    openverse_fallback: 0.65,
+    brave: 0.40,
+    bing: 0.35,
+    serpapi: 0.35,
+    browser: 0.30,
+    "managed-browser": 0.30,
+    "youtube-thumb": 0.50,
+    itunes: 0.55,
+    "musicbrainz-caa": 0.65,
+    spotify: 0.55,
+  };
+  return AUTHORITY[providerId] ?? 0.5;
+}
+
+/**
+ * Audit all license conflicts found across a federation run.
+ *
+ * Candidates are grouped by pHash/URL (same grouping as `reconcileLicensesBatch`),
+ * then each group is independently audited.  Events are emitted for every group
+ * that passes the optional `severityFilter`.
+ *
+ * @param candidates - Array of `ImageCandidate` objects from a federation run.
+ * @param options    - Optional audit configuration.
+ * @returns `BatchConflictAuditResult` with structured conflict events and summary counts.
+ */
+export function auditLicenseConflictBatch(
+  candidates: ImageCandidate[],
+  options: BatchConflictAuditOptions = {},
+): BatchConflictAuditResult {
+  const { detailedTrail = true, severityFilter } = options;
+  const minSeverityRank = severityFilter !== undefined ? SEVERITY_RANK[severityFilter] : 0;
+  const generatedAt = new Date().toISOString();
+
+  if (candidates.length === 0) {
+    return {
+      events: [],
+      totalGroups: 0,
+      totalCandidates: 0,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+      legalReviewNeeded: false,
+      generatedAt,
+    };
+  }
+
+  const groups = groupCandidates(candidates);
+  groups.sort((a, b) => b.length - a.length);
+
+  const events: LicenseConflictEvent[] = [];
+  let criticalCount = 0;
+  let majorCount = 0;
+  let minorCount = 0;
+  let legalReviewNeeded = false;
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i]!;
+    const first = group[0]!;
+    const groupKey =
+      first.phash && first.phash.length >= 8
+        ? `phash:${first.phash.slice(0, 8).toLowerCase()}`
+        : `url:${first.url}`;
+
+    const audit = auditLicenseConflict(group);
+    const severityRank = SEVERITY_RANK[audit.conflictSeverity];
+
+    // Count regardless of filter.
+    if (audit.conflictSeverity === "critical") criticalCount++;
+    else if (audit.conflictSeverity === "major") majorCount++;
+    else if (audit.conflictSeverity === "minor") minorCount++;
+    if (audit.legalReviewRequired) legalReviewNeeded = true;
+
+    // Apply severity filter.
+    if (severityRank < minSeverityRank) continue;
+
+    // Build authority trail: one entry per provider, sorted highest-first.
+    const authorityTrail = group
+      .map((c) => ({
+        provider: c.source,
+        assertedLicense: c.license,
+        authorityWeight: providerAuthorityWeight(c.source) * (c.confidence ?? 0.5),
+        evidence: detailedTrail ? buildEvidenceChain(c) : [],
+      }))
+      .sort((a, b) => b.authorityWeight - a.authorityWeight);
+
+    events.push({
+      eventId: i,
+      groupKey,
+      candidateUrls: group.map((c) => c.url),
+      conflictSeverity: audit.conflictSeverity,
+      conflictingProviders: audit.conflictingProviders,
+      consensusLicense: audit.consensusLicense,
+      auditNarrative: audit.auditNarrative,
+      legalReviewRequired: audit.legalReviewRequired,
+      authorityTrail,
+    });
+  }
+
+  return {
+    events,
+    totalGroups: groups.length,
+    totalCandidates: candidates.length,
+    criticalCount,
+    majorCount,
+    minorCount,
+    legalReviewNeeded,
+    generatedAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Batch reconciliation
 // ---------------------------------------------------------------------------
 

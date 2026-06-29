@@ -39,6 +39,17 @@ export type {
   BatchFederationOutput,
   BatchFederationOptions,
 } from "./batch-find-similar.ts";
+export { batchReverseImageSearch } from "./batch-reverse-image.ts";
+export type {
+  ReverseImageRef,
+  RankedCandidate,
+  ProviderBatchTelemetry,
+  ConfidenceHistogram,
+  BatchReverseTelemetry,
+  ReverseImageResult,
+  BatchReverseImageOutput,
+  BatchReverseSearchOptions,
+} from "./batch-reverse-image.ts";
 export { findSimilarBatch, classifyDistance } from "./find-similar-batch.ts";
 export { batchClusterByPhash } from "./batch-phash-cluster.ts";
 export type {
@@ -271,6 +282,8 @@ export {
   recommendLicenseUpgrade,
   reconcileLicensesBatch,
   auditLicenseConflict,
+  reconcileLicenseConflictsBatch,
+  auditLicenseConflictBatch,
 } from "./license-reconciliation.ts";
 
 export {
@@ -295,6 +308,12 @@ export type {
   BatchReconciliationEntry,
   BatchReconciliationResult,
   LicenseConflictAudit,
+  BatchConflictResolutionOptions,
+  ConflictUpgradePath,
+  BatchConflictResolutionResult,
+  LicenseConflictEvent,
+  BatchConflictAuditOptions,
+  BatchConflictAuditResult,
 } from "./license-reconciliation.ts";
 
 export {

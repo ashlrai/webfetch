@@ -98,3 +98,55 @@ export const extractImageMetadataAuditSchema = z.object({
     .enum(["provider-first", "embedded-first", "conservative"])
     .default("conservative"),
 });
+
+/** Inline ImageCandidate shape accepted by POST /audit-license-consensus. */
+const reconcileCandidateInputSchema = z.object({
+  url: z.string().url(),
+  source: z.string(),
+  license: z.string(),
+  phash: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  licenseUrl: z.string().url().optional(),
+  title: z.string().optional(),
+  author: z.string().optional(),
+  licenseAuditTrail: z
+    .object({
+      source: z.enum(["api-metadata", "embedded-metadata", "heuristic-url", "fallback"]).optional(),
+      provenance: z.string().optional(),
+      confidence: z.number().min(0).max(1).optional(),
+      flags: z.array(z.string()).optional(),
+    })
+    .optional(),
+}).passthrough();
+
+export const auditLicenseConsensusSchema = z.object({
+  candidates: z
+    .array(reconcileCandidateInputSchema)
+    .min(1)
+    .max(500),
+  allGroups: z.boolean().optional(),
+});
+
+/** Schema for POST /audit-license-conflicts */
+export const auditLicenseConflictsSchema = z.object({
+  candidates: z
+    .array(reconcileCandidateInputSchema)
+    .min(1)
+    .max(1000),
+  detailedTrail: z.boolean().optional().default(true),
+  severityFilter: z
+    .enum(["none", "minor", "major", "critical"])
+    .optional(),
+});
+
+/** Schema for POST /resolve-license-conflicts */
+export const resolveLicenseConflictsSchema = z.object({
+  candidates: z
+    .array(reconcileCandidateInputSchema)
+    .min(1)
+    .max(1000),
+  minAuthorityScore: z.number().min(0).max(1).optional(),
+  maxResults: z.number().int().min(1).max(500).optional(),
+  includeTrail: z.boolean().optional().default(false),
+  suggestUpgrades: z.boolean().optional().default(true),
+});

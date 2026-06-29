@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode } from "webfetch-core";
-import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders } from "webfetch-core";
+import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -1499,6 +1499,393 @@ export async function cmdPlugin(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
   return 2;
 }
 
+// ---------- `webfetch batch-reverse` ----------------------------------------
+
+/**
+ * `webfetch batch-reverse < urls.jsonl`
+ *
+ * Reads one JSON object per line from stdin (or --file). Each line must be
+ * either:
+ *   - A plain URL string: `"https://example.com/image.jpg"`
+ *   - A JSON object with a `url` field: `{"url":"https://...","label":"optional"}`
+ *
+ * Fans out to `batchReverseImageSearch` across the configured providers and
+ * streams one JSON result line per image to stdout.
+ *
+ * Flags (same search flags as `webfetch batch`):
+ *   --providers      Comma-separated provider ids
+ *   --license        License policy
+ *   --limit          Max candidates per image (default 20)
+ *   --confidence     Early-exit confidence threshold 0..1 (default 0.85)
+ *   --timeout-ms     Per-image timeout ms (default 15000)
+ *   --phash-threshold Hamming distance for pHash dedup (default 8)
+ *   --file PATH      Read from file instead of stdin
+ *   --json           Emit full batch JSON instead of streaming JSONL
+ *   --verbose        Print provider summary + warnings to stderr
+ */
+export async function cmdBatchReverse(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, limit, verbose, json } = buildSearchOptions(args, env, cfg);
+  const file = getString(args.flags, "file");
+  const confidenceRaw = getString(args.flags, "confidence");
+  const confidenceThreshold =
+    confidenceRaw !== undefined ? Math.max(0, Math.min(1, parseFloat(confidenceRaw))) : 0.85;
+  const phashThresholdRaw = getInt(args.flags, "phash-threshold");
+  const phashDedupThreshold = phashThresholdRaw ?? 8;
+  const perImageTimeoutMs = getInt(args.flags, "timeout-ms") ?? opts.timeoutMs ?? 15_000;
+
+  // Read input lines from stdin or file.
+  const source: AsyncIterable<string> = io.readStdin
+    ? io.readStdin()
+    : file
+      ? linesFromFile(file)
+      : linesFromProcessStdin();
+
+  const refs: Array<{ url: string; label?: string }> = [];
+  for await (const raw of source) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    try {
+      // Accept plain URL string or JSON object with `url` field.
+      if (line.startsWith("{")) {
+        const obj = JSON.parse(line) as Record<string, unknown>;
+        const url = String(obj.url ?? "").trim();
+        if (url) refs.push({ url, label: obj.label !== undefined ? String(obj.label) : undefined });
+      } else {
+        // Plain URL or quoted string
+        const url = line.replace(/^["']|["']$/g, "").trim();
+        if (url) refs.push({ url });
+      }
+    } catch {
+      // Skip malformed lines silently.
+    }
+  }
+
+  if (refs.length === 0) {
+    io.stderr(
+      c.red(
+        "batch-reverse: no image URLs read from stdin (pipe JSONL or pass --file).\n" +
+        "  Each line: a URL string or JSON {\"url\":\"...\"}",
+      ),
+    );
+    return 2;
+  }
+
+  if (verbose) {
+    io.stderr(c.dim(`batch-reverse: processing ${refs.length} image(s)…`));
+  }
+
+  const out: BatchReverseImageOutput = await batchReverseImageSearch(
+    refs.map((r) => ({ url: r.url })),
+    {
+      ...opts,
+      providers: (opts.providers ?? []) as ProviderId[],
+      limitPerImage: limit,
+      confidenceThreshold,
+      phashDedupThreshold,
+      perImageTimeoutMs,
+    },
+  );
+
+  if (json) {
+    io.stdout(JSON.stringify(out, null, 2));
+    if (verbose) {
+      const t = out.telemetry;
+      io.stderr(
+        c.dim(
+          `\nbatch-reverse: ${t.totalImages} image(s) | ${t.processedImages} processed` +
+          ` | ${t.timedOutImages} timed out | ${t.totalWallTimeMs}ms wall time`,
+        ),
+      );
+    }
+    return 0;
+  }
+
+  // Streaming JSONL output: one result per line.
+  for (const result of out.results) {
+    const ref = refs[result.imageIndex];
+    io.stdout(
+      JSON.stringify({
+        index: result.imageIndex,
+        url: result.url ?? ref?.url,
+        label: ref?.label,
+        candidateCount: result.candidates.length,
+        timedOut: result.timedOut,
+        earlyExit: result.earlyExit,
+        top: result.candidates[0] ?? null,
+        candidates: result.candidates,
+        warnings: result.warnings,
+      }),
+    );
+  }
+
+  if (verbose) {
+    const t = out.telemetry;
+    io.stderr(c.dim(`\nbatch-reverse summary:`));
+    io.stderr(
+      c.dim(
+        `  images: ${t.totalImages} | processed: ${t.processedImages}` +
+        ` | timed out: ${t.timedOutImages} | wall time: ${t.totalWallTimeMs}ms`,
+      ),
+    );
+    if (t.providerTelemetry.length > 0) {
+      io.stderr(c.dim("  provider breakdown:"));
+      for (const p of t.providerTelemetry) {
+        const mean = p.meanLatencyMs !== null ? `${p.meanLatencyMs.toFixed(0)}ms avg` : "n/a";
+        io.stderr(
+          c.dim(
+            `    ${p.provider}: ${p.successes}/${p.attempts} ok, ${p.totalCandidates} cands, ${mean}`,
+          ),
+        );
+      }
+    }
+    const hs = t.aggregatedScoreHistogram;
+    if (hs.total > 0) {
+      const highConf = hs.band80_100;
+      io.stderr(
+        c.dim(
+          `  confidence: mean=${hs.mean?.toFixed(3) ?? "n/a"}, high-conf(≥0.8): ${highConf}/${hs.total}`,
+        ),
+      );
+    }
+  }
+
+  return 0;
+}
+
+// ---------- `webfetch audit-license-conflicts` --------------------------------
+
+/**
+ * `webfetch audit-license-conflicts <query> [flags]`
+ *
+ * Runs a federated search for <query>, then audits all license conflicts found
+ * across the provider results and emits structured conflict events.
+ *
+ * Flags:
+ *   --json              Emit raw JSON BatchConflictAuditResult.
+ *   --severity minor|major|critical   Filter events by minimum severity.
+ *   --no-trail          Omit evidence chains from the output (faster for large pools).
+ *   --verbose           Print provider reports to stderr.
+ */
+export async function cmdAuditLicenseConflicts(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch audit-license-conflicts <query> [--json] [--severity minor|major|critical]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose, json } = buildSearchOptions(args, env, cfg);
+
+  const severityRaw = getString(args.flags, "severity");
+  const validSeverities = ["none", "minor", "major", "critical"] as const;
+  type Severity = typeof validSeverities[number];
+  const severityFilter: Severity | undefined =
+    severityRaw && (validSeverities as readonly string[]).includes(severityRaw)
+      ? (severityRaw as Severity)
+      : undefined;
+
+  const noTrail = getBool(args.flags, "no-trail");
+
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
+
+  if (verbose) {
+    for (const w of bundle.warnings) io.stderr(c.yellow(`warning: ${w}`));
+    for (const r of bundle.providerReports) {
+      const detail = r.ok
+        ? c.dim(`${r.count} results in ${r.timeMs}ms`)
+        : c.dim(r.skipped ?? r.error ?? "failed");
+      io.stderr(c.dim(`  ${r.provider}: `) + detail);
+    }
+    io.stderr("");
+  }
+
+  // Prefer the HTTP endpoint when --cloud is set; otherwise run locally.
+  let result: BatchConflictAuditResult;
+  if (wantsCloud(args, env)) {
+    result = await cloudRequest<BatchConflictAuditResult>(cfg, "/audit-license-conflicts", {
+      body: {
+        candidates: bundle.candidates,
+        detailedTrail: !noTrail,
+        severityFilter,
+      },
+    });
+  } else {
+    result = auditLicenseConflictBatch(bundle.candidates, {
+      detailedTrail: !noTrail,
+      severityFilter,
+    });
+  }
+
+  if (json) {
+    io.stdout(JSON.stringify(result, null, 2));
+    return result.legalReviewNeeded ? 1 : 0;
+  }
+
+  // Human-readable output.
+  io.stdout(c.bold(`License Conflict Audit`));
+  io.stdout(c.dim(`Query: "${query}"  |  Generated: ${result.generatedAt}`));
+  io.stdout(c.dim(
+    `Groups: ${result.totalGroups}  |  Candidates: ${result.totalCandidates}  |  ` +
+    `Critical: ${result.criticalCount}  Major: ${result.majorCount}  Minor: ${result.minorCount}`,
+  ));
+  io.stdout("");
+
+  if (result.events.length === 0) {
+    io.stdout(c.green("No license conflicts detected" + (severityFilter ? ` at or above "${severityFilter}"` : "") + "."));
+    return 0;
+  }
+
+  for (const evt of result.events) {
+    const sevColor =
+      evt.conflictSeverity === "critical" ? c.red :
+      evt.conflictSeverity === "major" ? c.yellow :
+      evt.conflictSeverity === "minor" ? c.dim :
+      c.dim;
+    io.stdout(`${sevColor(`[${evt.conflictSeverity.toUpperCase()}]`)} ${evt.groupKey}`);
+    io.stdout(`  consensus: ${licenseColor(evt.consensusLicense)(evt.consensusLicense)}`);
+    io.stdout(`  ${c.dim(evt.auditNarrative)}`);
+    if (evt.conflictingProviders.length > 0) {
+      io.stdout(`  conflicting providers: ${evt.conflictingProviders.join(", ")}`);
+    }
+    if (evt.legalReviewRequired) {
+      io.stdout(c.red("  ⚠  Legal review required before publishing."));
+    }
+    io.stdout("");
+  }
+
+  io.stdout(c.dim(`${result.events.length} conflict event(s) shown. Use --json for full audit trail.`));
+  if (result.legalReviewNeeded) {
+    io.stdout(c.red("⚠  One or more groups require legal review."));
+  }
+  return result.legalReviewNeeded ? 1 : 0;
+}
+
+// ---------- `webfetch resolve-license-conflicts` ------------------------------
+
+/**
+ * `webfetch resolve-license-conflicts <query> [flags]`
+ *
+ * Runs a federated search for <query>, then scores provider authority weights
+ * and returns ranked upgrade paths for each conflict group.
+ *
+ * Flags:
+ *   --json                    Emit raw JSON BatchConflictResolutionResult.
+ *   --suggest-upgrades        (default on) Include upgrade recommendations.
+ *   --min-authority N         Filter groups with authority score < N (0..1).
+ *   --max-results N           Cap number of groups shown.
+ *   --include-trail           Include per-provider evidence in output.
+ *   --verbose                 Print provider reports to stderr.
+ */
+export async function cmdResolveLicenseConflicts(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch resolve-license-conflicts <query> [--json] [--suggest-upgrades] [--min-authority N]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose, json } = buildSearchOptions(args, env, cfg);
+
+  const minAuthorityRaw = getString(args.flags, "min-authority");
+  const minAuthorityScore =
+    minAuthorityRaw !== undefined ? Math.max(0, Math.min(1, parseFloat(minAuthorityRaw))) : undefined;
+  const maxResultsRaw = getInt(args.flags, "max-results");
+  const includeTrail = getBool(args.flags, "include-trail");
+
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
+
+  if (verbose) {
+    for (const w of bundle.warnings) io.stderr(c.yellow(`warning: ${w}`));
+    for (const r of bundle.providerReports) {
+      const detail = r.ok
+        ? c.dim(`${r.count} results in ${r.timeMs}ms`)
+        : c.dim(r.skipped ?? r.error ?? "failed");
+      io.stderr(c.dim(`  ${r.provider}: `) + detail);
+    }
+    io.stderr("");
+  }
+
+  let result: BatchConflictResolutionResult;
+  if (wantsCloud(args, env)) {
+    result = await cloudRequest<BatchConflictResolutionResult>(cfg, "/resolve-license-conflicts", {
+      body: {
+        candidates: bundle.candidates,
+        minAuthorityScore,
+        maxResults: maxResultsRaw ?? undefined,
+        includeTrail,
+        suggestUpgrades: true,
+      },
+    });
+  } else {
+    result = reconcileLicenseConflictsBatch(bundle.candidates, {
+      minAuthorityScore,
+      maxResults: maxResultsRaw ?? undefined,
+      includeTrail,
+    });
+  }
+
+  if (json) {
+    io.stdout(JSON.stringify(result, null, 2));
+    return result.legalReviewNeeded ? 1 : 0;
+  }
+
+  // Human-readable output.
+  io.stdout(c.bold(`License Conflict Resolution`));
+  io.stdout(c.dim(
+    `Query: "${query}"  |  Groups: ${result.totalGroups}  |  ` +
+    `Candidates: ${result.totalCandidates}  |  Conflicting: ${result.conflictingGroups}`,
+  ));
+  io.stdout("");
+
+  if (result.upgradePaths.length === 0) {
+    io.stdout(c.green("No upgrade paths needed — all groups have consistent licenses."));
+    return 0;
+  }
+
+  for (const path of result.upgradePaths) {
+    const authPct = (path.authorityScore * 100).toFixed(0);
+    io.stdout(
+      `${c.bold(path.groupKey)}  ` +
+      `${licenseColor(path.consensusLicense)(path.consensusLicense)}  ` +
+      `${c.dim(`authority: ${authPct}%`)}`,
+    );
+    if (path.upgradeRecommendation.upgradeApplicable) {
+      io.stdout(
+        `  ${c.green("upgrade →")} ${path.upgradeRecommendation.recommendedLicense}  ` +
+        `${c.dim(`(conf: ${(path.upgradeRecommendation.confidence * 100).toFixed(0)}%)`)}`,
+      );
+      io.stdout(`  ${c.dim(path.upgradeRecommendation.rationale)}`);
+    } else {
+      io.stdout(`  ${c.dim("no upgrade path: ")}${path.upgradeRecommendation.rationale}`);
+    }
+    io.stdout(`  ${c.dim(path.conflictJustification)}`);
+    io.stdout("");
+  }
+
+  io.stdout(c.dim(`${result.upgradePaths.length} group(s) shown. Use --json for full details.`));
+  if (result.legalReviewNeeded) {
+    io.stdout(c.red("⚠  One or more groups require legal review."));
+  }
+  return result.legalReviewNeeded ? 1 : 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -1532,6 +1919,7 @@ ${c.bold("COMMANDS")}
   license <url> [--probe]               Determine license for an arbitrary URL
   providers [list] [--details]          List providers; --details adds capabilities, rate-limits
   batch [--file path | <stdin>]         Run many queries; one per line (query\\tproviders optional)
+  batch-reverse [--file path | <stdin>] Reverse-image search many URLs; one per line (JSONL out)
   watch <query> [--interval 1h]         Poll a query; emit only new candidates per tick
   config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
   signup                                Open https://app.getwebfetch.com/signup in your browser
@@ -1539,6 +1927,8 @@ ${c.bold("COMMANDS")}
   diagnose <query>                      Run search + show ranked repair steps for provider failures
   phash-diagnostics <query>            Inspect pHash algorithm mix + dedup confidence for a query
   plugin <list|add|test>               Manage runtime provider plugins (third-party image sources)
+  audit-license-conflicts <query>      Audit all license conflicts from a federation run [--json] [--severity major]
+  resolve-license-conflicts <query>    Recommend license upgrades per provider [--json] [--suggest-upgrades]
   help                                  Show this message
   version                               Print version
 
@@ -1586,6 +1976,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   license: cmdLicense,
   providers: cmdProviders,
   batch: cmdBatch,
+  "batch-reverse": cmdBatchReverse,
   watch: cmdWatch,
   config: cmdConfig,
   signup: cmdSignup,
@@ -1593,6 +1984,8 @@ export const COMMANDS: Record<string, Dispatcher> = {
   diagnose: cmdDiagnose,
   "phash-diagnostics": cmdPhashDiagnostics,
   plugin: cmdPlugin,
+  "audit-license-conflicts": cmdAuditLicenseConflicts,
+  "resolve-license-conflicts": cmdResolveLicenseConflicts,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
