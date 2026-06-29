@@ -163,6 +163,7 @@ export {
   detectProviderAnomalies,
   exportFederationAudit,
   getFederationDiagnosticsTrends,
+  recordFederationHashMetrics,
   _resetTelemetry,
 } from "./federation-telemetry.ts";
 export { getBucketState } from "./rate-limit.ts";
@@ -207,6 +208,7 @@ export type {
   FederationTrendReport,
   AnomalyEvent,
   FederationDiagnosticsTrendsResult,
+  FederationHashMetrics,
 } from "./federation-telemetry.ts";
 export {
   recordSearchEvent,
@@ -241,6 +243,23 @@ export type {
   ConfidenceDistribution,
   PhashDiagnosticsResult,
 } from "./phash-diagnostics.ts";
+
+export {
+  analyzeHashSimilarity,
+  percentileSimilarity,
+  hashQualityReport,
+  computeHashMetrics,
+  HISTOGRAM_BUCKET_LABELS,
+} from "./phash-analytics.ts";
+export type {
+  HashHistogramBucket,
+  HashSimilarityAnalysis,
+  PercentileSimilarityResult,
+  AlgorithmBucket,
+  ConfidenceTierBreakdown,
+  HashQualityReport,
+  HashMetrics,
+} from "./phash-analytics.ts";
 
 export {
   reconcileLicenses,

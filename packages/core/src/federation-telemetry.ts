@@ -10,6 +10,7 @@
 
 import type { ErrorKind, ProviderId } from "./types.ts";
 import { getBucketState } from "./rate-limit.ts";
+import type { HashMetrics } from "./phash-analytics.ts";
 
 // ---------------------------------------------------------------------------
 // Event shape
@@ -106,6 +107,112 @@ export interface FederationDiagnostics {
   warnings: string[];
   windowMs: number;
   generatedAt: number;
+  /**
+   * Per-cluster pHash similarity statistics recorded during this window.
+   * Populated when `recordFederationHashMetrics()` has been called at least
+   * once. `null` when no hash metrics have been recorded yet.
+   */
+  hashMetrics: FederationHashMetrics | null;
+}
+
+// ---------------------------------------------------------------------------
+// Federation pHash hash-metrics store
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-cluster hash statistics recorded during a federation run.
+ * Stored alongside telemetry events and exposed via `getFederationDiagnostics().hashMetrics`.
+ */
+export interface FederationHashMetrics {
+  /**
+   * Number of federation runs that contributed hash metrics to this snapshot.
+   */
+  federationCount: number;
+  /**
+   * Average Hamming distance across all recorded clusters (lower = more duplicates).
+   */
+  avgHammingDistance: number;
+  /**
+   * Average confidence score across all hashed candidates recorded (0..1).
+   */
+  avgConfidence: number;
+  /**
+   * Aggregate 5-bucket histogram (sum across all recorded clusters).
+   * Indices: [0–8, 9–16, 17–24, 25–32, 33+].
+   */
+  histogram: [number, number, number, number, number];
+  /**
+   * Median pairwise Hamming distance across the most-recently recorded cluster.
+   */
+  medianDistance: number;
+  /**
+   * Population standard deviation of Hamming distances in the most-recently
+   * recorded cluster.
+   */
+  stdDev: number;
+  /**
+   * Unix-ms timestamp when these metrics were last updated.
+   */
+  lastUpdatedAt: number;
+  /**
+   * Full `HashMetrics` snapshot from the most-recent federation run.
+   */
+  lastSnapshot: HashMetrics | null;
+}
+
+// In-memory accumulator for hash metrics (reset with _resetTelemetry)
+let _hashMetricsStore: FederationHashMetrics | null = null;
+
+/**
+ * Record per-cluster hash statistics from a federation run.
+ *
+ * Called by federation.ts (or manually by tests) after each federated search
+ * to accumulate rolling hash-quality metrics. Exposed via
+ * `getFederationDiagnostics().hashMetrics`.
+ *
+ * @param metrics  `HashMetrics` object returned by `computeHashMetrics(candidates)`.
+ */
+export function recordFederationHashMetrics(metrics: HashMetrics): void {
+  const sim = metrics.similarity;
+  const now = Date.now();
+
+  if (_hashMetricsStore === null) {
+    _hashMetricsStore = {
+      federationCount: 1,
+      avgHammingDistance: sim.avgHammingDistance,
+      avgConfidence: sim.avgConfidence,
+      histogram: [...sim.histogram] as [number, number, number, number, number],
+      medianDistance: sim.medianDistance,
+      stdDev: sim.stdDev,
+      lastUpdatedAt: now,
+      lastSnapshot: metrics,
+    };
+  } else {
+    const prev = _hashMetricsStore;
+    const n = prev.federationCount + 1;
+    // Rolling mean for scalar stats
+    const rollingAvg = (old: number, newVal: number) =>
+      (old * prev.federationCount + newVal) / n;
+
+    _hashMetricsStore = {
+      federationCount: n,
+      avgHammingDistance: rollingAvg(prev.avgHammingDistance, sim.avgHammingDistance),
+      avgConfidence: rollingAvg(prev.avgConfidence, sim.avgConfidence),
+      // Accumulate histogram buckets
+      histogram: [
+        prev.histogram[0] + sim.histogram[0],
+        prev.histogram[1] + sim.histogram[1],
+        prev.histogram[2] + sim.histogram[2],
+        prev.histogram[3] + sim.histogram[3],
+        prev.histogram[4] + sim.histogram[4],
+      ],
+      // Most-recent for per-run stats
+      medianDistance: sim.medianDistance,
+      stdDev: sim.stdDev,
+      lastUpdatedAt: now,
+      lastSnapshot: metrics,
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -282,6 +389,7 @@ export function getFederationDiagnostics(windowMs = WINDOW_MS): FederationDiagno
     warnings,
     windowMs,
     generatedAt: now,
+    hashMetrics: _hashMetricsStore,
   };
 }
 
@@ -1487,4 +1595,6 @@ export function _resetTelemetry(capacity = DEFAULT_CAPACITY): void {
   _sequenceBuf.length = 0;
   _seqHead = 0;
   _seqSize = 0;
+  // Reset hash metrics accumulator
+  _hashMetricsStore = null;
 }
