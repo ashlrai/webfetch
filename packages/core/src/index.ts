@@ -122,6 +122,17 @@ export type {
   AttributionValidationResult,
   AttributionValidationOptions,
 } from "./license.ts";
+export {
+  auditMetadataChain,
+  getMetadataQualityScore,
+  METADATA_SOURCE_CONFIDENCE,
+} from "./attribution-audit.ts";
+export type {
+  MetadataFieldSource,
+  AuditStep,
+  MetadataFieldAudit,
+  MetadataAuditTrail,
+} from "./attribution-audit.ts";
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
 export { ALL_PROVIDERS, DEFAULT_PROVIDERS, DEFAULT_PROVIDER_IDS, PROVIDER_IDS, bootstrapRegistry } from "./providers/index.ts";

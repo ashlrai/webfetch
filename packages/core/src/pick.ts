@@ -14,10 +14,12 @@
  */
 
 import { LICENSE_RANK, isContextSafeLicense, isOpenLicense } from "./license.ts";
+import { getMetadataQualityScore } from "./attribution-audit.ts";
 import type {
   ConfidenceGap,
   ImageCandidate,
   LicensePolicy,
+  PhashDedupeMetrics,
   RefinementPlan,
   SearchResultBundle,
   UpgradePathStep,
@@ -54,8 +56,10 @@ export function rankAll(
     pixels: number;
     complete: number;
     conf: number;
-    /** Audit-trail confidence (0..1). Used as tie-breaker between `conf` and `pixels`. */
+    /** Audit-trail confidence (0..1). Used as tie-breaker between `conf` and `metaQuality`. */
     trailConf: number;
+    /** Metadata quality score (0..1). Tertiary tie-breaker after license-conf + trail-conf. */
+    metaQuality: number;
     idx: number;
   };
   const scored: Scored[] = [];
@@ -89,6 +93,8 @@ export function rankAll(
       // Prefer candidates whose license was derived from authoritative metadata
       // (api-metadata > embedded-metadata > heuristic-url > fallback).
       trailConf: cand.licenseAuditTrail?.confidence ?? 0,
+      // Metadata quality score: weighted confidence across author/title/sourcePageUrl fields.
+      metaQuality: getMetadataQualityScore(cand),
       idx,
     });
   });
@@ -104,6 +110,8 @@ export function rankAll(
     if (a.conf !== b.conf) return b.conf - a.conf;
     // Audit-trail confidence as tie-breaker: higher provenance quality wins.
     if (a.trailConf !== b.trailConf) return b.trailConf - a.trailConf;
+    // Metadata quality score: weighted author/title/sourcePageUrl field confidence.
+    if (a.metaQuality !== b.metaQuality) return b.metaQuality - a.metaQuality;
     if (a.pixels !== b.pixels) return b.pixels - a.pixels;
     if (a.complete !== b.complete) return b.complete - a.complete;
     return a.idx - b.idx;
@@ -243,5 +251,35 @@ export function refineSearchResults(
       unknownLicenseCount: unknownCount,
       gapRatio,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// pHash dedup metrics extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract pHash dedup metrics from a `SearchResultBundle`.
+ *
+ * Returns the metrics attached by the `dedupeImagesByPhash` pass in federation,
+ * or a zeroed metrics object when pHash dedup was not run (e.g. `phashDedup:
+ * false` was set or the bundle was produced by an older version).
+ *
+ * Useful for agents and UIs that want to display dedup statistics without
+ * needing to import from `dedupe.ts` directly.
+ *
+ * @example
+ * ```ts
+ * const bundle = await searchImages(query);
+ * const metrics = extractPhashDedupeMetrics(bundle);
+ * console.log(`${metrics.clusterCount} visual clusters, ${metrics.totalDeduplicated} duplicates removed`);
+ * ```
+ */
+export function extractPhashDedupeMetrics(bundle: SearchResultBundle): PhashDedupeMetrics {
+  return bundle.phashDedupeResult?.metrics ?? {
+    clusterCount: 0,
+    totalDeduplicated: 0,
+    avgClusterSize: 0,
+    avgIntraClusterHammingDistance: 0,
   };
 }

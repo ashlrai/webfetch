@@ -15,6 +15,7 @@
  * fetcher is the global `fetch`.
  */
 
+import type { ImageCandidate, ProviderId } from "./types.ts";
 import type { License } from "./types.ts";
 
 // ---------------------------------------------------------------------------
@@ -543,4 +544,348 @@ function safeHost(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Metadata chain-of-custody types
+// ---------------------------------------------------------------------------
+
+/**
+ * Source from which a single metadata field value was resolved.
+ *
+ * Confidence grades:
+ *  - `api-metadata`    → 1.0  (explicit structured field from provider API)
+ *  - `embedded-exif`   → 0.9  (parsed from EXIF/IPTC/XMP embedded in the image)
+ *  - `html-heuristic`  → 0.7  (inferred via HTML parse / page scrape)
+ *  - `fallback`        → 0.4  (last-resort heuristic, no authoritative signal found)
+ */
+export type MetadataFieldSource =
+  | "api-metadata"
+  | "embedded-exif"
+  | "html-heuristic"
+  | "fallback";
+
+/** Confidence score associated with each `MetadataFieldSource`. */
+export const METADATA_SOURCE_CONFIDENCE: Record<MetadataFieldSource, number> = {
+  "api-metadata": 1.0,
+  "embedded-exif": 0.9,
+  "html-heuristic": 0.7,
+  fallback: 0.4,
+};
+
+/**
+ * A single step in a metadata field's provenance chain.
+ * Chains are ordered from most to least authoritative (index 0 = winning source).
+ */
+export interface AuditStep {
+  /** Source type used at this step. */
+  source: MetadataFieldSource;
+  /** Value observed at this step (empty string when absent/null). */
+  value: string;
+  /** Confidence for this step (0..1). */
+  confidence: number;
+  /** Human-readable note describing what was checked and why it was accepted or skipped. */
+  note: string;
+}
+
+/**
+ * Full chain-of-custody record for a single metadata field.
+ */
+export interface MetadataFieldAudit {
+  /** The source that ultimately won (supplied the resolved value). */
+  source: MetadataFieldSource;
+  /** Resolved value (empty string when unavailable). */
+  value: string;
+  /** Confidence of the winning source (0..1). */
+  confidence: number;
+  /** Ordered provenance chain — every source that was checked, winning source first. */
+  chain: AuditStep[];
+}
+
+/**
+ * Full metadata audit trail for an `ImageCandidate`.
+ *
+ * Extends `LicenseAuditTrail` with per-field chain-of-custody for the three
+ * attribution-critical metadata fields: `author`, `title`, and `sourcePageUrl`.
+ */
+export interface MetadataAuditTrail {
+  /** Provider that produced the candidate. */
+  provider: ProviderId | string;
+  /** Per-field chain-of-custody records. */
+  metadataFields: {
+    author?: MetadataFieldAudit;
+    title?: MetadataFieldAudit;
+    sourcePageUrl?: MetadataFieldAudit;
+  };
+  /**
+   * Weighted average confidence across all resolved fields (0..1).
+   * Computed by `getMetadataQualityScore`.
+   */
+  overallQualityScore: number;
+}
+
+// ---------------------------------------------------------------------------
+// Field weights for quality score
+// ---------------------------------------------------------------------------
+
+/** Relative importance weight for each metadata field in the quality score. */
+const FIELD_WEIGHTS: Record<"author" | "title" | "sourcePageUrl", number> = {
+  author: 0.4,
+  title: 0.35,
+  sourcePageUrl: 0.25,
+};
+
+// ---------------------------------------------------------------------------
+// auditMetadataChain
+// ---------------------------------------------------------------------------
+
+/**
+ * Trace how each attribution-critical metadata field was resolved for a
+ * candidate, producing a full chain-of-custody `MetadataAuditTrail`.
+ *
+ * Resolution priority per field:
+ *  1. `api-metadata`   — field present directly on the `ImageCandidate` (set by provider)
+ *  2. `embedded-exif`  — EXIF/IPTC value surfaced via `candidate.raw`
+ *     (looks for `raw.exif.<field>`, `raw.iptc.<field>`, `raw.xmp.<field>`)
+ *  3. `html-heuristic` — heuristic value from `candidate.raw` (looks for `raw.html.<field>`)
+ *  4. `fallback`       — no authoritative signal; records absence
+ *
+ * The `rawResponse` parameter is the provider's raw API response (may be the
+ * same object as `candidate.raw` or a richer parent object). The function
+ * attempts to extract embedded metadata from both `candidate.raw` and
+ * `rawResponse` before falling back.
+ *
+ * @param candidate    The `ImageCandidate` to audit.
+ * @param rawResponse  Raw provider response (may be the same as `candidate.raw`).
+ * @param provider     Provider id string (used for provenance labelling).
+ */
+export function auditMetadataChain(
+  candidate: ImageCandidate,
+  rawResponse: unknown,
+  provider: ProviderId | string,
+): MetadataAuditTrail {
+  const metadataFields: MetadataAuditTrail["metadataFields"] = {};
+
+  metadataFields.author = auditField("author", candidate, rawResponse);
+  metadataFields.title = auditField("title", candidate, rawResponse);
+  metadataFields.sourcePageUrl = auditField("sourcePageUrl", candidate, rawResponse);
+
+  const overallQualityScore = computeQualityScore(metadataFields);
+
+  return { provider, metadataFields, overallQualityScore };
+}
+
+// ---------------------------------------------------------------------------
+// getMetadataQualityScore
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a weighted average metadata quality score (0..1) for a candidate.
+ *
+ * Weights: author=0.4, title=0.35, sourcePageUrl=0.25.
+ * Fields that were not resolved (absent from `metadataFields`) contribute 0
+ * to the weighted sum but still count toward the total weight, so missing
+ * fields lower the overall score.
+ *
+ * When `candidate.metadataAuditTrail` is present, the pre-computed
+ * `overallQualityScore` is returned directly (no recomputation).
+ *
+ * @param candidate   Candidate whose metadata quality to score.
+ */
+export function getMetadataQualityScore(candidate: ImageCandidate): number {
+  const trail = (candidate as ImageCandidate & { metadataAuditTrail?: MetadataAuditTrail })
+    .metadataAuditTrail;
+  if (trail) return trail.overallQualityScore;
+
+  // Derive an ad-hoc score from the raw candidate fields.
+  const fields: { field: keyof typeof FIELD_WEIGHTS; value: string | undefined }[] = [
+    { field: "author", value: candidate.author },
+    { field: "title", value: candidate.title },
+    { field: "sourcePageUrl", value: candidate.sourcePageUrl },
+  ];
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const { field, value } of fields) {
+    const w = FIELD_WEIGHTS[field];
+    totalWeight += w;
+    if (value && value.trim().length > 0) {
+      // Presence with no source info → fallback confidence grade (0.4)
+      weightedSum += w * METADATA_SOURCE_CONFIDENCE.fallback;
+    }
+  }
+
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers for auditMetadataChain
+// ---------------------------------------------------------------------------
+
+type AuditableField = "author" | "title" | "sourcePageUrl";
+
+/** Extract a string field from an unknown raw object, checking common nested keys. */
+function extractRawField(raw: unknown, field: AuditableField): string | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+
+  // Direct field at root
+  if (typeof r[field] === "string" && (r[field] as string).trim()) {
+    return (r[field] as string).trim();
+  }
+
+  // EXIF / IPTC / XMP nested objects
+  for (const ns of ["exif", "iptc", "xmp"]) {
+    const ns_obj = r[ns];
+    if (ns_obj && typeof ns_obj === "object") {
+      const v = (ns_obj as Record<string, unknown>)[field];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+  }
+
+  // HTML heuristic nested object
+  const html = r["html"];
+  if (html && typeof html === "object") {
+    const v = (html as Record<string, unknown>)[field];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+
+  return undefined;
+}
+
+/** Check whether raw contains EXIF/IPTC/XMP data for a field. */
+function extractEmbeddedField(
+  raw: unknown,
+  field: AuditableField,
+): { value: string; ns: string } | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  for (const ns of ["exif", "iptc", "xmp"]) {
+    const ns_obj = r[ns];
+    if (ns_obj && typeof ns_obj === "object") {
+      const v = (ns_obj as Record<string, unknown>)[field];
+      if (typeof v === "string" && v.trim()) return { value: v.trim(), ns };
+    }
+  }
+  return undefined;
+}
+
+/** Check whether raw contains HTML heuristic data for a field. */
+function extractHtmlField(raw: unknown, field: AuditableField): string | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const html = r["html"];
+  if (html && typeof html === "object") {
+    const v = (html as Record<string, unknown>)[field];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
+/**
+ * Audit a single metadata field, building a full `MetadataFieldAudit`.
+ */
+function auditField(
+  field: AuditableField,
+  candidate: ImageCandidate,
+  rawResponse: unknown,
+): MetadataFieldAudit {
+  const chain: AuditStep[] = [];
+
+  // --- Step 1: api-metadata (direct candidate field) ---
+  const apiValue = candidate[field as keyof ImageCandidate] as string | undefined;
+  if (apiValue && typeof apiValue === "string" && apiValue.trim()) {
+    const conf = METADATA_SOURCE_CONFIDENCE["api-metadata"];
+    chain.push({
+      source: "api-metadata",
+      value: apiValue.trim(),
+      confidence: conf,
+      note: `Field "${field}" resolved from provider API metadata on candidate.`,
+    });
+    return { source: "api-metadata", value: apiValue.trim(), confidence: conf, chain };
+  } else {
+    chain.push({
+      source: "api-metadata",
+      value: "",
+      confidence: 0,
+      note: `Field "${field}" not present in provider API metadata; trying embedded sources.`,
+    });
+  }
+
+  // --- Step 2: embedded-exif (from candidate.raw or rawResponse) ---
+  const embeddedFromRaw = extractEmbeddedField(candidate.raw, field);
+  const embeddedFromResponse = extractEmbeddedField(rawResponse, field);
+  const embedded = embeddedFromRaw ?? embeddedFromResponse;
+
+  if (embedded) {
+    const conf = METADATA_SOURCE_CONFIDENCE["embedded-exif"];
+    chain.push({
+      source: "embedded-exif",
+      value: embedded.value,
+      confidence: conf,
+      note: `Field "${field}" resolved from ${embedded.ns.toUpperCase()} embedded metadata.`,
+    });
+    return { source: "embedded-exif", value: embedded.value, confidence: conf, chain };
+  } else {
+    chain.push({
+      source: "embedded-exif",
+      value: "",
+      confidence: 0,
+      note: `Field "${field}" not found in EXIF/IPTC/XMP metadata; trying HTML heuristic.`,
+    });
+  }
+
+  // --- Step 3: html-heuristic ---
+  const htmlFromRaw = extractHtmlField(candidate.raw, field);
+  const htmlFromResponse = extractHtmlField(rawResponse, field);
+  const html = htmlFromRaw ?? htmlFromResponse;
+
+  if (html) {
+    const conf = METADATA_SOURCE_CONFIDENCE["html-heuristic"];
+    chain.push({
+      source: "html-heuristic",
+      value: html,
+      confidence: conf,
+      note: `Field "${field}" resolved via HTML heuristic parsing.`,
+    });
+    return { source: "html-heuristic", value: html, confidence: conf, chain };
+  } else {
+    chain.push({
+      source: "html-heuristic",
+      value: "",
+      confidence: 0,
+      note: `Field "${field}" not found via HTML heuristic; recording as absent (fallback).`,
+    });
+  }
+
+  // --- Step 4: fallback (field is absent) ---
+  const fallbackConf = METADATA_SOURCE_CONFIDENCE["fallback"];
+  chain.push({
+    source: "fallback",
+    value: "",
+    confidence: 0,
+    note: `Field "${field}" could not be resolved from any source.`,
+  });
+
+  return { source: "fallback", value: "", confidence: 0, chain };
+}
+
+/**
+ * Compute a weighted quality score from a `MetadataAuditTrail["metadataFields"]`.
+ */
+function computeQualityScore(
+  fields: MetadataAuditTrail["metadataFields"],
+): number {
+  const keys = ["author", "title", "sourcePageUrl"] as const;
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const key of keys) {
+    const w = FIELD_WEIGHTS[key];
+    totalWeight += w;
+    const audit = fields[key];
+    if (audit) {
+      weightedSum += w * audit.confidence;
+    }
+  }
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
