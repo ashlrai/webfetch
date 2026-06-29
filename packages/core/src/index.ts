@@ -58,6 +58,15 @@ export {
   batchHammingDistances,
   hammingPercentile,
   hammingDistanceMatrix,
+  phashDistanceStats,
+  phashBatchValidation,
+} from "./perceptual-hash.ts";
+export type {
+  PhashDistanceStats,
+  HammingCandidate,
+  HammingPercentileResult,
+  PhashValidationAssertion,
+  PhashBatchValidationResult,
 } from "./perceptual-hash.ts";
 export { readImageMetadata, parseXmp, parseIptc, parseExifBuffer } from "./metadata-reader.ts";
 export type { EmbeddedMetadata } from "./metadata-reader.ts";
@@ -201,6 +210,19 @@ export {
   FALLBACK_ENDPOINT,
   TELEMETRY_SALT,
 } from "./telemetry.ts";
+export {
+  validateProviderRegistry,
+  getCapabilityMatrix,
+  _resetValidatorCache,
+} from "./provider-validator-runtime.ts";
+export type {
+  QueryIntent,
+  ProviderValidationResult,
+  CapabilityMatrixEntry,
+  ProviderCapabilityMatrix,
+  ProviderRegistryValidationResult,
+  ValidateRegistryOptions,
+} from "./provider-validator-runtime.ts";
 export type {
   TelemetryEvent,
   TelemetryProps,
