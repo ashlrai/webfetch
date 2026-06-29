@@ -20,7 +20,9 @@ import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { healthCheckProvider } from "./provider-health-check.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
+import { clusterCandidates } from "./semantic-clustering.ts";
 import type {
+  ClusterGroup,
   ErrorKind,
   ImageCandidate,
   Provider,
@@ -92,6 +94,7 @@ export async function searchImages(
         })),
       ],
       warnings: ["dryRun: no network calls made", ...piiWarning],
+      ...(opts.clusterSimilar ? { candidateClusters: [] } : {}),
     };
   }
 
@@ -171,7 +174,20 @@ export async function searchImages(
     );
   }
 
-  return { candidates: enriched, providerReports: [...skippedByHealth, ...reports], warnings };
+  // -------------------------------------------------------------------------
+  // Optional post-ranking semantic clustering
+  // -------------------------------------------------------------------------
+  let candidateClusters: ClusterGroup[] | undefined;
+  if (opts.clusterSimilar) {
+    candidateClusters = clusterCandidates(enriched, opts.clusteringOptions ?? {});
+  }
+
+  return {
+    candidates: enriched,
+    providerReports: [...skippedByHealth, ...reports],
+    warnings,
+    ...(candidateClusters !== undefined ? { candidateClusters } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------

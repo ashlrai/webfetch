@@ -141,6 +141,62 @@ export interface ProviderReport {
   errorContext?: Record<string, unknown>;
 }
 
+/**
+ * Metrics describing a semantic cluster produced by `clusterCandidates()`.
+ *
+ * - `pHashSimilarity`   — average pHash Hamming similarity (0..1; 1 = identical).
+ * - `metadataSimilarity` — average title/author overlap (0..1; Levenshtein-based).
+ * - `providerRankScore`  — weighted average of per-member provider-rank contributions.
+ * - `compositeConfidence` — 0.4*pHashSimilarity + 0.4*metadataSimilarity + 0.2*providerRankScore.
+ */
+export interface ClusterMetrics {
+  pHashSimilarity: number;
+  metadataSimilarity: number;
+  providerRankScore: number;
+  compositeConfidence: number;
+}
+
+/**
+ * A canonical group produced by `clusterCandidates()`.
+ *
+ * - `representative` — the best candidate in the group (highest scorer, then best license).
+ * - `alternatives`   — all other members of the group (sorted by score desc).
+ * - `clusterMetrics` — similarity & confidence breakdown for the group.
+ * - `clusterAnnotation` — human-readable label: `"cluster"` when the group has 2+ members,
+ *   `"unique"` when it is a singleton.
+ */
+export interface ClusterGroup {
+  representative: ImageCandidate;
+  alternatives: ImageCandidate[];
+  clusterMetrics: ClusterMetrics;
+  clusterAnnotation: "cluster" | "unique";
+}
+
+/**
+ * Options for `clusterCandidates()`.
+ *
+ * All thresholds are expressed as **similarity** values in [0, 1] (1 = identical):
+ *   - `pHashThreshold`    — minimum pHash similarity to consider two images visually alike.
+ *     Default: 0.875 (≈ Hamming distance ≤ 8 on 64-bit hash).
+ *     Valid range: 0.7 – 0.95 (clamped).
+ *   - `metaThreshold`     — minimum normalised metadata (title/author) similarity.
+ *     Default: 0.6.
+ *   - `requireBothSignals` — when true, *both* pHash AND metadata signals must individually
+ *     exceed their respective thresholds for a merge.  Default: false (single strong signal
+ *     is sufficient — OR-mode).
+ */
+export interface SemanticClusteringOptions {
+  /** Minimum pHash similarity (0..1) to consider two candidates visually alike. Default 0.875. */
+  pHashThreshold?: number;
+  /** Minimum normalised metadata similarity (0..1). Default 0.6. */
+  metaThreshold?: number;
+  /**
+   * When true, require BOTH pHash AND metadata signals to exceed their
+   * respective thresholds (AND-mode).  Default false (OR-mode).
+   */
+  requireBothSignals?: boolean;
+}
+
 export interface SearchOptions {
   providers?: ProviderId[];
   safeSearch?: SafeSearchMode;
@@ -156,6 +212,15 @@ export interface SearchOptions {
   auth?: ProviderAuth;
   /** When true, skip real network calls and return provider names that *would* be hit. */
   dryRun?: boolean;
+  /**
+   * When true, run the semantic clustering layer after ranking.
+   * Populates `SearchResultBundle.candidateClusters` with `ClusterGroup[]`.
+   * Candidates that share the same visual appear as a single cluster group with
+   * alternatives listed — enabling an "expand alternatives" UX.
+   */
+  clusterSimilar?: boolean;
+  /** Fine-tune the clustering algorithm when `clusterSimilar` is true. */
+  clusteringOptions?: SemanticClusteringOptions;
 
   // ---------------------------------------------------------------------------
   // Provider Health & Failover Strategy (v4+)
@@ -223,6 +288,14 @@ export interface SearchResultBundle {
   candidates: ImageCandidate[];
   providerReports: ProviderReport[];
   warnings: string[];
+  /**
+   * Populated when `SearchOptions.clusterSimilar` is true.
+   * Each entry is a canonical cluster group: one representative + zero or more
+   * visually/semantically similar alternatives. Single candidates with no
+   * neighbours appear as a cluster with an empty `alternatives` array and
+   * `clusterAnnotation: "unique"`.
+   */
+  candidateClusters?: ClusterGroup[];
 }
 
 /**

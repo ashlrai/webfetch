@@ -7,6 +7,14 @@
 
 export * from "./types.ts";
 export { searchImages } from "./federation.ts";
+export {
+  clusterCandidates,
+  levenshteinSimilarity,
+  pHashSimilarity,
+  metadataSimilarity,
+  providerRankScore,
+  computeClusterMetrics,
+} from "./semantic-clustering.ts";
 export { pickBest, rankAll, refineSearchResults } from "./pick.ts";
 export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts";
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
