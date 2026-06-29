@@ -188,6 +188,10 @@ export {
   getCacheReplayStats,
   getCacheAnalyticsSnapshot,
   replayQuery,
+  cacheHitRateByProvider,
+  getHotQueries,
+  recomputeProviderRecommendations,
+  exportCacheMetrics,
   _resetAnalytics,
 } from "./cache-analytics.ts";
 export type {
@@ -199,7 +203,20 @@ export type {
   ReplayOptions,
   ReplayResult,
   CacheAnalyticsSnapshot,
+  ProviderHitRateSummary,
+  HotQueryEntry,
+  CacheAwareProviderRec,
+  CacheMetricsRow,
+  CacheMetricsExport,
 } from "./cache-analytics.ts";
+export { analyzePhashQuality } from "./phash-diagnostics.ts";
+export type {
+  AlgorithmStats,
+  AlgorithmMix,
+  ConfidenceDistribution,
+  PhashDiagnosticsResult,
+} from "./phash-diagnostics.ts";
+
 export {
   trackEvent,
   isTelemetryEnabled,

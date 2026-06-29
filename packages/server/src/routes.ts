@@ -15,6 +15,7 @@
 import {
   ALL_PROVIDERS,
   DEFAULT_PROVIDERS,
+  analyzePhashQuality,
   auditImageMetadata,
   batchFindSimilar,
   clearCacheEntry,
@@ -50,6 +51,33 @@ import {
   searchArtistImagesSchema,
   searchImagesSchema,
 } from "./schema.ts";
+
+// ---------------------------------------------------------------------------
+// pHash diagnostics schema
+// ---------------------------------------------------------------------------
+
+/**
+ * A minimal candidate shape accepted by POST /analyze-phash-quality.
+ * Callers may pass full `ImageCandidate` objects; only pHash-related fields
+ * are consumed by `analyzePhashQuality`.
+ */
+const phashCandidateSchema = z.object({
+  url: z.string().optional(),
+  phash: z.string().optional(),
+  phashAlgorithm: z.enum(["dct-phash", "ahash-fallback"]).optional(),
+  phashResult: z
+    .object({
+      hash: z.string(),
+      algorithm: z.enum(["dct-phash", "ahash-fallback"]),
+      confidence: z.number().min(0).max(1),
+    })
+    .optional(),
+  /** Allow any extra fields from a real ImageCandidate — they are ignored. */
+}).passthrough();
+
+const analyzePhashQualitySchema = z.object({
+  candidates: z.array(phashCandidateSchema).min(0),
+});
 
 // ---------------------------------------------------------------------------
 // Cache endpoint schemas
@@ -220,6 +248,9 @@ const handlers: Record<string, Handler> = {
       resolveConflicts: a.resolveConflicts as any,
     });
   }),
+  "/analyze-phash-quality": wrap(analyzePhashQualitySchema, async (a) => {
+    return analyzePhashQuality(a.candidates as any[]);
+  }),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -291,6 +322,7 @@ export function getProviders(): Response {
           "/federation-strategy",
           "/provider-recommendations",
           "/compare-phashes",
+          "/analyze-phash-quality",
           "/extract-metadata",
           "/cache-analytics",
           "/cache/stats",

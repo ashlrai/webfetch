@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
-import { getCacheAnalyticsSnapshot, getFederationRepairPlan } from "webfetch-core";
+import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
+import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -277,7 +277,14 @@ export async function cmdSearch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): P
     ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
     : await core().searchImages(query, opts);
   if (shouldPick(args, io)) return maybePick(bundle, args, env, cfg, io, limit);
-  return emitBundle(bundle, { json, limit, verbose }, io);
+  const exitCode = emitBundle(bundle, { json, limit, verbose }, io);
+  // --phash-diagnostics: append diagnostics summary after normal results
+  if (getBool(args.flags, "phash-diagnostics")) {
+    const diag = analyzePhashQuality(bundle.candidates);
+    io.stdout("");
+    emitPhashDiagnostics(diag, json, io);
+  }
+  return exitCode;
 }
 
 export async function cmdArtist(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
@@ -467,6 +474,11 @@ export async function cmdLicense(args: ParsedArgs, io: CommandIO = DEFAULT_IO): 
 export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
   const env = io.env ?? process.env;
   const json = getBool(args.flags, "json");
+  const details = getBool(args.flags, "details");
+  // Support `webfetch providers list [--details]` subcommand
+  const sub = args.positional[0];
+  const wantsList = !sub || sub === "list";
+
   if (wantsCloud(args, env)) {
     const cfg = await resolveCliConfig(args, env);
     const data = await cloudRequest<any>(cfg, "/providers", { method: "GET" });
@@ -477,13 +489,61 @@ export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO)
     io.stdout(JSON.stringify(data, null, 2));
     return 0;
   }
+
+  if (!wantsList) {
+    io.stderr(c.red(`unknown providers subcommand: ${sub} (expected: list)`));
+    return 2;
+  }
+
+  // --details: rich tabular output sourced from the provider registry
+  if (details) {
+    const allMeta = providerRegistry.listMetadata();
+    if (json) {
+      io.stdout(JSON.stringify(allMeta, null, 2));
+      return 0;
+    }
+    const cols = [
+      { header: "ID", width: 22 },
+      { header: "Name", width: 28 },
+      { header: "License", width: 18 },
+      { header: "Capabilities", width: 36 },
+      { header: "Auth", width: 14 },
+      { header: "Rate limit", width: 22 },
+    ];
+    const tableRows = allMeta.map((m) => {
+      const authStr = m.auth?.env?.length ? m.auth.env.join(", ") : c.dim("none");
+      const rlStr = m.rateLimit
+        ? Object.entries(m.rateLimit)
+            .filter(([k]) => k !== "note")
+            .map(([k, v]) => `${v} ${k.replace(/requests/, "req/")}`)
+            .join("; ") + (m.rateLimit.note ? ` (${m.rateLimit.note})` : "")
+        : c.dim("-");
+      const enabled = providerRegistry.isEnabled(String(m.id));
+      const idStr = enabled ? String(m.id) : c.dim(`${m.id} [disabled]`);
+      return [
+        idStr,
+        m.name,
+        m.defaultLicense ?? c.dim("UNKNOWN"),
+        m.capabilities.join(", "),
+        authStr,
+        rlStr,
+      ];
+    });
+    io.stdout(c.bold("Provider Registry  (--details)"));
+    io.stdout(renderTable(cols, tableRows));
+    io.stdout("");
+    io.stdout(c.dim(`${allMeta.length} providers registered. Use registry.register() to add custom providers.`));
+    return 0;
+  }
+
+  // Default: existing compact table (auth + default/opt-in status)
   const rows = listProviders(env);
   if (json) {
     io.stdout(JSON.stringify(rows, null, 2));
     return 0;
   }
   const cols = [
-    { header: "provider", width: 16 },
+    { header: "provider", width: 22 },
     { header: "default", width: 8 },
     { header: "opt-in", width: 7 },
     { header: "auth", width: 14 },
@@ -508,6 +568,7 @@ export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO)
   io.stdout("");
   io.stdout(c.dim("Default-on providers run when no --providers flag is given."));
   io.stdout(c.dim("Opt-in providers (serpapi, browser, bing) run only when explicitly requested."));
+  io.stdout(c.dim("Run 'webfetch providers list --details' for capability + rate-limit details."));
   return 0;
 }
 
@@ -1126,6 +1187,127 @@ function exampleCommand(
   }
 }
 
+// ---------- pHash diagnostics helpers + command ----------------------------
+
+/**
+ * Render a histogram bar for a 0..1 fraction (width: 20 chars).
+ */
+function histBar(ratio: number, width = 20): string {
+  const filled = Math.round(Math.max(0, Math.min(1, ratio)) * width);
+  return `[${"█".repeat(filled)}${" ".repeat(width - filled)}]`;
+}
+
+/**
+ * Emit a human-readable pHash diagnostics summary.
+ * In JSON mode, serialise the raw `PhashDiagnosticsResult`.
+ */
+function emitPhashDiagnostics(
+  diag: PhashDiagnosticsResult,
+  json: boolean,
+  io: CommandIO,
+): void {
+  if (json) {
+    io.stdout(JSON.stringify(diag, null, 2));
+    return;
+  }
+
+  const mixColor =
+    diag.algorithmMix === "high-quality"
+      ? c.green
+      : diag.algorithmMix === "degraded"
+        ? c.yellow
+        : c.red;
+
+  io.stdout(c.bold("pHash Diagnostics"));
+  io.stdout(c.dim("─".repeat(60)));
+
+  // Algorithm mix
+  io.stdout(`${c.bold("Algorithm mix:")}  ${mixColor(diag.algorithmMix)}`);
+  const dctRatio =
+    diag.hashedCount > 0 ? diag.perAlgorithm.dct.count / diag.hashedCount : 0;
+  const ahashRatio = 1 - dctRatio;
+  io.stdout(
+    `  dct-phash      ${histBar(dctRatio)}  ${diag.perAlgorithm.dct.count} candidates  (conf ${diag.perAlgorithm.dct.confidence.toFixed(2)})`,
+  );
+  io.stdout(
+    `  ahash-fallback ${histBar(ahashRatio)}  ${diag.perAlgorithm.ahash.count} candidates  (conf ${diag.perAlgorithm.ahash.confidence.toFixed(2)})`,
+  );
+  io.stdout("");
+
+  // Confidence distribution
+  const cd = diag.confidenceDistribution;
+  io.stdout(c.bold("Confidence distribution:"));
+  io.stdout(
+    `  mean ${cd.mean.toFixed(3)}  min ${cd.min.toFixed(3)}  max ${cd.max.toFixed(3)}  stdDev ${cd.stdDev.toFixed(3)}`,
+  );
+  io.stdout(`  ${histBar(cd.mean)} ← mean confidence`);
+  io.stdout("");
+
+  // Dedupe reliability
+  const relColor =
+    diag.dedupeReliability >= 0.85
+      ? c.green
+      : diag.dedupeReliability >= 0.5
+        ? c.yellow
+        : c.red;
+  io.stdout(
+    `${c.bold("Dedupe reliability:")} ${relColor(diag.dedupeReliability.toFixed(3))}  ${histBar(diag.dedupeReliability)}`,
+  );
+  if (diag.dedupeReliability < 0.5) {
+    io.stdout(c.yellow("  ⚠  Low reliability — install `sharp` for DCT-pHash accuracy."));
+  } else if (diag.dedupeReliability < 0.85) {
+    io.stdout(c.yellow("  ⚠  Moderate reliability — some aHash fallbacks present."));
+  } else {
+    io.stdout(c.green("  ✓  High reliability — deduplication decisions are trustworthy."));
+  }
+  io.stdout("");
+
+  // Counts
+  io.stdout(c.dim(`Candidates: ${diag.totalCandidates} total, ${diag.hashedCount} hashed, ${diag.unhashedCount} unhashed`));
+}
+
+/**
+ * `webfetch phash-diagnostics <query>` — run a search then analyse and print
+ * pHash quality metrics without downloading anything.
+ *
+ * Flags:
+ *   --json       Emit raw JSON diagnostics object.
+ *   --verbose    Show provider reports alongside diagnostics.
+ */
+export async function cmdPhashDiagnostics(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch phash-diagnostics <query> [flags]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose, json } = buildSearchOptions(args, env, cfg);
+
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, opts) })
+    : await core().searchImages(query, opts);
+
+  if (verbose) {
+    for (const w of bundle.warnings) io.stderr(c.yellow(`warning: ${w}`));
+    for (const r of bundle.providerReports) {
+      const detail = r.ok
+        ? c.dim(`${r.count} results in ${r.timeMs}ms`)
+        : c.dim(r.skipped ?? r.error ?? "failed");
+      io.stderr(c.dim(`  ${r.provider}: `) + detail);
+    }
+    io.stderr("");
+  }
+
+  const diag = analyzePhashQuality(bundle.candidates);
+  emitPhashDiagnostics(diag, json, io);
+  return 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -1157,13 +1339,14 @@ ${c.bold("COMMANDS")}
   download <url> [--out path]           Download an image (writes XMP sidecar by default)
   probe <url>                           List every <img> on a page with per-image license
   license <url> [--probe]               Determine license for an arbitrary URL
-  providers                             List configured providers + auth status
+  providers [list] [--details]          List providers; --details adds capabilities, rate-limits
   batch [--file path | <stdin>]         Run many queries; one per line (query\\tproviders optional)
   watch <query> [--interval 1h]         Poll a query; emit only new candidates per tick
   config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
   signup                                Open https://app.getwebfetch.com/signup in your browser
   cache-analytics [--since 7d]          Query-replay stats, cache-hit diagnostics, provider ranking
   diagnose <query>                      Run search + show ranked repair steps for provider failures
+  phash-diagnostics <query>            Inspect pHash algorithm mix + dedup confidence for a query
   help                                  Show this message
   version                               Print version
 
@@ -1180,6 +1363,7 @@ ${c.bold("COMMON SEARCH FLAGS")}
   --profile NAME        Activate a profile from ~/.webfetchrc
   --pick                Interactive picker (TTY only); choose a candidate to download
   --no-sidecar          Skip writing the .xmp attribution sidecar on download
+  --phash-diagnostics   After results, print pHash algorithm mix + dedup confidence summary
 
 ${c.bold("EXAMPLES")}
   webfetch search "drake portrait" --json --limit 5
@@ -1213,6 +1397,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   signup: cmdSignup,
   "cache-analytics": cmdCacheAnalytics,
   diagnose: cmdDiagnose,
+  "phash-diagnostics": cmdPhashDiagnostics,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
