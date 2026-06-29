@@ -539,6 +539,112 @@ export interface FederationRepairPlan {
   generatedAt: string;
 }
 
+// ---------------------------------------------------------------------------
+// Batch Reverse-Image Search with Perceptual Distance Ranking
+// ---------------------------------------------------------------------------
+
+/**
+ * Similarity band derived from Hamming distance between two 64-bit pHashes:
+ *   - `exact`           0–3   (same image or trivial re-encode)
+ *   - `near-duplicate`  4–8   (minor crop/resize/compression)
+ *   - `similar`         9–15  (visually related)
+ *   - `loosely-related` 16–25 (same subject, different angle/lighting)
+ */
+export type SimilarityBand = "exact" | "near-duplicate" | "similar" | "loosely-related";
+
+/**
+ * A single candidate returned by `findSimilarBatch`, annotated with its
+ * Hamming distance from the closest reference image.
+ */
+export interface SimilarityResult {
+  /** The found image candidate. */
+  candidate: ImageCandidate;
+  /** Hamming distance to the nearest reference hash (0 = identical). */
+  distance: number;
+  /** Index into the `references` array this candidate is closest to. */
+  referenceIndex: number;
+  /** Human-readable distance label derived from `distance`. */
+  distanceLabel: SimilarityBand;
+}
+
+/**
+ * A cluster of candidates sharing the same perceptual-distance band.
+ */
+export interface SimilarityCluster {
+  /** Distance band for all candidates in this cluster. */
+  similarity: SimilarityBand;
+  /** Candidates ranked: license-first, then phash confidence, then provider priority. */
+  candidates: SimilarityResult[];
+  /** Total number of candidates in this cluster. */
+  count: number;
+}
+
+/**
+ * Per-reference pHash metadata returned in `BatchFindSimilarBundleResult.references`.
+ */
+export interface PerceptualDistance {
+  /** 16-hex-char perceptual hash for this reference, or null if hashing failed. */
+  pHash: string | null;
+  /** Algorithm used — null when hashing failed. */
+  algorithm: "dct-phash" | "ahash-fallback" | null;
+  /** Hash confidence (0..1), or null when hashing failed. */
+  confidence: number | null;
+  /** Source URL of the reference image, when provided by the caller. */
+  url?: string;
+}
+
+/**
+ * Options for `findSimilarBatch`.
+ */
+export interface BatchFindSimilarOptions extends SearchOptions {
+  /**
+   * When true, if the same candidate URL appears for multiple references, keep
+   * only the entry with the smallest Hamming distance (best match).
+   * Default: false (each reference gets its own result set).
+   */
+  dedupeAcrossReferences?: boolean;
+  /**
+   * Maximum number of raw candidates to collect per reference before distance
+   * ranking. Default: 50.
+   */
+  maxCandidatesPerReference?: number;
+}
+
+/**
+ * Full result bundle returned by `findSimilarBatch`.
+ */
+export interface BatchFindSimilarBundleResult {
+  /**
+   * One entry per input reference — pHash metadata computed during the run.
+   * Entries are in the same order as the input `references` array.
+   */
+  references: PerceptualDistance[];
+  /**
+   * Candidates grouped by similarity band, ordered from most to least similar.
+   * Bands with zero candidates are omitted.
+   */
+  clusters: SimilarityCluster[];
+  /** Aggregate statistics for the entire batch run. */
+  statistics: {
+    /** Total candidate entries (before URL-deduplication across references when dedupeAcrossReferences is off). */
+    totalCandidates: number;
+    /** Unique candidate URLs across all references and bands. */
+    uniqueCandidates: number;
+    /** Number of non-empty clusters. */
+    clusterCount: number;
+    /** Number of reference images provided. */
+    referenceCount: number;
+    /** Per-band candidate counts. */
+    bandBreakdown: Record<SimilarityBand, number>;
+    /** Median Hamming distance across all candidates, or null if no candidates. */
+    medianHammingDistance: number | null;
+    /** 90th-percentile Hamming distance, or null if no candidates. */
+    p90HammingDistance: number | null;
+  };
+  /** Non-fatal warnings (skipped references, missing API keys, etc.). */
+  warnings: string[];
+}
+
 export type Fetcher = typeof fetch;
 
 export interface Provider {

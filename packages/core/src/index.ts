@@ -28,6 +28,7 @@ export type {
   BatchFindSimilarOutput,
   BatchFindSimilarResult,
 } from "./batch-find-similar.ts";
+export { findSimilarBatch, classifyDistance } from "./find-similar-batch.ts";
 export {
   perceptualHash,
   perceptualHashStructured,
@@ -40,6 +41,11 @@ export {
   dedupeWithPhashGrouping,
 } from "./dedupe.ts";
 export type { CompareCandidatesOptions, DedupeByHashOptions } from "./dedupe.ts";
+export {
+  batchHammingDistances,
+  hammingPercentile,
+  hammingDistanceMatrix,
+} from "./perceptual-hash.ts";
 export { readImageMetadata, parseXmp, parseIptc, parseExifBuffer } from "./metadata-reader.ts";
 export type { EmbeddedMetadata } from "./metadata-reader.ts";
 export {

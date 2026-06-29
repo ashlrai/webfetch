@@ -188,6 +188,35 @@ export const providerRecommendationsSchema = z.object({
     .describe("Sliding window size in ms (default 300000 = 5 minutes)"),
 });
 
+export const batchFindSimilarWithDistancesSchema = z.object({
+  references: z
+    .array(
+      z.object({
+        url: z.string().url().optional().describe("Public URL of a reference image"),
+      }),
+    )
+    .min(1)
+    .max(10)
+    .describe("Reference images to reverse-search (max 10). Each entry needs a url."),
+  providers: z
+    .array(providerIdSchema)
+    .optional()
+    .describe("Providers to use; supported: 'brave', 'serpapi'"),
+  dedupeAcrossReferences: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, if the same candidate URL appears for multiple references keep only the closest match. Default false.",
+    ),
+  maxCandidatesPerReference: z
+    .number()
+    .int()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("Max raw candidates collected per reference before ranking (default 50)."),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -196,6 +225,7 @@ export const schemas = {
   fetch_with_license: fetchWithLicenseSchema,
   find_similar: findSimilarSchema,
   batch_find_similar: batchFindSimilarSchema,
+  batch_find_similar_with_distances: batchFindSimilarWithDistancesSchema,
   probe_page: probePageSchema,
   compare_phashes: comparePhashesSchema,
   compare_candidates: compareCandidatesSchema,

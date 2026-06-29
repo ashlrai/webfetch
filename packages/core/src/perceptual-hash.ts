@@ -193,6 +193,53 @@ export function hammingDistance(a: string, b: string): number {
   return d;
 }
 
+/**
+ * Compute batch Hamming distances between a single reference hash and
+ * an array of candidate hashes. Returns an array of distances in the
+ * same order as `candidateHashes`. Missing/undefined entries get distance 64.
+ */
+export function batchHammingDistances(
+  referenceHash: string,
+  candidateHashes: Array<string | undefined>,
+): number[] {
+  return candidateHashes.map((h) =>
+    h !== undefined ? hammingDistance(referenceHash, h) : 64,
+  );
+}
+
+/**
+ * Compute the p-th percentile of an array of Hamming distances.
+ * `p` must be in [0, 1]. Returns the value at that percentile using
+ * nearest-rank method. Returns 0 for empty arrays.
+ */
+export function hammingPercentile(distances: number[], p: number): number {
+  if (distances.length === 0) return 0;
+  const sorted = [...distances].sort((a, b) => a - b);
+  const idx = Math.min(
+    Math.floor(p * sorted.length),
+    sorted.length - 1,
+  );
+  return sorted[idx]!;
+}
+
+/**
+ * Build the full N×M Hamming-distance matrix between N reference hashes
+ * and M candidate hashes. Returns `matrix[refIdx][candIdx]`.
+ * Missing hashes produce distance 64 (max for 64-bit hash).
+ */
+export function hammingDistanceMatrix(
+  referenceHashes: Array<string | undefined>,
+  candidateHashes: Array<string | undefined>,
+): number[][] {
+  return referenceHashes.map((ref) =>
+    candidateHashes.map((cand) =>
+      ref !== undefined && cand !== undefined
+        ? hammingDistance(ref, cand)
+        : 64,
+    ),
+  );
+}
+
 /** Find pairs of (i,j) where hamming(phash[i], phash[j]) <= threshold. */
 export function findDuplicates(
   candidates: Array<{ phash?: string }>,

@@ -13,6 +13,7 @@ import {
   exportCache,
   fetchWithLicense,
   findSimilar,
+  findSimilarBatch,
   getCacheStats,
   getFederationDiagnostics,
   getFederationHealthReport,
@@ -29,6 +30,7 @@ import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
   batchFindSimilarSchema,
+  batchFindSimilarWithDistancesSchema,
   compareCandidatesSchema,
   comparePhashesSchema,
   downloadImageSchema,
@@ -395,6 +397,49 @@ export const TOOLS: ToolDef[] = [
       return {
         content: [{ type: "text", text: lines.join("\n") }],
         structuredContent: { plan, probeResult },
+      };
+    },
+  },
+  {
+    name: "batch_find_similar_with_distances",
+    description:
+      "Batch reverse-image search: given multiple reference image URLs, find visually similar images across providers (brave, serpapi) and return results grouped by perceptual-distance clusters. " +
+      "Clusters: 'exact' (Hamming 0-3), 'near-duplicate' (4-8), 'similar' (9-15), 'loosely-related' (16-25). " +
+      "Within each cluster, candidates are ranked license-first (open > platform > editorial > unknown), then by pHash confidence, then provider quality. " +
+      "Returns per-reference pHash metadata, clusters with ranked candidates, aggregate statistics (band breakdown, median/p90 Hamming distances), and non-fatal warnings. " +
+      "Use for: finding other uses of a product photo, content moderation, brand monitoring, or any workflow needing perceptual grouping across multiple reference images. " +
+      "Set dedupeAcrossReferences: true to collapse candidates that match multiple references into the closest match only.",
+    inputSchema: batchFindSimilarWithDistancesSchema,
+    async handler(args) {
+      const refs = (args.references as Array<{ url?: string }>).map((r) => ({
+        url: r.url,
+      }));
+      const out = await findSimilarBatch(refs, {
+        providers: args.providers,
+        dedupeAcrossReferences: args.dedupeAcrossReferences,
+        maxCandidatesPerReference: args.maxCandidatesPerReference,
+      });
+
+      const lines: string[] = [];
+      lines.push(
+        `Batch result: ${out.statistics.referenceCount} reference(s), ` +
+        `${out.statistics.uniqueCandidates} unique candidates across ${out.statistics.clusterCount} cluster(s).`,
+      );
+      for (const cluster of out.clusters) {
+        lines.push(`  ${cluster.similarity}: ${cluster.count} candidate(s)`);
+      }
+      if (out.statistics.medianHammingDistance !== null) {
+        lines.push(
+          `  Hamming — median: ${out.statistics.medianHammingDistance}, p90: ${out.statistics.p90HammingDistance}`,
+        );
+      }
+      if (out.warnings.length > 0) {
+        lines.push(`Warnings: ${out.warnings.join("; ")}`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: out,
       };
     },
   },
