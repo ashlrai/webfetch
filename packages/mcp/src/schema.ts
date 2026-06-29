@@ -64,6 +64,11 @@ export const probePageSchema = z.object({
   respectRobots: z.boolean().default(true),
 });
 
+export const comparePhashesSchema = z.object({
+  urlA: z.string().url().describe("First image URL to compare"),
+  urlB: z.string().url().describe("Second image URL to compare"),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -72,6 +77,7 @@ export const schemas = {
   fetch_with_license: fetchWithLicenseSchema,
   find_similar: findSimilarSchema,
   probe_page: probePageSchema,
+  compare_phashes: comparePhashesSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;

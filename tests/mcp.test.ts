@@ -33,6 +33,7 @@ describe("mcp tools", () => {
   test("tool names match spec", () => {
     const names = TOOLS.map((t) => t.name).sort();
     expect(names).toEqual([
+      "compare_phashes",
       "download_image",
       "fetch_with_license",
       "find_similar",

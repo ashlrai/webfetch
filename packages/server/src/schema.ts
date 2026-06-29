@@ -64,3 +64,8 @@ export const probePageSchema = z.object({
   url: z.string().url(),
   respectRobots: z.boolean().default(true),
 });
+
+export const comparePhashesSchema = z.object({
+  urlA: z.string().url(),
+  urlB: z.string().url(),
+});

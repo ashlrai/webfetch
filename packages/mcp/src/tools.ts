@@ -10,6 +10,8 @@ import {
   fetchWithLicense,
   findSimilar,
   getFederationDiagnostics,
+  hammingDistance,
+  perceptualHashStructured,
   probePage,
   searchAlbumCover,
   searchArtistImages,
@@ -18,6 +20,7 @@ import {
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
+  comparePhashesSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
   findSimilarSchema,
@@ -121,6 +124,31 @@ export const TOOLS: ToolDef[] = [
     async handler(args) {
       const r = await probePage(args.url, { respectRobots: args.respectRobots });
       return renderJson(r);
+    },
+  },
+  {
+    name: "compare_phashes",
+    description:
+      "Download two image URLs, compute structured perceptual hashes for each (DCT pHash via sharp when available, aHash fallback otherwise), and return per-image metadata plus the Hamming distance. `isMatch` is true when distance ≤ 6 (near-duplicate). Use to rank candidates by perceptual stability, choose between fast (aHash) vs accurate (DCT) deduplication, and build confidence-aware deduplication pipelines.",
+    inputSchema: comparePhashesSchema,
+    async handler(args) {
+      const [dlA, dlB] = await Promise.all([
+        downloadImage(args.urlA),
+        downloadImage(args.urlB),
+      ]);
+      const [hashA, hashB] = await Promise.all([
+        perceptualHashStructured(dlA.bytes),
+        perceptualHashStructured(dlB.bytes),
+      ]);
+      const hamming = hammingDistance(hashA.hash, hashB.hash);
+      return renderJson({
+        candidates: [
+          { url: args.urlA, phash: hashA.hash, algorithm: hashA.algorithm, confidence: hashA.confidence },
+          { url: args.urlB, phash: hashB.hash, algorithm: hashB.algorithm, confidence: hashB.confidence },
+        ],
+        hamming,
+        isMatch: hamming <= 6,
+      });
     },
   },
   {

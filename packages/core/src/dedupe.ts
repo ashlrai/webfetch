@@ -85,8 +85,13 @@ async function dedupeByHashAsync(
         userAgent: opts.userAgent,
         signal: opts.signal,
       });
-      const phash = await perceptualHash(dl.bytes);
-      withHashes.push({ ...c, phash });
+      const result = await perceptualHashStructured(dl.bytes);
+      withHashes.push({
+        ...c,
+        phash: result.hash,
+        phashResult: result,
+        phashAlgorithm: result.algorithm,
+      });
     } catch {
       withHashes.push(c);
     }

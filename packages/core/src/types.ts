@@ -96,6 +96,11 @@ export interface ImageCandidate {
   phash?: string;
   /** Structured pHash result set by dedupe when computeHashes is used with perceptualHashStructured(). */
   phashResult?: PerceptualHashResult;
+  /**
+   * Algorithm used to compute `phash`. Mirrors `phashResult.algorithm` for callers
+   * that want a quick top-level discriminant without destructuring `phashResult`.
+   */
+  phashAlgorithm?: "dct-phash" | "ahash-fallback";
   /** Free-form marker for provider-specific metadata; opaque to callers. */
   raw?: unknown;
   /** When true, this result was sourced via an opt-in browser fallback (see providers/browser.ts). */

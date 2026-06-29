@@ -19,6 +19,8 @@ import {
   fetchWithLicense,
   findSimilar,
   getFederationDiagnostics,
+  hammingDistance,
+  perceptualHashStructured,
   probePage,
   searchAlbumCover,
   searchArtistImages,
@@ -27,6 +29,7 @@ import {
 import { z } from "zod";
 import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {
+  comparePhashesSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
   findSimilarSchema,
@@ -150,6 +153,27 @@ const handlers: Record<string, Handler> = {
   "/similar": wrap(findSimilarSchema, async (a) =>
     findSimilar({ url: a.url }, { providers: a.providers }),
   ),
+  "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
+    assertPublicUrl(a.urlA);
+    assertPublicUrl(a.urlB);
+    const [dlA, dlB] = await Promise.all([
+      downloadImage(a.urlA),
+      downloadImage(a.urlB),
+    ]);
+    const [hashA, hashB] = await Promise.all([
+      perceptualHashStructured(dlA.bytes),
+      perceptualHashStructured(dlB.bytes),
+    ]);
+    const hamming = hammingDistance(hashA.hash, hashB.hash);
+    return {
+      candidates: [
+        { url: a.urlA, phash: hashA.hash, algorithm: hashA.algorithm, confidence: hashA.confidence },
+        { url: a.urlB, phash: hashB.hash, algorithm: hashB.algorithm, confidence: hashB.confidence },
+      ],
+      hamming,
+      isMatch: hamming <= 6,
+    };
+  }),
 };
 
 function assertPublicUrl(url: string): void {
@@ -187,7 +211,7 @@ export function getProviders(): Response {
       data: {
         all,
         defaults: DEFAULT_PROVIDERS,
-        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/federation-diagnostics"],
+        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/federation-diagnostics", "/compare-phashes"],
       },
     }),
     { status: 200, headers: { "content-type": "application/json; charset=utf-8" } },
