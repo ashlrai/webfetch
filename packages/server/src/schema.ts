@@ -75,3 +75,26 @@ export const batchFindSimilarSchema = z.object({
   providers: z.array(providerIdSchema).optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });
+
+/** Inline ImageCandidate shape accepted by POST /extract-metadata. */
+const auditCandidateInputSchema = z.object({
+  url: z.string().url(),
+  source: z.string(),
+  license: z.string(),
+  author: z.string().optional(),
+  licenseUrl: z.string().url().optional(),
+  attributionLine: z.string().optional(),
+  title: z.string().optional(),
+  sourcePageUrl: z.string().url().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+export const extractImageMetadataAuditSchema = z.object({
+  imageBase64: z
+    .string()
+    .describe("Base64-encoded bytes of the downloaded image to audit."),
+  candidate: auditCandidateInputSchema,
+  resolveConflicts: z
+    .enum(["provider-first", "embedded-first", "conservative"])
+    .default("conservative"),
+});

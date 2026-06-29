@@ -15,6 +15,7 @@
 import {
   ALL_PROVIDERS,
   DEFAULT_PROVIDERS,
+  auditImageMetadata,
   batchFindSimilar,
   clearCacheEntry,
   computeProviderRecommendations,
@@ -41,6 +42,7 @@ import {
   batchFindSimilarSchema,
   comparePhashesSchema,
   downloadImageSchema,
+  extractImageMetadataAuditSchema,
   fetchWithLicenseSchema,
   findSimilarSchema,
   probePageSchema,
@@ -202,6 +204,22 @@ const handlers: Record<string, Handler> = {
     return exportCache(a.cacheDir, a.outputPath, filter);
   }),
   "/cache/import": wrap(cacheImportSchema, async (a) => importCache(a.tarPath, a.cacheDir)),
+  "/extract-metadata": wrap(extractImageMetadataAuditSchema, async (a) => {
+    // Decode base64 → Uint8Array
+    let bytes: Uint8Array;
+    try {
+      const bin = atob(a.imageBase64);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } catch {
+      throw new ValidationError("imageBase64 is not valid base64");
+    }
+    return auditImageMetadata({
+      downloadedBytes: bytes,
+      candidate: a.candidate as any,
+      resolveConflicts: a.resolveConflicts as any,
+    });
+  }),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -273,6 +291,7 @@ export function getProviders(): Response {
           "/federation-strategy",
           "/provider-recommendations",
           "/compare-phashes",
+          "/extract-metadata",
           "/cache-analytics",
           "/cache/stats",
           "/cache/entries",

@@ -41,6 +41,7 @@ describe("mcp tools", () => {
       "compute_federation_fallback",
       "download_image",
       "export_cache_for_replay",
+      "extract_image_metadata_audit",
       "fetch_with_license",
       "find_similar",
       "get_federation_diagnostics",
