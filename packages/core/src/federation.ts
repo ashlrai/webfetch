@@ -11,7 +11,11 @@
  */
 
 import { dedupeByUrl } from "./dedupe.ts";
-import { emitProviderEvent } from "./federation-telemetry.ts";
+import {
+  emitProviderEvent,
+  emitProviderSequenceEvent,
+  getFederationDiagnostics,
+} from "./federation-telemetry.ts";
 import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
@@ -51,11 +55,51 @@ export async function searchImages(
     };
   }
 
+  // -------------------------------------------------------------------------
+  // Priority ordering based on providerPreference
+  // -------------------------------------------------------------------------
+  const preference = opts.providerPreference ?? "default";
+  const ordered = orderProviders(requested, preference, timeoutMs);
+
+  // Emit a sequence event so telemetry can track dispatch order
+  emitProviderSequenceEvent({
+    query,
+    dispatchOrder: ordered,
+    preference,
+    startedAt: Date.now(),
+  });
+
+  // -------------------------------------------------------------------------
+  // Fallback chain: run chain providers sequentially with adaptive timeouts,
+  // falling back on error/timeout. Non-chain providers run in parallel.
+  // -------------------------------------------------------------------------
+  const fallbackChain = opts.fallbackChain ?? [];
+  const chainSet = new Set(fallbackChain);
+  const parallelProviders = ordered.filter((id) => !chainSet.has(id));
+
   const reports: ProviderReport[] = [];
-  const results = await Promise.all(
-    requested.map((id) => runProvider(id, query, opts, timeoutMs, reports)),
+  const allResults: ImageCandidate[] = [];
+
+  // Run parallel providers concurrently
+  const parallelResults = await Promise.all(
+    parallelProviders.map((id) =>
+      runProvider(id, query, opts, resolveTimeout(id, timeoutMs, opts), reports),
+    ),
   );
-  const flat = results.flat();
+  allResults.push(...parallelResults.flat());
+
+  // Run fallback chain sequentially — stop as soon as one succeeds
+  for (const id of fallbackChain) {
+    const chainTimeout = resolveTimeout(id, timeoutMs, opts);
+    const out = await runProvider(id, query, opts, chainTimeout, reports);
+    if (out.length > 0) {
+      allResults.push(...out);
+      break; // Got results — skip remaining fallbacks
+    }
+    // If the provider failed/timed-out, continue to the next in chain
+  }
+
+  const flat = allResults;
   const deduped = dedupeByUrl(flat);
   const ranked = rankAll(deduped, {
     licensePolicy: opts.licensePolicy ?? "safe-only",
@@ -88,6 +132,75 @@ export async function searchImages(
   }
 
   return { candidates: enriched, providerReports: reports, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// Priority queue helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-order providers according to the requested preference mode.
+ * Uses the 5-min diagnostics window to compute health scores / latencies.
+ */
+function orderProviders(
+  ids: ProviderId[],
+  preference: "fastest" | "healthiest" | "default",
+  _timeoutMs: number,
+): ProviderId[] {
+  if (preference === "default" || ids.length <= 1) return ids;
+
+  const diag = getFederationDiagnostics();
+  const statsMap = new Map(diag.providerStats.map((s) => [s.id, s]));
+
+  if (preference === "healthiest") {
+    return [...ids].sort((a, b) => {
+      const sa = statsMap.get(a);
+      const sb = statsMap.get(b);
+      const scoreA = sa ? Math.max(0, 1 - sa.errorRate - (sa.saturated ? 0.5 : 0)) : 1;
+      const scoreB = sb ? Math.max(0, 1 - sb.errorRate - (sb.saturated ? 0.5 : 0)) : 1;
+      const diff = scoreB - scoreA;
+      if (Math.abs(diff) > 1e-9) return diff;
+      // Tie-break by latency
+      return (sa?.avgLatencyMs ?? 0) - (sb?.avgLatencyMs ?? 0);
+    });
+  }
+
+  // fastest: lowest latency first, no-data providers go after those with data
+  return [...ids].sort((a, b) => {
+    const sa = statsMap.get(a);
+    const sb = statsMap.get(b);
+    if (!sa && !sb) return 0;
+    if (!sa) return 1;
+    if (!sb) return -1;
+    const latDiff = sa.avgLatencyMs - sb.avgLatencyMs;
+    if (Math.abs(latDiff) > 0) return latDiff;
+    // Tie-break by health score
+    const scoreA = Math.max(0, 1 - sa.errorRate - (sa.saturated ? 0.5 : 0));
+    const scoreB = Math.max(0, 1 - sb.errorRate - (sb.saturated ? 0.5 : 0));
+    return scoreB - scoreA;
+  });
+}
+
+/**
+ * Compute the effective timeout for a provider when adaptiveTimeoutMs is enabled.
+ *
+ * Adaptive timeout = clamp(avgLatency * 2.5, minAdaptiveMs, timeoutMs).
+ * Falls back to the global timeoutMs when no latency data is available.
+ */
+function resolveTimeout(
+  id: ProviderId,
+  globalTimeoutMs: number,
+  opts: SearchOptions,
+): number {
+  if (!opts.adaptiveTimeoutMs) return globalTimeoutMs;
+
+  const MIN_ADAPTIVE_MS = 2_000; // never go below 2 s
+  const diag = getFederationDiagnostics();
+  const stat = diag.providerStats.find((s) => s.id === id);
+  if (!stat || stat.avgLatencyMs === 0) return globalTimeoutMs;
+
+  const adaptive = Math.round(stat.avgLatencyMs * 2.5);
+  return Math.min(globalTimeoutMs, Math.max(MIN_ADAPTIVE_MS, adaptive));
 }
 
 async function runProvider(

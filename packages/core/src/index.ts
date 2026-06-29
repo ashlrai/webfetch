@@ -69,12 +69,18 @@ export type {
 } from "./cache-inspection.ts";
 export {
   emitProviderEvent,
+  emitProviderSequenceEvent,
   getFederationDiagnostics,
+  getProviderRanking,
+  getProviderSequenceEvents,
   _resetTelemetry,
 } from "./federation-telemetry.ts";
 export { getBucketState } from "./rate-limit.ts";
 export type {
   ProviderEvent,
+  ProviderRankEntry,
+  ProviderRanking,
+  ProviderSequenceEvent,
   ProviderStats,
   FederationSummary,
   FederationDiagnostics,

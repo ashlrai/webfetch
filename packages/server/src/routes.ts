@@ -23,6 +23,7 @@ import {
   findSimilar,
   getCacheStats,
   getFederationDiagnostics,
+  getProviderRanking,
   hammingDistance,
   importCache,
   listCacheEntries,
@@ -267,6 +268,7 @@ export function getProviders(): Response {
           "/similar",
           "/batch-find-similar",
           "/federation-diagnostics",
+          "/federation-strategy",
           "/compare-phashes",
           "/cache/stats",
           "/cache/entries",
@@ -317,4 +319,22 @@ export function getFederationDiagnosticsResponse(req: Request): Response {
   }
   const diag = getFederationDiagnostics(windowMs);
   return jsonOk(diag);
+}
+
+export function getFederationStrategyResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const windowMsParam = url.searchParams.get("windowMs");
+  const windowMs = windowMsParam ? Number(windowMsParam) : undefined;
+  if (windowMs !== undefined && (isNaN(windowMs) || windowMs < 1000 || windowMs > 3_600_000)) {
+    return jsonErr("windowMs must be between 1000 and 3600000", 422);
+  }
+
+  // Accept an optional comma-separated providers param; default to all known providers
+  const providersParam = url.searchParams.get("providers");
+  const providerIds = providersParam
+    ? (providersParam.split(",").map((p) => p.trim()).filter(Boolean) as Parameters<typeof getProviderRanking>[0])
+    : (Object.keys(ALL_PROVIDERS) as Parameters<typeof getProviderRanking>[0]);
+
+  const ranking = getProviderRanking(providerIds, windowMs);
+  return jsonOk(ranking);
 }

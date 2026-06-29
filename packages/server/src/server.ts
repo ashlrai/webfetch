@@ -11,6 +11,7 @@ import {
   getCacheEntriesResponse,
   getCacheStatsResponse,
   getFederationDiagnosticsResponse,
+  getFederationStrategyResponse,
   getProviders,
 } from "./routes.ts";
 
@@ -67,6 +68,13 @@ export function startServer(opts: ServerOptions) {
           url.pathname === "/v1/federation-diagnostics")
       ) {
         return withHeaders(getFederationDiagnosticsResponse(req), cors);
+      }
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/federation-strategy" ||
+          url.pathname === "/v1/federation-strategy")
+      ) {
+        return withHeaders(getFederationStrategyResponse(req), cors);
       }
       if (
         req.method === "GET" &&

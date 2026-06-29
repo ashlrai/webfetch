@@ -109,6 +109,89 @@ export interface FederationDiagnostics {
 }
 
 // ---------------------------------------------------------------------------
+// Provider ranking types (for /v1/federation-strategy endpoint)
+// ---------------------------------------------------------------------------
+
+/** A single provider's computed rank entry. */
+export interface ProviderRankEntry {
+  /** Provider identifier. */
+  id: ProviderId;
+  /** Composite health score in [0, 1]: 1 - errorRate - rateLimitPenalty. */
+  healthScore: number;
+  /** Average latency in ms over the diagnostics window (0 if no data). */
+  avgLatencyMs: number;
+  /** Error rate in [0, 1] over the diagnostics window. */
+  errorRate: number;
+  /** True when the rate-limit bucket is saturated. */
+  saturated: boolean;
+  /**
+   * Predicted success rate: probability the next call succeeds
+   * (0 when saturated, else 1 - errorRate, clamped to [0, 1]).
+   */
+  predictedSuccessRate: number;
+  /**
+   * Rank position (1 = best) under the 'healthiest' ordering.
+   */
+  rankHealthiest: number;
+  /**
+   * Rank position (1 = best) under the 'fastest' ordering.
+   */
+  rankFastest: number;
+}
+
+export interface ProviderRanking {
+  /** Providers ordered best → worst by health score. */
+  byHealth: ProviderRankEntry[];
+  /** Providers ordered best → worst by avg latency (fastest first). */
+  byLatency: ProviderRankEntry[];
+  /** The window these stats were computed over. */
+  windowMs: number;
+  generatedAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Provider sequence event (emitted per federated query)
+// ---------------------------------------------------------------------------
+
+export interface ProviderSequenceEvent {
+  /** The query string that triggered this federation call. */
+  query: string;
+  /** Ordered list of provider IDs as dispatched (post-ranking). */
+  dispatchOrder: ProviderId[];
+  /** The preference mode that drove the ordering. */
+  preference: "fastest" | "healthiest" | "default";
+  /** Unix-ms when the federation call started. */
+  startedAt: number;
+}
+
+const _sequenceBuf: ProviderSequenceEvent[] = [];
+let _seqHead = 0;
+let _seqSize = 0;
+const SEQ_CAPACITY = 200;
+
+/** Emit a provider-sequence event for a federation call. */
+export function emitProviderSequenceEvent(evt: ProviderSequenceEvent): void {
+  if (_sequenceBuf.length < SEQ_CAPACITY) {
+    _sequenceBuf.push(evt);
+  } else {
+    _sequenceBuf[_seqHead] = evt;
+  }
+  _seqHead = (_seqHead + 1) % SEQ_CAPACITY;
+  _seqSize = Math.min(_seqSize + 1, SEQ_CAPACITY);
+}
+
+/** Return recent provider-sequence events (newest first, up to limit). */
+export function getProviderSequenceEvents(limit = 20): ProviderSequenceEvent[] {
+  const all: ProviderSequenceEvent[] = [];
+  if (_seqSize < SEQ_CAPACITY || _sequenceBuf.length < SEQ_CAPACITY) {
+    all.push(..._sequenceBuf.slice(0, _seqSize));
+  } else {
+    all.push(..._sequenceBuf.slice(_seqHead), ..._sequenceBuf.slice(0, _seqHead));
+  }
+  return all.slice(-limit).reverse();
+}
+
+// ---------------------------------------------------------------------------
 // Aggregation
 // ---------------------------------------------------------------------------
 
@@ -203,6 +286,97 @@ export function getFederationDiagnostics(windowMs = WINDOW_MS): FederationDiagno
 }
 
 // ---------------------------------------------------------------------------
+// Provider ranking computation
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a ranked list of providers based on 5-min diagnostics.
+ *
+ * Health score = 1 - errorRate - rateLimitPenalty
+ *   where rateLimitPenalty = 0.5 when saturated, else 0.
+ *
+ * Providers with no data in the window get healthScore=1, avgLatencyMs=0
+ * (optimistic — prefer to try them over known-bad ones).
+ */
+export function getProviderRanking(
+  providerIds: ProviderId[],
+  windowMs = WINDOW_MS,
+): ProviderRanking {
+  const diag = getFederationDiagnostics(windowMs);
+  const statsMap = new Map<ProviderId, ProviderStats>(diag.providerStats.map((s) => [s.id, s]));
+
+  const entries: ProviderRankEntry[] = providerIds.map((id) => {
+    const stats = statsMap.get(id);
+    const errorRate = stats?.errorRate ?? 0;
+    const avgLatencyMs = stats?.avgLatencyMs ?? 0;
+    const saturated = stats?.saturated ?? false;
+    const rateLimitPenalty = saturated ? 0.5 : 0;
+    const healthScore = Math.max(0, Math.min(1, 1 - errorRate - rateLimitPenalty));
+    const predictedSuccessRate = saturated ? 0 : Math.max(0, Math.min(1, 1 - errorRate));
+
+    return {
+      id,
+      healthScore,
+      avgLatencyMs,
+      errorRate,
+      saturated,
+      predictedSuccessRate,
+      rankHealthiest: 0, // filled below
+      rankFastest: 0,
+    };
+  });
+
+  // Healthiest order: higher healthScore first; ties broken by lower latency.
+  const byHealth = [...entries].sort((a, b) => {
+    const hDiff = b.healthScore - a.healthScore;
+    if (Math.abs(hDiff) > 1e-9) return hDiff;
+    return a.avgLatencyMs - b.avgLatencyMs;
+  });
+
+  // Fastest order: lower latency first; ties broken by higher health score.
+  // Providers with no latency data (avgLatencyMs=0 but also no events) sort last
+  // so we don't blindly prefer untested providers as "fastest".
+  const byLatency = [...entries].sort((a, b) => {
+    const statsA = statsMap.get(a.id);
+    const statsB = statsMap.get(b.id);
+    const hasDataA = statsA !== undefined;
+    const hasDataB = statsB !== undefined;
+    // No-data providers go after ones with data
+    if (hasDataA !== hasDataB) return hasDataA ? -1 : 1;
+    const latDiff = a.avgLatencyMs - b.avgLatencyMs;
+    if (Math.abs(latDiff) > 0) return latDiff;
+    return b.healthScore - a.healthScore;
+  });
+
+  // Stamp rank positions (1-based)
+  byHealth.forEach((e, i) => { e.rankHealthiest = i + 1; });
+  byLatency.forEach((e, i) => { e.rankFastest = i + 1; });
+
+  // Sync rank fields back into both arrays (they share object references)
+  // Nothing to do — arrays share the same entry objects via spread-copy of
+  // primitives, so we need to cross-update via the id map.
+  const rankMap = new Map<ProviderId, { rankHealthiest: number; rankFastest: number }>();
+  byHealth.forEach((e, i) => {
+    rankMap.set(e.id, { rankHealthiest: i + 1, rankFastest: 0 });
+  });
+  byLatency.forEach((e, i) => {
+    const r = rankMap.get(e.id);
+    if (r) r.rankFastest = i + 1;
+  });
+  // Apply back to all entries arrays
+  for (const e of byHealth) {
+    const r = rankMap.get(e.id);
+    if (r) { e.rankHealthiest = r.rankHealthiest; e.rankFastest = r.rankFastest; }
+  }
+  for (const e of byLatency) {
+    const r = rankMap.get(e.id);
+    if (r) { e.rankHealthiest = r.rankHealthiest; e.rankFastest = r.rankFastest; }
+  }
+
+  return { byHealth, byLatency, windowMs, generatedAt: Date.now() };
+}
+
+// ---------------------------------------------------------------------------
 // Reset helper (test-only)
 // ---------------------------------------------------------------------------
 
@@ -211,4 +385,8 @@ export function _resetTelemetry(capacity = DEFAULT_CAPACITY): void {
   _head = 0;
   _size = 0;
   _capacity = capacity;
+  // Also reset sequence buffer
+  _sequenceBuf.length = 0;
+  _seqHead = 0;
+  _seqSize = 0;
 }

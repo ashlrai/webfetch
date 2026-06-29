@@ -149,6 +149,32 @@ export interface SearchOptions {
   auth?: ProviderAuth;
   /** When true, skip real network calls and return provider names that *would* be hit. */
   dryRun?: boolean;
+
+  // ---------------------------------------------------------------------------
+  // Provider Health & Failover Strategy (v4+)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * How to order providers before dispatching:
+   * - `'fastest'`   — sort by avg latency ascending (lowest first).
+   * - `'healthiest'` — sort by health score descending (health = 1 - errorRate - rateLimitPenalty).
+   * - `'default'`   — preserve the order given in `providers` (or DEFAULT_PROVIDERS order).
+   */
+  providerPreference?: "fastest" | "healthiest" | "default";
+
+  /**
+   * When true, enable adaptive per-provider timeouts derived from observed
+   * avg latency (clamped to `timeoutMs` as the ceiling).  Falls back to the
+   * next-best provider in `fallbackChain` on timeout/error.
+   */
+  adaptiveTimeoutMs?: boolean;
+
+  /**
+   * Explicit ordered fallback chain.  When a provider in this list times out
+   * or errors, the next provider in the chain is attempted sequentially.
+   * Providers not in this list are still run in parallel as normal.
+   */
+  fallbackChain?: ProviderId[];
 }
 
 export interface ProviderAuth {
