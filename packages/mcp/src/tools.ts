@@ -7,6 +7,7 @@
 
 import {
   batchFindSimilar,
+  compareCandidates,
   downloadImage,
   exportCache,
   fetchWithLicense,
@@ -25,6 +26,7 @@ import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
   batchFindSimilarSchema,
+  compareCandidatesSchema,
   comparePhashesSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
@@ -237,6 +239,40 @@ export const TOOLS: ToolDef[] = [
           : undefined;
       const result = await exportCache(args.cacheDir, args.outputPath, filter);
       return renderJson(result);
+    },
+  },
+  {
+    name: "compare_candidates",
+    description:
+      "Analyse a SearchResultBundle for cross-provider duplicates. Runs two detection passes: (1) URL-level — normalised URLs that appear from multiple providers form a 'url' group (confidence 1.0); (2) pHash-level — candidates whose perceptual hashes are within a Hamming distance threshold form 'phash' groups. Returns a structured ProviderDedupeReport: { duplicateGroups: [{members, reason, confidence}], merged }. Use this after search_images or search_artist_images to understand which providers returned the same image, to tune federation provider selection, and to inform cache strategy. hammingThreshold defaults to 6.",
+    inputSchema: compareCandidatesSchema,
+    async handler(args) {
+      const bundle = {
+        candidates: args.candidates,
+        providerReports: args.providerReports ?? [],
+        warnings: args.warnings ?? [],
+      };
+      const report = compareCandidates(bundle, {
+        hammingThreshold: args.hammingThreshold,
+      });
+
+      // Build a human-readable digest.
+      const groupLines = report.duplicateGroups.map((g, i) => {
+        const providerList = g.members.map((m) => m.provider).join(", ");
+        return `  Group ${i + 1} [${g.reason}, confidence=${g.confidence.toFixed(2)}]: ${g.members.length} members across providers: ${providerList}`;
+      });
+      const digest =
+        report.duplicateGroups.length === 0
+          ? "No duplicates detected across providers."
+          : [
+              `${report.duplicateGroups.length} duplicate group(s) found. ${bundle.candidates.length - report.merged.length} candidate(s) collapsed.`,
+              ...groupLines,
+            ].join("\n");
+
+      return {
+        content: [{ type: "text", text: digest }],
+        structuredContent: report,
+      };
     },
   },
 ];

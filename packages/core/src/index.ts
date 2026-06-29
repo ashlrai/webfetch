@@ -26,7 +26,9 @@ export {
   dedupeByUrl,
   hammingDistance,
   findDuplicates,
+  compareCandidates,
 } from "./dedupe.ts";
+export type { CompareCandidatesOptions } from "./dedupe.ts";
 export { readImageMetadata, parseXmp, parseIptc, parseExifBuffer } from "./metadata-reader.ts";
 export type { EmbeddedMetadata } from "./metadata-reader.ts";
 export {

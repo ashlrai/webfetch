@@ -184,6 +184,41 @@ export interface SearchResultBundle {
   warnings: string[];
 }
 
+/**
+ * A single member of a duplicate group as returned by `compareCandidates()`.
+ * `index` is the position in the original `SearchResultBundle.candidates` array.
+ */
+export interface DedupeGroupMember {
+  index: number;
+  url: string;
+  provider: string;
+  phash?: string;
+}
+
+/**
+ * A cluster of candidates that are considered duplicates of each other.
+ * - `reason: 'phash'`  — members share a perceptual hash within the Hamming threshold.
+ * - `reason: 'url'`    — members share a normalised URL (after stripping cache-buster params).
+ * - `confidence`       — 0..1; 1.0 for exact URL matches, scales with phash algorithm quality otherwise.
+ */
+export interface DuplicateGroup {
+  members: DedupeGroupMember[];
+  reason: "phash" | "url";
+  /** 0..1 confidence that these are truly the same image. */
+  confidence: number;
+}
+
+/**
+ * Structured deduplication report returned by `compareCandidates()`.
+ *
+ * - `duplicateGroups` — every cluster of 2+ candidates detected as duplicates.
+ * - `merged`          — deduplicated candidate list (one representative per group, highest-scored first).
+ */
+export interface ProviderDedupeReport {
+  duplicateGroups: DuplicateGroup[];
+  merged: ImageCandidate[];
+}
+
 export type Fetcher = typeof fetch;
 
 export interface Provider {
