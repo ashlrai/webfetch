@@ -255,6 +255,13 @@ export interface SearchOptions {
    * as skipped in providerReports. Adds one round-trip of latency.
    */
   healthCheck?: boolean;
+
+  /**
+   * When true, analyze provider outcomes after federation and attach a
+   * `FederationRepairPlan` to the returned `SearchResultBundle.repairPlan`.
+   * Off by default — opt in when you need actionable failure diagnostics.
+   */
+  repairPlan?: boolean;
 }
 
 export interface ProviderAuth {
@@ -296,6 +303,12 @@ export interface SearchResultBundle {
    * `clusterAnnotation: "unique"`.
    */
   candidateClusters?: ClusterGroup[];
+  /**
+   * Populated when `SearchOptions.repairPlan` is true (opt-in, off by default).
+   * Provides actionable repair recommendations when providers failed, returned
+   * no results, or produced low-confidence results.
+   */
+  repairPlan?: FederationRepairPlan;
 }
 
 /**
@@ -456,6 +469,74 @@ export interface RefinementPlan {
     /** Fraction of candidates below the confidence threshold. */
     gapRatio: number;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Federation Repair Plan types
+// ---------------------------------------------------------------------------
+
+/**
+ * The concrete action a repair recommendation advises.
+ *
+ * - `'retry'`           — re-run the same query; transient error may have cleared.
+ * - `'relax-policy'`    — loosen the licensePolicy (e.g. safe-only → prefer-safe).
+ * - `'add-provider'`    — add one or more providers to the request.
+ * - `'enable-browser'`  — opt-in to the browser/managed-browser provider for JS-gated sites.
+ * - `'set-auth'`        — configure missing API credentials for a skipped provider.
+ * - `'increase-timeout'`— raise timeoutMs; providers timed out before returning results.
+ */
+export type RepairAction =
+  | "retry"
+  | "relax-policy"
+  | "add-provider"
+  | "enable-browser"
+  | "set-auth"
+  | "increase-timeout";
+
+/**
+ * A single actionable repair step produced by `getFederationRepairPlan()`.
+ */
+export interface RepairRecommendation {
+  /** The action class to take. */
+  action: RepairAction;
+  /** Human-readable explanation of why this action is recommended. */
+  rationale: string;
+  /**
+   * Structured parameters for the action.
+   * Shape depends on `action`:
+   *   - `add-provider`    → `{ providers: ProviderId[] }`
+   *   - `set-auth`        → `{ providers: ProviderId[]; envVars: string[] }`
+   *   - `relax-policy`    → `{ suggestedPolicy: LicensePolicy }`
+   *   - `increase-timeout`→ `{ suggestedTimeoutMs: number }`
+   *   - `retry` / `enable-browser` → `{}`
+   */
+  parameters: Record<string, unknown>;
+  /**
+   * Estimated fraction of the issue that this action resolves (0..1).
+   * Used for ranking recommendations — higher = more impactful first.
+   */
+  estimatedImpact: number;
+}
+
+/**
+ * Structured repair plan returned by `getFederationRepairPlan()` and
+ * optionally embedded in `SearchResultBundle.repairPlan`.
+ */
+export interface FederationRepairPlan {
+  /** All detected patterns that triggered recommendations. */
+  detectedPatterns: string[];
+  /**
+   * Ordered recommendations — highest `estimatedImpact` first.
+   * Empty when no issues are detected (all providers succeeded with results).
+   */
+  recommendations: RepairRecommendation[];
+  /**
+   * True when the repair engine found no actionable issues
+   * (every active provider succeeded and returned ≥1 result).
+   */
+  healthy: boolean;
+  /** ISO-8601 timestamp of when this plan was generated. */
+  generatedAt: string;
 }
 
 export type Fetcher = typeof fetch;

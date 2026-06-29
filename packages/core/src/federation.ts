@@ -16,6 +16,7 @@ import {
   emitProviderSequenceEvent,
   getFederationDiagnostics,
 } from "./federation-telemetry.ts";
+import { getFederationRepairPlan } from "./federation-repair.ts";
 import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { healthCheckProvider } from "./provider-health-check.ts";
@@ -24,6 +25,7 @@ import { clusterCandidates } from "./semantic-clustering.ts";
 import type {
   ClusterGroup,
   ErrorKind,
+  FederationRepairPlan,
   ImageCandidate,
   Provider,
   ProviderId,
@@ -182,11 +184,27 @@ export async function searchImages(
     candidateClusters = clusterCandidates(enriched, opts.clusteringOptions ?? {});
   }
 
+  // -------------------------------------------------------------------------
+  // Optional federation repair plan (opt-in via opts.repairPlan)
+  // -------------------------------------------------------------------------
+  const allReports = [...skippedByHealth, ...reports];
+  let repairPlan: FederationRepairPlan | undefined;
+  if (opts.repairPlan) {
+    repairPlan = getFederationRepairPlan({
+      reports: allReports,
+      candidates: enriched,
+      licensePolicy: opts.licensePolicy ?? "safe-only",
+      timeoutMs: opts.timeoutMs ?? 15_000,
+      requestedProviders: requested as ProviderId[],
+    });
+  }
+
   return {
     candidates: enriched,
-    providerReports: [...skippedByHealth, ...reports],
+    providerReports: allReports,
     warnings,
     ...(candidateClusters !== undefined ? { candidateClusters } : {}),
+    ...(repairPlan !== undefined ? { repairPlan } : {}),
   };
 }
 

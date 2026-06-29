@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
-import { getCacheAnalyticsSnapshot } from "webfetch-core";
+import type { FederationRepairPlan, ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
+import { getCacheAnalyticsSnapshot, getFederationRepairPlan } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -985,6 +985,147 @@ export async function cmdCacheAnalytics(
   return 0;
 }
 
+// ---------- `webfetch diagnose` -------------------------------------------
+
+/**
+ * Run a federated search, analyse the provider outcomes, and display a
+ * structured repair report with ranked actionable steps.
+ *
+ * `--json`  emits the raw `FederationRepairPlan` JSON for agent consumption.
+ */
+export async function cmdDiagnose(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch diagnose <query> [flags]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, json } = buildSearchOptions(args, env, cfg);
+  const json2 = json || getBool(args.flags, "json");
+
+  // Run the search with repair plan enabled
+  const searchOpts: SearchOptions = { ...opts, repairPlan: true };
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, searchOpts) })
+    : await core().searchImages(query, searchOpts);
+
+  // Build plan from bundle (cloud path may not return repairPlan; compute locally as fallback)
+  const plan: FederationRepairPlan =
+    bundle.repairPlan ??
+    getFederationRepairPlan({
+      reports: bundle.providerReports,
+      candidates: bundle.candidates,
+      licensePolicy: opts.licensePolicy ?? "safe-only",
+      timeoutMs: opts.timeoutMs ?? 15_000,
+      requestedProviders: opts.providers,
+    });
+
+  if (json2) {
+    io.stdout(JSON.stringify(plan, null, 2));
+    return 0;
+  }
+
+  // Human-readable output
+  io.stdout(c.bold(`Federation Diagnostic Report`));
+  io.stdout(c.dim(`Query: "${query}"  |  Generated: ${plan.generatedAt}`));
+  io.stdout("");
+
+  // Provider summary table
+  const provCols = [
+    { header: "provider", width: 22 },
+    { header: "status", width: 14 },
+    { header: "results", width: 8 },
+    { header: "timeMs", width: 8 },
+    { header: "detail", width: 40 },
+  ];
+  const provRows = bundle.providerReports.map((r) => {
+    const status = r.skipped
+      ? c.yellow(`skipped:${r.skipped}`)
+      : r.ok
+        ? c.green("ok")
+        : c.red(`failed:${r.errorKind ?? "?"}`);
+    const detail = r.skipped
+      ? c.dim(`(${r.skipped})`)
+      : r.ok
+        ? c.dim(`${r.count} results`)
+        : c.dim(r.error ?? "");
+    return [r.provider, status, String(r.count), String(r.timeMs), detail];
+  });
+  io.stdout(renderTable(provCols, provRows));
+  io.stdout("");
+
+  if (plan.healthy) {
+    io.stdout(c.green("✓ All providers healthy — no repair steps needed."));
+    io.stdout(c.dim(`  ${bundle.candidates.length} candidate(s) returned.`));
+    return 0;
+  }
+
+  // Detected patterns
+  if (plan.detectedPatterns.length > 0) {
+    io.stdout(c.bold("Detected patterns:"));
+    for (const p of plan.detectedPatterns) {
+      io.stdout(`  ${c.yellow("•")} ${p}`);
+    }
+    io.stdout("");
+  }
+
+  // Ranked repair steps
+  io.stdout(c.bold(`Repair recommendations (${plan.recommendations.length}):`));
+  plan.recommendations.forEach((rec, i) => {
+    const impactPct = Math.round(rec.estimatedImpact * 100);
+    io.stdout(`  ${c.bold(`${i + 1}.`)} [${c.cyan(rec.action)}]  impact ~${impactPct}%`);
+    io.stdout(`     ${rec.rationale}`);
+
+    // Render example command for common actions
+    const eg = exampleCommand(query, rec.action, rec.parameters, opts);
+    if (eg) {
+      io.stdout(`     ${c.dim("Example:")} ${c.bold(eg)}`);
+    }
+    io.stdout("");
+  });
+
+  return plan.recommendations.length > 0 ? 1 : 0;
+}
+
+function exampleCommand(
+  query: string,
+  action: string,
+  params: Record<string, unknown>,
+  opts: SearchOptions,
+): string | null {
+  const q = `"${query}"`;
+  switch (action) {
+    case "retry":
+      return `webfetch search ${q}`;
+    case "increase-timeout": {
+      const ms = params.suggestedTimeoutMs as number | undefined;
+      return ms ? `webfetch search ${q} --timeout-ms ${ms}` : null;
+    }
+    case "relax-policy": {
+      const pol = params.suggestedPolicy as string | undefined;
+      return pol ? `webfetch search ${q} --license ${pol}` : null;
+    }
+    case "add-provider": {
+      const providers = params.providers as string[] | undefined;
+      if (!providers?.length) return null;
+      const existing = opts.providers ?? [];
+      const combined = [...new Set([...existing, ...providers])].join(",");
+      return `webfetch search ${q} --providers ${combined}`;
+    }
+    case "enable-browser":
+      return `webfetch search ${q} --providers browser`;
+    case "set-auth": {
+      const envVars = params.envVars as string[] | undefined;
+      if (!envVars?.length) return null;
+      return `${envVars.map((v) => `${v}=<key>`).join(" ")} webfetch search ${q}`;
+    }
+    default:
+      return null;
+  }
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -1022,6 +1163,7 @@ ${c.bold("COMMANDS")}
   config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
   signup                                Open https://app.getwebfetch.com/signup in your browser
   cache-analytics [--since 7d]          Query-replay stats, cache-hit diagnostics, provider ranking
+  diagnose <query>                      Run search + show ranked repair steps for provider failures
   help                                  Show this message
   version                               Print version
 
@@ -1070,6 +1212,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   config: cmdConfig,
   signup: cmdSignup,
   "cache-analytics": cmdCacheAnalytics,
+  diagnose: cmdDiagnose,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
