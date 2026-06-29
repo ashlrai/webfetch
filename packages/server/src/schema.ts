@@ -69,3 +69,9 @@ export const comparePhashesSchema = z.object({
   urlA: z.string().url(),
   urlB: z.string().url(),
 });
+
+export const batchFindSimilarSchema = z.object({
+  urls: z.array(z.string().url()).min(1).max(50),
+  providers: z.array(providerIdSchema).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});

@@ -12,6 +12,12 @@ export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";
 export { findSimilar } from "./find-similar.ts";
+export { batchFindSimilar } from "./batch-find-similar.ts";
+export type {
+  BatchFindSimilarInput,
+  BatchFindSimilarOutput,
+  BatchFindSimilarResult,
+} from "./batch-find-similar.ts";
 export {
   perceptualHash,
   perceptualHashStructured,

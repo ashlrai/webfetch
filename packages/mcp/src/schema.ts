@@ -69,6 +69,25 @@ export const comparePhashesSchema = z.object({
   urlB: z.string().url().describe("Second image URL to compare"),
 });
 
+export const batchFindSimilarSchema = z.object({
+  urls: z
+    .array(z.string().url())
+    .min(1)
+    .max(50)
+    .describe("Public image URLs to reverse-search (max 50)"),
+  providers: z
+    .array(providerIdSchema)
+    .optional()
+    .describe("Providers to use; supported: 'brave', 'serpapi'"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe("Max candidates per URL after deduplication (default 20)"),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -76,6 +95,7 @@ export const schemas = {
   download_image: downloadImageSchema,
   fetch_with_license: fetchWithLicenseSchema,
   find_similar: findSimilarSchema,
+  batch_find_similar: batchFindSimilarSchema,
   probe_page: probePageSchema,
   compare_phashes: comparePhashesSchema,
 } as const;

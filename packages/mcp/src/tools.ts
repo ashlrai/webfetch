@@ -6,6 +6,7 @@
  */
 
 import {
+  batchFindSimilar,
   downloadImage,
   fetchWithLicense,
   findSimilar,
@@ -20,6 +21,7 @@ import {
 import { z } from "zod";
 import { renderJson, renderSearch } from "./render.ts";
 import {
+  batchFindSimilarSchema,
   comparePhashesSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
@@ -149,6 +151,19 @@ export const TOOLS: ToolDef[] = [
         hamming,
         isMatch: hamming <= 6,
       });
+    },
+  },
+  {
+    name: "batch_find_similar",
+    description:
+      "Reverse-image-search multiple public image URLs in a single call, across one or more providers (brave, serpapi). Returns per-URL candidate lists with heuristic licenses, deduplicated across providers. Federation-level rate-limit state is checked per-provider per-URL; saturated providers are skipped with a warning rather than blocking the batch. Use when an agent needs to discover similar content for many images at once.",
+    inputSchema: batchFindSimilarSchema,
+    async handler(args) {
+      const out = await batchFindSimilar(
+        { urls: args.urls, providers: args.providers, limit: args.limit },
+        {},
+      );
+      return renderJson(out);
     },
   },
   {

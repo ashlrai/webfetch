@@ -15,6 +15,7 @@
 import {
   ALL_PROVIDERS,
   DEFAULT_PROVIDERS,
+  batchFindSimilar,
   downloadImage,
   fetchWithLicense,
   findSimilar,
@@ -29,6 +30,7 @@ import {
 import { z } from "zod";
 import { assertPublicHttpUrl } from "../../core/src/download.ts";
 import {
+  batchFindSimilarSchema,
   comparePhashesSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
@@ -153,6 +155,12 @@ const handlers: Record<string, Handler> = {
   "/similar": wrap(findSimilarSchema, async (a) =>
     findSimilar({ url: a.url }, { providers: a.providers }),
   ),
+  "/batch-find-similar": wrap(batchFindSimilarSchema, async (a) =>
+    batchFindSimilar(
+      { urls: a.urls, providers: a.providers, limit: a.limit },
+      {},
+    ),
+  ),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -211,7 +219,7 @@ export function getProviders(): Response {
       data: {
         all,
         defaults: DEFAULT_PROVIDERS,
-        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/federation-diagnostics", "/compare-phashes"],
+        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/batch-find-similar", "/federation-diagnostics", "/compare-phashes"],
       },
     }),
     { status: 200, headers: { "content-type": "application/json; charset=utf-8" } },
