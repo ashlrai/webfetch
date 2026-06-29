@@ -291,12 +291,44 @@ function licenseScore(c: ImageCandidate): number {
 }
 
 /**
+ * Compute a confidence decay factor when a group mixes UNKNOWN-license
+ * providers with known-license providers.
+ *
+ * Rationale: if the same visual is returned by both a trusted source (e.g.,
+ * Wikimedia with CC0) and an UNKNOWN-license scraper (e.g., Brave/Bing), the
+ * UNKNOWN members cast doubt on provenance — they may be hotlinking without
+ * rights. The decay is proportional to the fraction of UNKNOWN members:
+ *
+ *   decay = 1 - unknownFraction × UNKNOWN_MIX_PENALTY
+ *
+ * where `UNKNOWN_MIX_PENALTY = 0.25` means a fully-UNKNOWN group is penalised
+ * by 25%, and a 50/50 split is penalised by 12.5%. Pure known-license groups
+ * (including pure-UNKNOWN groups that have no known comparator) receive no
+ * decay — the penalty only fires when known and UNKNOWN providers co-exist.
+ */
+const UNKNOWN_MIX_PENALTY = 0.25;
+
+function unknownMixDecay(members: ImageCandidate[]): number {
+  if (members.length === 0) return 1;
+  const unknownCount = members.filter((c) => (LICENSE_RANK[c.license] ?? 99) >= 99).length;
+  const knownCount = members.length - unknownCount;
+  // Only apply decay when there is at least one known AND at least one UNKNOWN member.
+  if (knownCount === 0 || unknownCount === 0) return 1;
+  const unknownFraction = unknownCount / members.length;
+  return Math.max(0, 1 - unknownFraction * UNKNOWN_MIX_PENALTY);
+}
+
+/**
  * Compute aggregated confidence for a group of candidates.
  *
- * Formula: phashWeight × avgPhashConfidence + (1 - phashWeight) × bestLicenseScore
+ * Formula:
+ *   base = phashWeight × avgPhashConfidence + (1 - phashWeight) × bestLicenseScore
+ *   result = base × unknownMixDecay(members)
  *
  * This rewards groups where all members used the high-quality DCT hash AND at
- * least one member has a well-known open license.
+ * least one member has a well-known open license. It also penalises mixed
+ * groups where UNKNOWN-license providers co-exist with known-license providers,
+ * reflecting reduced provenance certainty.
  */
 function aggregateGroupConfidence(
   members: ImageCandidate[],
@@ -308,7 +340,8 @@ function aggregateGroupConfidence(
     members.reduce((s, c) => s + phashAlgorithmConfidence(c), 0) / members.length;
   const bestLicense = members.reduce((best, c) => Math.max(best, licenseScore(c)), 0);
 
-  return phashWeight * avgPhash + (1 - phashWeight) * bestLicense;
+  const base = phashWeight * avgPhash + (1 - phashWeight) * bestLicense;
+  return base * unknownMixDecay(members);
 }
 
 /**
@@ -500,11 +533,17 @@ export async function dedupeWithPhashGrouping(
       continue;
     }
 
-    // Pick representative: highest score, then first in memberRepIndices order.
+    // Pick representative: highest score, then prefer known-license over UNKNOWN
+    // (lower LICENSE_RANK = more open = preferred), then first in order.
     const repRi = memberRepIndices.reduce((best, ri) => {
       const bScore = repCandidates[best]?.score ?? 0;
       const iScore = repCandidates[ri]?.score ?? 0;
-      return iScore > bScore ? ri : best;
+      if (iScore > bScore) return ri;
+      if (iScore < bScore) return best;
+      // Scores equal — prefer the candidate with the better (lower) license rank.
+      const bRank = LICENSE_RANK[repCandidates[best]?.license ?? "UNKNOWN"] ?? 99;
+      const iRank = LICENSE_RANK[repCandidates[ri]?.license ?? "UNKNOWN"] ?? 99;
+      return iRank < bRank ? ri : best;
     }, memberRepIndices[0]!);
 
     const rep = repCandidates[repRi]!;

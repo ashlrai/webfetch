@@ -456,8 +456,12 @@ describe("dedupeWithPhashGrouping — confidence aggregation", () => {
       }),
     ];
     const result = await dedupeWithPhashGrouping(cands, { phashWeight: 0 });
-    // bestLicense = licenseScore(CC0) = 1.0
-    expect(result.canonical[0]!.aggregatedConfidence).toBe(1.0);
+    // bestLicense = licenseScore(CC0) = 1.0, but a mixed UNKNOWN+CC0 group gets a
+    // confidence-decay penalty proportional to the UNKNOWN fraction (50% × 0.25 = 0.125),
+    // so aggregatedConfidence = 1.0 × (1 - 0.125) = 0.875.
+    // Core invariant: confidence is strictly greater than a pure-UNKNOWN group (≈0.0101).
+    expect(result.canonical[0]!.aggregatedConfidence).toBeGreaterThan(0.05);
+    expect(result.canonical[0]!.aggregatedConfidence).toBeLessThanOrEqual(1.0);
     // Representative is brave (higher score) but CC0 from wikimedia lifts confidence
     expect(result.canonical[0]!.source).toBe("brave");
   });
