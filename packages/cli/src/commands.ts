@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { ImageCandidate, ProviderId, SearchOptions, SearchResultBundle } from "webfetch-core";
+import { getCacheAnalyticsSnapshot } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -881,6 +882,109 @@ export async function cmdWatch(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Pr
   return 0;
 }
 
+// ---------- `webfetch cache-analytics` -------------------------------------
+
+/**
+ * Parse a human-friendly time duration string into milliseconds.
+ * Accepts: Nd (days), Nh (hours), Nm (minutes), Ns (seconds).
+ * Falls back to parsing as raw milliseconds if no suffix.
+ */
+function parseSinceFlag(s: string): number {
+  const m = /^(\d+(?:\.\d+)?)(d|h|m|s)$/.exec(s.trim());
+  if (m) {
+    const n = parseFloat(m[1]!);
+    switch (m[2]) {
+      case "d": return Math.round(n * 86_400_000);
+      case "h": return Math.round(n * 3_600_000);
+      case "m": return Math.round(n * 60_000);
+      case "s": return Math.round(n * 1_000);
+    }
+  }
+  const ms = Number.parseInt(s, 10);
+  return Number.isFinite(ms) && ms > 0 ? ms : 7 * 86_400_000;
+}
+
+export async function cmdCacheAnalytics(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const sinceRaw = getString(args.flags, "since") ?? "7d";
+  const windowMs = parseSinceFlag(sinceRaw);
+  const json = getBool(args.flags, "json");
+
+  const snapshot = getCacheAnalyticsSnapshot(windowMs);
+
+  if (json) {
+    io.stdout(JSON.stringify(snapshot, null, 2));
+    return 0;
+  }
+
+  // Human-readable output
+  const windowLabel = sinceRaw;
+  io.stdout(c.bold(`Cache Analytics  (window: ${windowLabel})`));
+  io.stdout(c.dim(`Generated: ${new Date(snapshot.generatedAt).toISOString()}  |  Total events in buffer: ${snapshot.totalEvents}`));
+  io.stdout("");
+
+  const hitPct = (snapshot.cacheHitRate * 100).toFixed(1);
+  io.stdout(`${c.bold("Overall cache-hit rate:")}  ${hitPct}%`);
+  io.stdout("");
+
+  // Query frequency table
+  const freqEntries = Object.entries(snapshot.queryFrequency).sort((a, b) => b[1] - a[1]);
+  if (freqEntries.length === 0) {
+    io.stdout(c.dim("No queries recorded in this window."));
+    return 0;
+  }
+
+  io.stdout(c.bold("Top queries by frequency:"));
+  const freqCols = [
+    { header: "#", width: 3, align: "right" as const },
+    { header: "count", width: 6 },
+    { header: "query", width: 60 },
+  ];
+  const freqRows = freqEntries.slice(0, 20).map(([q, count], i) => [
+    String(i + 1),
+    String(count),
+    q,
+  ]);
+  io.stdout(renderTable(freqCols, freqRows));
+  io.stdout("");
+
+  // Recommended providers
+  if (snapshot.recommendedProviders.length > 0) {
+    io.stdout(c.bold("Recommended providers (by cache-hit × confidence):"));
+    snapshot.recommendedProviders.slice(0, 10).forEach((pid, i) => {
+      io.stdout(`  ${c.dim(`${i + 1}.`)} ${pid}`);
+    });
+    io.stdout("");
+  }
+
+  // Per-query provider coverage (top 5 queries)
+  const topQueries = snapshot.providerCoverageByQuery.slice(0, 5);
+  if (topQueries.length > 0) {
+    io.stdout(c.bold("Provider coverage (top queries):"));
+    for (const row of topQueries) {
+      io.stdout(c.dim(`  Query: "${row.query}"`));
+      const cols = [
+        { header: "provider", width: 22 },
+        { header: "hitRate", width: 9 },
+        { header: "avgConf", width: 9 },
+        { header: "candidates", width: 11 },
+      ];
+      const rows = row.providers.map((p) => [
+        p.id,
+        `${(p.hitRate * 100).toFixed(1)}%`,
+        p.avgConfidence.toFixed(3),
+        String(p.totalCandidates),
+      ]);
+      io.stdout(renderTable(cols, rows));
+      io.stdout("");
+    }
+  }
+
+  return 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -917,6 +1021,7 @@ ${c.bold("COMMANDS")}
   watch <query> [--interval 1h]         Poll a query; emit only new candidates per tick
   config <init|show|get|set>            Manage ~/.webfetchrc (e.g. 'config set apiKey <key>')
   signup                                Open https://app.getwebfetch.com/signup in your browser
+  cache-analytics [--since 7d]          Query-replay stats, cache-hit diagnostics, provider ranking
   help                                  Show this message
   version                               Print version
 
@@ -964,6 +1069,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   watch: cmdWatch,
   config: cmdConfig,
   signup: cmdSignup,
+  "cache-analytics": cmdCacheAnalytics,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,

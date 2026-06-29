@@ -8,6 +8,7 @@ import { checkBearer } from "./auth.ts";
 import { evaluateCors, preflight } from "./cors.ts";
 import {
   dispatchPost,
+  getCacheAnalyticsResponse,
   getCacheEntriesResponse,
   getCacheStatsResponse,
   getFederationDiagnosticsResponse,
@@ -75,6 +76,12 @@ export function startServer(opts: ServerOptions) {
           url.pathname === "/v1/federation-strategy")
       ) {
         return withHeaders(getFederationStrategyResponse(req), cors);
+      }
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/cache-analytics" || url.pathname === "/v1/cache-analytics")
+      ) {
+        return withHeaders(getCacheAnalyticsResponse(req), cors);
       }
       if (
         req.method === "GET" &&

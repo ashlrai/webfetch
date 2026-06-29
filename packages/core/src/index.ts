@@ -86,6 +86,23 @@ export type {
   FederationDiagnostics,
 } from "./federation-telemetry.ts";
 export {
+  recordSearchEvent,
+  getCacheReplayStats,
+  getCacheAnalyticsSnapshot,
+  replayQuery,
+  _resetAnalytics,
+} from "./cache-analytics.ts";
+export type {
+  CandidateHit,
+  SearchEvent,
+  ProviderCoverageEntry,
+  QueryCoverageRow,
+  CacheReplayStats,
+  ReplayOptions,
+  ReplayResult,
+  CacheAnalyticsSnapshot,
+} from "./cache-analytics.ts";
+export {
   trackEvent,
   isTelemetryEnabled,
   installHash,

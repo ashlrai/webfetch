@@ -21,6 +21,7 @@ import {
   exportCache,
   fetchWithLicense,
   findSimilar,
+  getCacheAnalyticsSnapshot,
   getCacheStats,
   getFederationDiagnostics,
   getProviderRanking,
@@ -270,6 +271,7 @@ export function getProviders(): Response {
           "/federation-diagnostics",
           "/federation-strategy",
           "/compare-phashes",
+          "/cache-analytics",
           "/cache/stats",
           "/cache/entries",
           "/cache/export",
@@ -308,6 +310,39 @@ export async function getCacheEntriesResponse(req: Request): Promise<Response> {
   } catch (e: any) {
     return jsonErr(e?.message ?? "internal error", 500);
   }
+}
+
+export function getCacheAnalyticsResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const windowMsParam = url.searchParams.get("windowMs");
+  const sinceParam = url.searchParams.get("since");
+
+  let windowMs: number;
+  if (windowMsParam !== null) {
+    windowMs = Number(windowMsParam);
+    if (isNaN(windowMs) || windowMs < 1000 || windowMs > 30 * 24 * 3_600_000) {
+      return jsonErr("windowMs must be between 1000 and 2592000000 (30 days)", 422);
+    }
+  } else if (sinceParam !== null) {
+    // Parse human-friendly duration: Nd, Nh, Nm, Ns
+    const m = /^(\d+(?:\.\d+)?)(d|h|m|s)$/.exec(sinceParam.trim());
+    if (m) {
+      const n = parseFloat(m[1]!);
+      const unit = m[2]!;
+      windowMs =
+        unit === "d" ? Math.round(n * 86_400_000) :
+        unit === "h" ? Math.round(n * 3_600_000) :
+        unit === "m" ? Math.round(n * 60_000) :
+        Math.round(n * 1_000);
+    } else {
+      return jsonErr("since must be a duration like 7d, 24h, 30m, 60s", 422);
+    }
+  } else {
+    windowMs = 7 * 24 * 3_600_000; // default 7 days
+  }
+
+  const snapshot = getCacheAnalyticsSnapshot(windowMs);
+  return jsonOk(snapshot);
 }
 
 export function getFederationDiagnosticsResponse(req: Request): Response {
