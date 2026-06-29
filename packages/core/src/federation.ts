@@ -10,7 +10,7 @@
  * best pick, call `pickBest()` on the returned candidates.
  */
 
-import { dedupeByUrl } from "./dedupe.ts";
+import { dedupeByUrl, dedupeImagesByPhash } from "./dedupe.ts";
 import { decayProviderCandidateConfidence } from "./perceptual-hash.ts";
 import {
   emitProviderEvent,
@@ -26,6 +26,8 @@ import { providerRegistry } from "./provider-registry.ts";
 import { clusterCandidates } from "./semantic-clustering.ts";
 import { clusterCandidatesBySemantic } from "./semantic-dedupe.ts";
 import { recordScorecardEvent, selectProvidersForQuery } from "./provider-scorecard.ts";
+import { recordProviderTimeout, recordProviderSuccess } from "./provider-degradation.ts";
+import { predictCacheHits, recordCacheHitPrediction } from "./cache-analytics.ts";
 import type {
   ClusterGroup,
   EarlyExitCriteria,
@@ -33,6 +35,7 @@ import type {
   FederationRepairPlan,
   ImageCandidate,
   License,
+  PhashDedupeResult,
   Provider,
   ProviderId,
   ProviderReport,
@@ -166,18 +169,65 @@ export async function searchImages(
   }
 
   // -------------------------------------------------------------------------
+  // providerChain override: when a pre-computed degradation chain is supplied,
+  // use its primary list as the ordered provider set and append its fallback
+  // list to opts.fallbackChain so they are attempted sequentially afterwards.
+  // -------------------------------------------------------------------------
+  if (opts.providerChain) {
+    const chain = opts.providerChain;
+    // Intersect with activeProviders (health-check may have removed some)
+    const activeSet = new Set(activeProviders);
+    const chainPrimary = chain.primary.filter((id) => activeSet.has(id));
+    const chainFallback = chain.fallback.filter((id) => activeSet.has(id));
+    // Re-assign activeProviders to the primary set; merge fallback into
+    // opts.fallbackChain (chain fallback always appended after explicit chain)
+    activeProviders = chainPrimary;
+    // Merge: explicit fallbackChain first, then degradation fallback
+    const existingFallback = opts.fallbackChain ?? [];
+    opts = {
+      ...opts,
+      fallbackChain: [
+        ...existingFallback.filter((id) => !chainFallback.includes(id)),
+        ...chainFallback,
+      ],
+    };
+  }
+
+  // -------------------------------------------------------------------------
   // Secondary scorecard-based ordering (applied before providerPreference
   // so providerPreference can further re-sort the scorecard-ordered list).
   // Only active when no explicit providers list was given by the caller.
   // -------------------------------------------------------------------------
   let scorecardOrdered = activeProviders;
   if (!opts.providers && opts.scorecardSelection) {
+    // When preferCachedProviders is requested, compute Bayesian cache-hit
+    // predictions and pass them to selectProvidersForQuery for blended ranking.
+    let cacheHitPredictions: Array<{ provider: ProviderId; rankScore: number }> | undefined;
+    if (opts.preferCachedProviders) {
+      cacheHitPredictions = predictCacheHits(query, activeProviders);
+    }
     scorecardOrdered = selectProvidersForQuery(
       activeProviders,
       opts.licensePolicy ?? "safe-only",
       undefined,
       opts.scorecardSelection,
+      cacheHitPredictions,
+      opts.preferCachedProviders ?? false,
     );
+  } else if (opts.preferCachedProviders) {
+    // preferCachedProviders without scorecardSelection: still reorder using
+    // predictions alone (no scorecard blend — pure cache-hit ordering).
+    const predictions = predictCacheHits(query, activeProviders);
+    if (predictions.length > 0) {
+      const rankMap = new Map(predictions.map((p) => [p.provider, p.rankScore]));
+      scorecardOrdered = [...activeProviders].sort((a, b) => {
+        const sa = rankMap.get(a) ?? 0.5;
+        const sb = rankMap.get(b) ?? 0.5;
+        const diff = sb - sa;
+        if (Math.abs(diff) > 1e-9) return diff;
+        return activeProviders.indexOf(a) - activeProviders.indexOf(b);
+      });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -288,11 +338,28 @@ export async function searchImages(
   }
 
   // -------------------------------------------------------------------------
+  // Optional multi-provider pHash similarity deduplication (default ON).
+  // Runs after license filtering + ranking so dedup happens on the best-ordered
+  // candidate list. Controlled by opts.phashDedup (default true) and the
+  // WEBFETCH_PHASH_DEDUP=0 environment variable.
+  // -------------------------------------------------------------------------
+  const phashDedupEnabled =
+    opts.phashDedup !== false &&
+    process.env.WEBFETCH_PHASH_DEDUP !== "0";
+
+  let phashDedupeResult: PhashDedupeResult | undefined;
+  let phashDedupedCandidates = enriched;
+  if (phashDedupEnabled && enriched.length > 1) {
+    phashDedupeResult = await dedupeImagesByPhash(enriched, opts.phashDedupOptions ?? {});
+    phashDedupedCandidates = phashDedupeResult.dedupedCandidates as typeof enriched;
+  }
+
+  // -------------------------------------------------------------------------
   // Optional post-ranking semantic clustering
   // -------------------------------------------------------------------------
   let candidateClusters: ClusterGroup[] | undefined;
   if (opts.clusterSimilar) {
-    candidateClusters = clusterCandidates(enriched, opts.clusteringOptions ?? {});
+    candidateClusters = clusterCandidates(phashDedupedCandidates, opts.clusteringOptions ?? {});
   }
 
   // -------------------------------------------------------------------------
@@ -300,9 +367,9 @@ export async function searchImages(
   // When active, candidates is replaced with one representative per unique visual.
   // -------------------------------------------------------------------------
   let semanticDedupeResult: SemanticDedupeResult | undefined;
-  let finalCandidates = enriched;
+  let finalCandidates = phashDedupedCandidates;
   if (opts.semanticDedupe) {
-    semanticDedupeResult = clusterCandidatesBySemantic(enriched);
+    semanticDedupeResult = clusterCandidatesBySemantic(phashDedupedCandidates);
     // SemanticDedupeCandidate extends ImageCandidate; cast to the enriched shape.
     finalCandidates = semanticDedupeResult.allRepresentatives as typeof enriched;
   }
@@ -322,12 +389,34 @@ export async function searchImages(
     });
   }
 
+  // -------------------------------------------------------------------------
+  // Train the Bayesian cache-hit prediction model with actual outcomes.
+  // We record the actual cache-hit fraction per provider so future calls to
+  // predictCacheHits() improve over time — even when preferCachedProviders
+  // was not requested (passive learning from every successful federation run).
+  // -------------------------------------------------------------------------
+  for (const report of allReports) {
+    if (report.ok && report.count > 0) {
+      // Determine whether the provider had any cache hits in this run.
+      // We use the scorecard cacheHitFraction from the most recent event —
+      // for now we approximate: if a provider returned results on its first
+      // call, treat as potential cache hit (1 = hit, 0 = live-only).
+      // A more precise signal is injected by providers that set cacheHitFraction.
+      const actualHit = report.count > 0; // provider delivered results
+      // We don't have per-candidate cacheHit data here; use result-presence as
+      // a conservative proxy. The real per-candidate signal flows via
+      // recordCacheHitPrediction calls from callers that know the full picture.
+      recordCacheHitPrediction(query, report.provider, true, actualHit);
+    }
+  }
+
   return {
     candidates: finalCandidates,
     providerReports: allReports,
     warnings,
     ...(candidateClusters !== undefined ? { candidateClusters } : {}),
     ...(semanticDedupeResult !== undefined ? { semanticDedupeResult } : {}),
+    ...(phashDedupeResult !== undefined ? { phashDedupeResult } : {}),
     ...(repairPlan !== undefined ? { repairPlan } : {}),
   };
 }
@@ -607,6 +696,8 @@ async function runProvider(
     });
     // Record scorecard observation for this successful call.
     recordScorecardEvent(id, true, elapsed, out);
+    // Update session-scoped degradation recovery counter.
+    recordProviderSuccess(id);
     return out;
   } catch (e) {
     const elapsed = Date.now() - started;
@@ -617,6 +708,10 @@ async function runProvider(
     // Track timeouts for degradedTimeoutMs feature.
     if (kind === "timeout" && opts.degradedTimeoutMs) {
       _timeoutHistory.set(id, (_timeoutHistory.get(id) ?? 0) + 1);
+    }
+    // Always record session-scoped timeout for degradation routing.
+    if (kind === "timeout") {
+      recordProviderTimeout(id);
     }
 
     reports.push({

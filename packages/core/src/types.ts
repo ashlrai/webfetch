@@ -362,6 +362,52 @@ export interface SearchOptions {
    * CLI flag: `--semantic-dedupe`
    */
   semanticDedupe?: boolean;
+
+  /**
+   * When true (default), apply multi-provider pHash similarity deduplication
+   * after license filtering and ranking. Groups visually identical images from
+   * different providers/CDNs using a Hamming-distance matrix (threshold ≤ 8)
+   * and keeps only the highest-confidence/highest-resolution primary from each
+   * cluster. The full cluster map and metrics are attached to
+   * `SearchResultBundle.phashDedupeResult`.
+   *
+   * Set to false or set env var `WEBFETCH_PHASH_DEDUP=0` to disable.
+   *
+   * CLI flag: `--phash-dedup` (default true)
+   */
+  phashDedup?: boolean;
+
+  /**
+   * Fine-tune the pHash dedup pass when `phashDedup` is true.
+   * See `PhashDedupeOptions` for details.
+   */
+  phashDedupOptions?: PhashDedupeOptions;
+
+  /**
+   * When true, reorder the provider queue to query high-cache-hit-probability
+   * sources first. Uses the Bayesian model in `cache-analytics.ts` to predict
+   * P(cache-hit | provider, query-class) and blends that with the scorecard
+   * composite score (60% scorecard, 40% cache prediction).
+   *
+   * Has no effect unless `scorecardSelection` is also set or the scorecard has
+   * accumulated data. Does not change which providers are called — only their
+   * dispatch order.
+   */
+  preferCachedProviders?: boolean;
+
+  /**
+   * Pre-computed provider chain from `selectProviderChain()` or
+   * `providerDegradationRouting()`.
+   *
+   * When supplied, overrides the default `selectProvidersForQuery` ordering
+   * used by `scorecardSelection`. The `primary` providers are dispatched first
+   * (in order); the `fallback` providers are run sequentially only if the
+   * primary set returns zero results.
+   *
+   * Typically built by calling `providerDegradationRouting(providers)` before
+   * invoking `searchImages`, then passing the result here.
+   */
+  providerChain?: import("./provider-degradation.ts").ProviderChain;
 }
 
 export interface ProviderAuth {
@@ -416,6 +462,13 @@ export interface SearchResultBundle {
    * When present, `candidates` has been replaced with `allRepresentatives`.
    */
   semanticDedupeResult?: import("./semantic-dedupe.ts").SemanticDedupeResult;
+  /**
+   * Populated when `SearchOptions.phashDedup` is true (the default).
+   * Contains the full multi-provider pHash cluster map, flat deduplicated
+   * candidates, and aggregate metrics. When present, `candidates` has been
+   * replaced with `phashDedupeResult.dedupedCandidates`.
+   */
+  phashDedupeResult?: PhashDedupeResult;
 }
 
 /**
@@ -753,6 +806,70 @@ export interface BatchFindSimilarBundleResult {
 }
 
 export type Fetcher = typeof fetch;
+
+// ---------------------------------------------------------------------------
+// dedupeImagesByPhash types
+// ---------------------------------------------------------------------------
+
+/**
+ * Options for `dedupeImagesByPhash()`.
+ */
+export interface PhashDedupeOptions {
+  /**
+   * Maximum Hamming distance (inclusive) to consider two pHashes as the same
+   * visual. Default: 8.
+   */
+  hammingThreshold?: number;
+  /**
+   * When true, download and compute pHashes for candidates that don't have one.
+   * Default: false (only candidates with pre-computed hashes participate).
+   */
+  computeHashes?: boolean;
+  /** Injectable fetch implementation. Used when computeHashes is true. */
+  fetcher?: Fetcher;
+  /** User-Agent header for downloader when computeHashes is true. */
+  userAgent?: string;
+  /** AbortSignal for cancelling in-flight hash computation. */
+  signal?: AbortSignal;
+  /**
+   * Weight (0..1) for pHash algorithm confidence in aggregated confidence.
+   * Remainder (1 - phashWeight) is given to the best license rank score.
+   * Default: 0.6.
+   */
+  phashWeight?: number;
+}
+
+/**
+ * Metrics emitted by `dedupeImagesByPhash()`.
+ */
+export interface PhashDedupeMetrics {
+  /** Total number of clusters (groups with 2+ visually identical images). */
+  clusterCount: number;
+  /** Total number of candidates that were removed as duplicates. */
+  totalDeduplicated: number;
+  /** Average number of candidates per cluster (cluster members / clusterCount, or 0). */
+  avgClusterSize: number;
+  /** Average Hamming distance between all intra-cluster pairs that have hashes. */
+  avgIntraClusterHammingDistance: number;
+}
+
+/**
+ * Result of `dedupeImagesByPhash()`.
+ *
+ * - `clusters`  — Map<clusterId, [primary, ...duplicates]> where the primary is
+ *   the highest-confidence / highest-resolution candidate in the group.
+ * - `dedupedCandidates` — flat list: one primary per cluster plus all singletons,
+ *   in original relative order (singletons after cluster primaries, sorted by score).
+ * - `metrics`   — aggregate statistics for the deduplication pass.
+ */
+export interface PhashDedupeResult {
+  /** Map from cluster id string to [primary, ...duplicates]. */
+  clusters: Map<string, ImageCandidate[]>;
+  /** Flat deduplicated list ready to replace the original candidate array. */
+  dedupedCandidates: ImageCandidate[];
+  /** Aggregate metrics for this deduplication pass. */
+  metrics: PhashDedupeMetrics;
+}
 
 // ---------------------------------------------------------------------------
 // Provider Registry types (re-exported from provider-registry.ts for

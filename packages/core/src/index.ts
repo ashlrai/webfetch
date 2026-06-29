@@ -178,6 +178,21 @@ export {
   recordFederationHashMetrics,
   _resetTelemetry,
 } from "./federation-telemetry.ts";
+export {
+  selectProviderChain,
+  providerDegradationRouting,
+  recordProviderTimeout,
+  recordProviderSuccess,
+  _resetDegradationState,
+  _sessionTimeouts,
+  _sessionSuccesses,
+} from "./provider-degradation.ts";
+export type {
+  ProviderChain,
+  DegradationReason,
+  SkippedProviderDiagnostic,
+  DegradationRoutingOptions,
+} from "./provider-degradation.ts";
 export { getBucketState } from "./rate-limit.ts";
 export {
   healthCheckProvider,
