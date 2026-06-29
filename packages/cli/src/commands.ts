@@ -10,8 +10,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
-import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS } from "webfetch-core";
+import type { FederationRepairPlan, FederationPhashAuditReport, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, buildFederationPhashAuditReport, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS } from "webfetch-core";
 import type { CacheHitPrediction } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
@@ -2142,6 +2142,205 @@ export async function cmdDedupeReport(
   return 0;
 }
 
+// ---------- `webfetch audit-phash-federation` ---------------------------------
+
+/**
+ * `webfetch audit-phash-federation <query> [flags]`
+ *
+ * Runs a federated search for <query>, then emits a structured report:
+ *   - Total uniques by Hamming distance (threshold tuning guide)
+ *   - Provider agreement matrix (which pairs agree most often)
+ *   - License confidence variance per cluster
+ *   - Actionable recommendations
+ *
+ * Flags:
+ *   --json                    Emit raw JSON FederationPhashAuditReport.
+ *   --hamming-threshold N     Hamming distance threshold for clustering (default 8).
+ *   --anomaly-min-delta N     Min confidence delta to flag as anomaly (default 0.3).
+ *   --verbose                 Print provider reports to stderr.
+ */
+export async function cmdAuditPhashFederation(
+  args: ParsedArgs,
+  io: CommandIO = DEFAULT_IO,
+): Promise<number> {
+  const env = io.env ?? process.env;
+  const query = args.positional.join(" ").trim();
+  if (!query) {
+    io.stderr(c.red("usage: webfetch audit-phash-federation <query> [--hamming-threshold N] [--json]"));
+    return 2;
+  }
+
+  const cfg = await resolveCliConfig(args, env);
+  const { opts, verbose, json } = buildSearchOptions(args, env, cfg);
+
+  const hammingThresholdRaw = getInt(args.flags, "hamming-threshold");
+  const hammingThreshold =
+    hammingThresholdRaw !== undefined ? Math.max(1, Math.min(64, hammingThresholdRaw)) : 8;
+
+  const anomalyMinDeltaRaw = getString(args.flags, "anomaly-min-delta");
+  const anomalyMinDelta =
+    anomalyMinDeltaRaw !== undefined
+      ? Math.max(0, Math.min(1, parseFloat(anomalyMinDeltaRaw)))
+      : 0.3;
+
+  const searchOpts: SearchOptions = {
+    ...opts,
+    // We need all candidates (before dedup) to detect cross-provider duplicates.
+    // Disable phash dedup so we get the raw multi-provider set for analysis.
+    phashDedup: false,
+  };
+
+  const bundle: SearchResultBundle = wantsCloud(args, env)
+    ? await cloudRequest<SearchResultBundle>(cfg, "/search", { body: searchBody(query, searchOpts) })
+    : await core().searchImages(query, searchOpts);
+
+  if (verbose) {
+    for (const w of bundle.warnings) io.stderr(c.yellow(`warning: ${w}`));
+    for (const r of bundle.providerReports) {
+      const detail = r.ok
+        ? c.dim(`${r.count} results in ${r.timeMs}ms`)
+        : c.dim(r.skipped ?? r.error ?? "failed");
+      io.stderr(c.dim(`  ${r.provider}: `) + detail);
+    }
+    io.stderr("");
+  }
+
+  // Build the audit report locally (always — cloud path doesn't run this yet).
+  const report: FederationPhashAuditReport = buildFederationPhashAuditReport(
+    query,
+    bundle.candidates,
+    { hammingThreshold, anomalyMinDelta },
+  );
+
+  if (json) {
+    io.stdout(JSON.stringify(report, null, 2));
+    return 0;
+  }
+
+  // Human-readable output
+  io.stdout(c.bold(`pHash Federation Audit`));
+  io.stdout(
+    c.dim(
+      `Query: "${query}"  |  Threshold: ${report.hammingThreshold}  |  ` +
+      `Candidates: ${report.totalCandidates} (${report.hashedCandidates} hashed)  |  ` +
+      `Generated: ${report.generatedAt}`,
+    ),
+  );
+  io.stdout("");
+
+  // 1. Threshold tuning guide
+  io.stdout(c.bold("Threshold tuning guide (uniques at each Hamming distance):"));
+  const ttCols = [
+    { header: "threshold", width: 10 },
+    { header: "uniques",   width: 8 },
+    { header: "clusters",  width: 9 },
+    { header: "note",      width: 30 },
+  ];
+  const ttRows = report.thresholdTuningGuide.map((e) => {
+    const note =
+      e.threshold === report.hammingThreshold
+        ? c.yellow("← current")
+        : e.threshold < report.hammingThreshold
+          ? c.dim("stricter")
+          : c.dim("more permissive");
+    return [String(e.threshold), String(e.uniqueCount), String(e.clusterCount), note];
+  });
+  io.stdout(renderTable(ttCols, ttRows));
+  io.stdout("");
+
+  // 2. Provider agreement matrix
+  if (report.providerAgreementMatrix.length > 0) {
+    io.stdout(c.bold("Provider agreement matrix (pairs that most often share visuals):"));
+    const paCols = [
+      { header: "#",          width: 3, align: "right" as const },
+      { header: "providerA",  width: 22 },
+      { header: "providerB",  width: 22 },
+      { header: "clusters",   width: 9 },
+      { header: "agreeRate",  width: 10 },
+    ];
+    const paRows = report.providerAgreementMatrix.slice(0, 10).map((e, i) => [
+      String(i + 1),
+      e.providerA,
+      e.providerB,
+      String(e.sharedClusterCount),
+      `${(e.agreementRate * 100).toFixed(1)}%`,
+    ]);
+    io.stdout(renderTable(paCols, paRows));
+    io.stdout("");
+  } else {
+    io.stdout(c.dim("No cross-provider duplicate clusters detected."));
+    io.stdout("");
+  }
+
+  // 3. Clusters with license confidence variance
+  const anomalousClusters = report.clusters.filter((cl) => cl.confidenceVariance > 0.1);
+  if (anomalousClusters.length > 0) {
+    io.stdout(c.bold(`Clusters with license confidence variance (${anomalousClusters.length}):`));
+    const clCols = [
+      { header: "id",       width: 4 },
+      { header: "size",     width: 5 },
+      { header: "confVar",  width: 8 },
+      { header: "providers", width: 40 },
+    ];
+    const clRows = anomalousClusters.slice(0, 10).map((cl) => [
+      String(cl.clusterId),
+      String(cl.clusterSize),
+      cl.confidenceVariance.toFixed(3),
+      [...new Set(cl.providers)].join(", "),
+    ]);
+    io.stdout(renderTable(clCols, clRows));
+    io.stdout("");
+  }
+
+  // 4. Confidence anomaly events
+  if (report.confidenceAnomalies.length > 0) {
+    io.stdout(c.bold(`License confidence anomalies (${report.confidenceAnomalies.length}):`));
+    for (const anomaly of report.confidenceAnomalies.slice(0, 5)) {
+      const clusterId = report.clusters[anomaly.clusterIndex]?.clusterId ?? "?";
+      io.stdout(
+        `  ${c.yellow(`[cluster ${clusterId}]`)} delta=${anomaly.maxConfidenceDelta.toFixed(2)}  ` +
+        `high: ${c.green(anomaly.highestConfidenceLicense)} → low: ${c.red(anomaly.lowestConfidenceLicense)}`,
+      );
+      io.stdout(
+        c.dim(
+          `    mean conf ${anomaly.meanConfidence.toFixed(3)}  stdDev ${anomaly.stdDevConfidence.toFixed(3)}  ` +
+          `members: ${anomaly.candidateIndices.length}`,
+        ),
+      );
+    }
+    io.stdout("");
+  }
+
+  // 5. Actionable recommendations
+  if (report.recommendations.length > 0) {
+    io.stdout(c.bold(`Recommendations (${report.recommendations.length}):`));
+    for (const rec of report.recommendations) {
+      const prefix =
+        rec.type === "investigate-anomaly"
+          ? c.yellow("⚠")
+          : rec.type === "raise-threshold" || rec.type === "lower-threshold"
+            ? c.cyan("→")
+            : c.dim("·");
+      io.stdout(`  ${prefix} [${c.bold(rec.type)}] ${rec.message}`);
+    }
+    io.stdout("");
+  } else {
+    io.stdout(c.green("✓ No actionable issues detected."));
+    io.stdout("");
+  }
+
+  // Summary footer
+  io.stdout(
+    c.dim(
+      `Summary: ${report.totalUniques} unique visual(s), ` +
+      `${report.clusterCount} duplicate cluster(s), ` +
+      `${report.confidenceAnomalies.length} confidence anomaly event(s).`,
+    ),
+  );
+
+  return 0;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -2187,6 +2386,7 @@ ${c.bold("COMMANDS")}
   audit-license-conflicts <query>      Audit all license conflicts from a federation run [--json] [--severity major]
   resolve-license-conflicts <query>    Recommend license upgrades per provider [--json] [--suggest-upgrades]
   dedupe-report <query>                Cluster dedup quality report: FP/FN risk, confidence, threshold recommendation
+  audit-phash-federation <query>       Federation-wide pHash duplicate audit: clusters, anomalies, provider agreement
   warm [--input queries.jsonl]         Cache warm-up daemon: pre-populate cache + track hit rates
   help                                  Show this message
   version                               Print version
@@ -2247,6 +2447,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   "audit-license-conflicts": cmdAuditLicenseConflicts,
   "resolve-license-conflicts": cmdResolveLicenseConflicts,
   "dedupe-report": cmdDedupeReport,
+  "audit-phash-federation": cmdAuditPhashFederation,
   warm: cmdWarm,
   help: cmdHelp,
   "--help": cmdHelp,

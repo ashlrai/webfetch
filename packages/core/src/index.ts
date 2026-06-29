@@ -293,6 +293,9 @@ export {
   hashQualityReport,
   computeHashMetrics,
   HISTOGRAM_BUCKET_LABELS,
+  detectFederationDuplicateClusters,
+  detectConfidenceAnomalies,
+  buildFederationPhashAuditReport,
 } from "./phash-analytics.ts";
 export type {
   HashHistogramBucket,
@@ -302,6 +305,15 @@ export type {
   ConfidenceTierBreakdown,
   HashQualityReport,
   HashMetrics,
+  DuplicateCluster,
+  FederationClusterOptions,
+  ConfidenceAnomalyEvent,
+  ConfidenceAnomalyOptions,
+  ProviderAgreementEntry,
+  ThresholdTuningEntry,
+  PhashAuditRecommendation,
+  FederationPhashAuditReport,
+  FederationPhashAuditOptions,
 } from "./phash-analytics.ts";
 
 export {

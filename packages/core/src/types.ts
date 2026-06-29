@@ -396,6 +396,20 @@ export interface SearchOptions {
   preferCachedProviders?: boolean;
 
   /**
+   * When true, run a federation-wide pHash duplicate cluster + confidence
+   * anomaly analysis after the search and attach a `FederationPhashAuditReport`
+   * to `SearchResultBundle.phashFederationAudit`. Off by default.
+   *
+   * CLI flag: `audit-phash-federation <query>`
+   */
+  phashFederationAudit?: boolean;
+
+  /**
+   * Fine-tune the federation pHash audit when `phashFederationAudit` is true.
+   */
+  phashFederationAuditOptions?: import("./phash-analytics.ts").FederationPhashAuditOptions;
+
+  /**
    * Pre-computed provider chain from `selectProviderChain()` or
    * `providerDegradationRouting()`.
    *
@@ -469,6 +483,12 @@ export interface SearchResultBundle {
    * replaced with `phashDedupeResult.dedupedCandidates`.
    */
   phashDedupeResult?: PhashDedupeResult;
+  /**
+   * Populated when `SearchOptions.phashFederationAudit` is true (opt-in, off by default).
+   * Contains the full federation-wide pHash duplicate cluster report, confidence
+   * anomaly events, provider agreement matrix, and threshold tuning guide.
+   */
+  phashFederationAudit?: import("./phash-analytics.ts").FederationPhashAuditReport;
 }
 
 /**

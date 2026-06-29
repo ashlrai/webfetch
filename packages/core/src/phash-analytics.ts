@@ -29,8 +29,7 @@
  */
 
 import { hammingDistance } from "./perceptual-hash.ts";
-import type { PerceptualHashResult } from "./types.ts";
-import type { ImageCandidate } from "./types.ts";
+import type { ImageCandidate, License, PerceptualHashResult } from "./types.ts";
 
 // ---------------------------------------------------------------------------
 // Histogram bucket labels — 5 bands matching the spec
@@ -697,4 +696,665 @@ export function computeHashMetrics(candidates: ImageCandidate[]): HashMetrics {
   }
 
   return { similarity, quality, topSimilarPairs };
+}
+
+// ---------------------------------------------------------------------------
+// 5. Federation-wide pHash duplicate cluster detection
+// ---------------------------------------------------------------------------
+
+/**
+ * A cluster of visually identical images from multiple providers,
+ * detected when their pHash Hamming distance is below the threshold.
+ *
+ * `providerVariance` measures how widely the providers differ:
+ *   0 = all providers are the same; 1 = every provider is distinct.
+ *
+ * `confidenceVariance` is the population std-dev of the per-member
+ * license-confidence values — high values signal that providers disagree
+ * on how confident they are in their license determinations.
+ */
+export interface DuplicateCluster {
+  /** Monotonically increasing cluster id (1-based). */
+  clusterId: number;
+  /** All candidate indices belonging to this cluster. */
+  memberIndices: number[];
+  /** Number of members in the cluster. */
+  clusterSize: number;
+  /**
+   * Fraction of distinct providers across cluster members (0..1).
+   * 0 = all from one provider; 1 = every member from a different provider.
+   */
+  providerVariance: number;
+  /**
+   * Population std-dev of license-confidence values within the cluster (0..1).
+   * High value = providers disagree on how confident they are.
+   */
+  confidenceVariance: number;
+  /**
+   * Minimum pHash Hamming distance observed across all intra-cluster pairs.
+   * Clusters with minIntraDistance = 0 contain exact hash duplicates.
+   */
+  minIntraDistance: number;
+  /**
+   * Maximum pHash Hamming distance observed within the cluster.
+   * If > threshold the cluster spans multiple tolerance levels.
+   */
+  maxIntraDistance: number;
+  /** All provider ids present in this cluster. */
+  providers: string[];
+  /** License-confidence values per member (same order as memberIndices). */
+  licenseConfidences: number[];
+}
+
+/**
+ * Options for `detectFederationDuplicateClusters`.
+ */
+export interface FederationClusterOptions {
+  /**
+   * Maximum Hamming distance (inclusive) for two images to be considered
+   * visually identical. Default: 8.
+   */
+  hammingThreshold?: number;
+  /**
+   * When true, only emit clusters that span 3 or more providers.
+   * Default: false (emit all clusters with 2+ members).
+   */
+  multiProviderOnly?: boolean;
+}
+
+/**
+ * Find clusters of visually identical images across providers by
+ * union-find over pairwise Hamming distances.
+ *
+ * Only candidates that have a hash are considered.
+ * Candidates without any hash are skipped.
+ *
+ * @param candidates     Array of `ImageCandidate` objects from a federation run.
+ * @param options        Tuning options (threshold, multiProviderOnly).
+ * @returns              Array of `DuplicateCluster` — one entry per group of 2+.
+ *
+ * @example
+ * ```ts
+ * const clusters = detectFederationDuplicateClusters(bundle.candidates, { hammingThreshold: 8 });
+ * for (const cl of clusters) {
+ *   if (cl.clusterSize >= 3) console.log("Cross-provider duplicate:", cl);
+ * }
+ * ```
+ */
+export function detectFederationDuplicateClusters(
+  candidates: ImageCandidate[],
+  options: FederationClusterOptions = {},
+): DuplicateCluster[] {
+  const threshold = options.hammingThreshold ?? 8;
+  const obs = extractObservations(candidates);
+  if (obs.length < 2) return [];
+
+  // Union-Find
+  const parent = obs.map((_, i) => i);
+
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]!]!; // path compression
+      x = parent[x]!;
+    }
+    return x;
+  }
+
+  function union(a: number, b: number): void {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  }
+
+  for (let i = 0; i < obs.length; i++) {
+    for (let j = i + 1; j < obs.length; j++) {
+      const d = hammingDistance(obs[i]!.hash, obs[j]!.hash);
+      if (d <= threshold) {
+        union(i, j);
+      }
+    }
+  }
+
+  // Group by root
+  const groupMap = new Map<number, number[]>();
+  for (let i = 0; i < obs.length; i++) {
+    const root = find(i);
+    if (!groupMap.has(root)) groupMap.set(root, []);
+    groupMap.get(root)!.push(i);
+  }
+
+  const clusters: DuplicateCluster[] = [];
+  let clusterId = 0;
+
+  for (const members of groupMap.values()) {
+    if (members.length < 2) continue;
+
+    const providers = members.map((i) => candidates[obs[i]!.candidateIndex]!.source);
+    const uniqueProviders = [...new Set(providers)];
+
+    if (options.multiProviderOnly && uniqueProviders.length < 3) continue;
+
+    // Intra-cluster distances
+    let minIntraDistance = Infinity;
+    let maxIntraDistance = 0;
+    for (let a = 0; a < members.length; a++) {
+      for (let b = a + 1; b < members.length; b++) {
+        const d = hammingDistance(obs[members[a]!]!.hash, obs[members[b]!]!.hash);
+        if (d < minIntraDistance) minIntraDistance = d;
+        if (d > maxIntraDistance) maxIntraDistance = d;
+      }
+    }
+    if (minIntraDistance === Infinity) minIntraDistance = 0;
+
+    // Provider variance: fraction of distinct providers
+    const providerVariance =
+      members.length > 1
+        ? (uniqueProviders.length - 1) / (members.length - 1)
+        : 0;
+
+    // License confidence values
+    const licenseConfidences = members.map((i) => {
+      const cand = candidates[obs[i]!.candidateIndex]!;
+      return cand.confidence ?? obs[i]!.confidence;
+    });
+
+    const confMean =
+      licenseConfidences.reduce((s, v) => s + v, 0) / licenseConfidences.length;
+    const confVariance =
+      licenseConfidences.reduce((s, v) => s + (v - confMean) ** 2, 0) /
+      licenseConfidences.length;
+    const confidenceVariance = Math.sqrt(confVariance);
+
+    clusters.push({
+      clusterId: ++clusterId,
+      memberIndices: members.map((i) => obs[i]!.candidateIndex),
+      clusterSize: members.length,
+      providerVariance,
+      confidenceVariance,
+      minIntraDistance,
+      maxIntraDistance,
+      providers,
+      licenseConfidences,
+    });
+  }
+
+  return clusters;
+}
+
+// ---------------------------------------------------------------------------
+// 6. License-confidence anomaly detection
+// ---------------------------------------------------------------------------
+
+/**
+ * A single confidence anomaly event: the same visual has wildly different
+ * license confidences across providers.
+ *
+ * "Confidence" here is the `ImageCandidate.confidence` field (0..1) that
+ * indicates how trustworthy the license determination is for a candidate.
+ * When this varies significantly within a pHash cluster, it flags that one
+ * provider's license metadata is unreliable.
+ */
+export interface ConfidenceAnomalyEvent {
+  /** Index of the DuplicateCluster this anomaly was found in. */
+  clusterIndex: number;
+  /** Candidate indices involved in this anomaly (subset of the cluster). */
+  candidateIndices: number[];
+  /**
+   * Max absolute difference in license-confidence within this cluster.
+   * For example: 0.9 (CC_BY provider) vs 0.4 (UNKNOWN provider) → delta 0.5.
+   */
+  maxConfidenceDelta: number;
+  /**
+   * Mean license-confidence across candidates in this cluster.
+   */
+  meanConfidence: number;
+  /**
+   * Population std-dev of license-confidence across this cluster.
+   */
+  stdDevConfidence: number;
+  /**
+   * Candidate index with the highest license confidence in this cluster.
+   * Null when the cluster has no candidates with confidence set.
+   */
+  highestConfidenceIndex: number | null;
+  /**
+   * Candidate index with the lowest license confidence in this cluster.
+   * Null when the cluster has no candidates with confidence set.
+   */
+  lowestConfidenceIndex: number | null;
+  /**
+   * License reported by the highest-confidence provider, or UNKNOWN.
+   */
+  highestConfidenceLicense: License;
+  /**
+   * License reported by the lowest-confidence provider, or UNKNOWN.
+   */
+  lowestConfidenceLicense: License;
+}
+
+/**
+ * Options for `detectConfidenceAnomalies`.
+ */
+export interface ConfidenceAnomalyOptions {
+  /**
+   * Minimum license-confidence delta (between highest and lowest in a cluster)
+   * to flag as an anomaly. Default: 0.3.
+   */
+  minDelta?: number;
+  /**
+   * Hamming distance threshold passed through to `detectFederationDuplicateClusters`.
+   * Default: 8.
+   */
+  hammingThreshold?: number;
+}
+
+/**
+ * Detect cases where visually identical images have wildly different
+ * license-confidence scores across providers.
+ *
+ * Runs `detectFederationDuplicateClusters` internally to group candidates,
+ * then checks each cluster for high confidence variance.
+ *
+ * @param candidates    Array of `ImageCandidate` objects.
+ * @param options       `minDelta` threshold and pHash `hammingThreshold`.
+ * @returns             Array of `ConfidenceAnomalyEvent` — one per anomalous cluster.
+ *
+ * @example
+ * ```ts
+ * const anomalies = detectConfidenceAnomalies(bundle.candidates, { minDelta: 0.3 });
+ * for (const a of anomalies) {
+ *   console.log(`Cluster: max delta ${a.maxConfidenceDelta.toFixed(2)}`);
+ * }
+ * ```
+ */
+export function detectConfidenceAnomalies(
+  candidates: ImageCandidate[],
+  options: ConfidenceAnomalyOptions = {},
+): ConfidenceAnomalyEvent[] {
+  const minDelta = options.minDelta ?? 0.3;
+  const hammingThreshold = options.hammingThreshold ?? 8;
+
+  const clusters = detectFederationDuplicateClusters(candidates, { hammingThreshold });
+  const anomalies: ConfidenceAnomalyEvent[] = [];
+
+  for (let ci = 0; ci < clusters.length; ci++) {
+    const cluster = clusters[ci]!;
+    const { memberIndices, licenseConfidences } = cluster;
+
+    const maxConf = Math.max(...licenseConfidences);
+    const minConf = Math.min(...licenseConfidences);
+    const delta = maxConf - minConf;
+    if (delta < minDelta) continue;
+
+    const mean = licenseConfidences.reduce((s, v) => s + v, 0) / licenseConfidences.length;
+    const variance =
+      licenseConfidences.reduce((s, v) => s + (v - mean) ** 2, 0) / licenseConfidences.length;
+    const stdDev = Math.sqrt(variance);
+
+    // Identify which candidates are the highest/lowest.
+    let highIdx = 0;
+    let lowIdx = 0;
+    for (let k = 1; k < licenseConfidences.length; k++) {
+      if (licenseConfidences[k]! > licenseConfidences[highIdx]!) highIdx = k;
+      if (licenseConfidences[k]! < licenseConfidences[lowIdx]!) lowIdx = k;
+    }
+
+    const highCandIdx = memberIndices[highIdx]!;
+    const lowCandIdx = memberIndices[lowIdx]!;
+
+    anomalies.push({
+      clusterIndex: ci,
+      candidateIndices: [...memberIndices],
+      maxConfidenceDelta: delta,
+      meanConfidence: mean,
+      stdDevConfidence: stdDev,
+      highestConfidenceIndex: highCandIdx,
+      lowestConfidenceIndex: lowCandIdx,
+      highestConfidenceLicense: candidates[highCandIdx]?.license ?? "UNKNOWN",
+      lowestConfidenceLicense: candidates[lowCandIdx]?.license ?? "UNKNOWN",
+    });
+  }
+
+  return anomalies;
+}
+
+// ---------------------------------------------------------------------------
+// 7. Federation phash audit report (full structured output)
+// ---------------------------------------------------------------------------
+
+/**
+ * A provider agreement matrix entry: how often two specific providers
+ * return the same visual (pHash cluster members from the same pair).
+ */
+export interface ProviderAgreementEntry {
+  /** First provider id (alphabetically first). */
+  providerA: string;
+  /** Second provider id. */
+  providerB: string;
+  /**
+   * Number of pHash clusters that contain at least one candidate from
+   * each of these two providers.
+   */
+  sharedClusterCount: number;
+  /**
+   * Fraction of all clusters that contain both providers.
+   * Range [0, 1]; 0 when neither provider had any clusters together.
+   */
+  agreementRate: number;
+}
+
+/**
+ * Threshold tuning guide entry — how many unique images exist at a given
+ * Hamming distance threshold. Useful for deciding where to set the
+ * dedup threshold.
+ */
+export interface ThresholdTuningEntry {
+  /** Hamming threshold tested (0..64). */
+  threshold: number;
+  /**
+   * Number of distinct "unique" groups at this threshold.
+   * Lower = more aggressively merged; higher = more conservative.
+   */
+  uniqueCount: number;
+  /**
+   * Number of clusters (groups with 2+ members) at this threshold.
+   */
+  clusterCount: number;
+}
+
+/**
+ * An actionable recommendation produced by the federation phash audit.
+ */
+export interface PhashAuditRecommendation {
+  /**
+   * Short identifier for this recommendation class.
+   * - `'raise-threshold'` — the current threshold merges too many false positives.
+   * - `'lower-threshold'` — the current threshold misses real duplicates.
+   * - `'investigate-anomaly'` — a cluster has high confidence variance.
+   * - `'single-provider'`  — only one provider returned hashes; federation was narrow.
+   */
+  type: "raise-threshold" | "lower-threshold" | "investigate-anomaly" | "single-provider";
+  /** Human-readable description of the issue and what to do. */
+  message: string;
+  /**
+   * If this recommendation relates to a specific cluster, its clusterId.
+   * Null when the recommendation is global.
+   */
+  relatedClusterId: number | null;
+}
+
+/**
+ * Full federation pHash audit report returned by `buildFederationPhashAuditReport`.
+ */
+export interface FederationPhashAuditReport {
+  /** Query string that was searched (passed through from the caller). */
+  query: string;
+  /** ISO-8601 timestamp of when this report was generated. */
+  generatedAt: string;
+  /** Total candidates analyzed. */
+  totalCandidates: number;
+  /** Number of candidates with a computable pHash. */
+  hashedCandidates: number;
+  /** Hamming threshold used for this run. */
+  hammingThreshold: number;
+  /**
+   * Total number of unique images at this threshold (groups with 1 member +
+   * one representative per cluster).
+   */
+  totalUniques: number;
+  /**
+   * Number of duplicate clusters (groups with 2+ members).
+   */
+  clusterCount: number;
+  /**
+   * All detected duplicate clusters (including single-provider ones).
+   */
+  clusters: DuplicateCluster[];
+  /**
+   * Confidence anomaly events — clusters where license-confidence varies
+   * wildly across providers.
+   */
+  confidenceAnomalies: ConfidenceAnomalyEvent[];
+  /**
+   * Provider agreement matrix — which provider pairs most often agree on
+   * visually identical images.
+   */
+  providerAgreementMatrix: ProviderAgreementEntry[];
+  /**
+   * Threshold tuning guide: unique counts at thresholds [4, 6, 8, 10, 12, 16].
+   * Use this to decide whether to raise or lower the Hamming threshold.
+   */
+  thresholdTuningGuide: ThresholdTuningEntry[];
+  /**
+   * Actionable recommendations generated from the analysis.
+   */
+  recommendations: PhashAuditRecommendation[];
+  /** Overall pHash similarity stats across all candidates. */
+  similarity: HashSimilarityAnalysis;
+  /** Algorithm quality report. */
+  quality: HashQualityReport;
+}
+
+/**
+ * Options for `buildFederationPhashAuditReport`.
+ */
+export interface FederationPhashAuditOptions {
+  /**
+   * Hamming threshold for duplicate clustering. Default: 8.
+   */
+  hammingThreshold?: number;
+  /**
+   * Minimum confidence delta to flag as an anomaly. Default: 0.3.
+   */
+  anomalyMinDelta?: number;
+}
+
+/**
+ * Build a comprehensive federation-wide pHash audit report.
+ *
+ * Combines duplicate cluster detection, confidence anomaly detection,
+ * provider agreement matrix, and threshold tuning guidance into a single
+ * structured report suitable for the CLI `audit-phash-federation` command
+ * or agent consumption.
+ *
+ * Pure and synchronous — no I/O.
+ *
+ * @param query      The search query string (included in the report for traceability).
+ * @param candidates Array of `ImageCandidate` objects from a federation run.
+ * @param options    Tuning options.
+ * @returns          `FederationPhashAuditReport`
+ *
+ * @example
+ * ```ts
+ * const report = buildFederationPhashAuditReport("sunset landscape", bundle.candidates);
+ * console.log(report.recommendations);
+ * ```
+ */
+export function buildFederationPhashAuditReport(
+  query: string,
+  candidates: ImageCandidate[],
+  options: FederationPhashAuditOptions = {},
+): FederationPhashAuditReport {
+  const hammingThreshold = options.hammingThreshold ?? 8;
+  const anomalyMinDelta = options.anomalyMinDelta ?? 0.3;
+
+  const obs = extractObservations(candidates);
+  const hashedCandidates = obs.length;
+
+  const clusters = detectFederationDuplicateClusters(candidates, { hammingThreshold });
+  const confidenceAnomalies = detectConfidenceAnomalies(candidates, {
+    hammingThreshold,
+    minDelta: anomalyMinDelta,
+  });
+
+  const similarity = analyzeHashSimilarity(candidates);
+  const quality = hashQualityReport(candidates);
+
+  // Total uniques = singletons + one representative per cluster
+  const clusteredIndices = new Set(clusters.flatMap((cl) => cl.memberIndices));
+  const singletonCount = obs.filter((o) => !clusteredIndices.has(o.candidateIndex)).length;
+  const totalUniques = singletonCount + clusters.length;
+
+  // Provider agreement matrix
+  const providerAgreementMatrix = buildProviderAgreementMatrix(clusters, candidates.length);
+
+  // Threshold tuning guide
+  const TUNING_THRESHOLDS = [4, 6, 8, 10, 12, 16];
+  const thresholdTuningGuide: ThresholdTuningEntry[] = TUNING_THRESHOLDS.map((t) => {
+    const cl = detectFederationDuplicateClusters(candidates, { hammingThreshold: t });
+    const clusteredSet = new Set(cl.flatMap((c) => c.memberIndices));
+    const singletons = obs.filter((o) => !clusteredSet.has(o.candidateIndex)).length;
+    return {
+      threshold: t,
+      uniqueCount: singletons + cl.length,
+      clusterCount: cl.length,
+    };
+  });
+
+  // Generate recommendations
+  const recommendations = generatePhashRecommendations(
+    clusters,
+    confidenceAnomalies,
+    hammingThreshold,
+    thresholdTuningGuide,
+    obs.length,
+  );
+
+  return {
+    query,
+    generatedAt: new Date().toISOString(),
+    totalCandidates: candidates.length,
+    hashedCandidates,
+    hammingThreshold,
+    totalUniques,
+    clusterCount: clusters.length,
+    clusters,
+    confidenceAnomalies,
+    providerAgreementMatrix,
+    thresholdTuningGuide,
+    recommendations,
+    similarity,
+    quality,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers for federation audit
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a provider pair agreement matrix from a set of duplicate clusters.
+ * Each entry tells how often two providers returned the same visual.
+ */
+function buildProviderAgreementMatrix(
+  clusters: DuplicateCluster[],
+  _totalCandidates: number,
+): ProviderAgreementEntry[] {
+  // Count shared clusters per provider pair
+  const pairCounts = new Map<string, number>();
+
+  for (const cluster of clusters) {
+    const uniqueProviders = [...new Set(cluster.providers)];
+    for (let a = 0; a < uniqueProviders.length; a++) {
+      for (let b = a + 1; b < uniqueProviders.length; b++) {
+        const key = [uniqueProviders[a]!, uniqueProviders[b]!].sort().join("|||");
+        pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+      }
+    }
+  }
+
+  const totalClusters = clusters.length;
+  const entries: ProviderAgreementEntry[] = [];
+  for (const [key, count] of pairCounts) {
+    const [providerA, providerB] = key.split("|||") as [string, string];
+    entries.push({
+      providerA,
+      providerB,
+      sharedClusterCount: count,
+      agreementRate: totalClusters > 0 ? count / totalClusters : 0,
+    });
+  }
+
+  // Sort by agreement rate descending
+  entries.sort((a, b) => b.agreementRate - a.agreementRate);
+  return entries;
+}
+
+/**
+ * Generate actionable recommendations from clusters, anomalies, and tuning guide.
+ */
+function generatePhashRecommendations(
+  clusters: DuplicateCluster[],
+  anomalies: ConfidenceAnomalyEvent[],
+  currentThreshold: number,
+  tuningGuide: ThresholdTuningEntry[],
+  hashedCount: number,
+): PhashAuditRecommendation[] {
+  const recs: PhashAuditRecommendation[] = [];
+
+  // Single-provider coverage warning
+  const allProviders = new Set(clusters.flatMap((cl) => cl.providers));
+  if (allProviders.size <= 1 && hashedCount > 1) {
+    recs.push({
+      type: "single-provider",
+      message:
+        "Only one provider returned hashed candidates. Federation coverage is narrow — " +
+        "add more providers to get cross-provider duplicate detection.",
+      relatedClusterId: null,
+    });
+  }
+
+  // Confidence anomaly warnings
+  for (const anomaly of anomalies) {
+    const clusterId = clusters[anomaly.clusterIndex]?.clusterId ?? null;
+    recs.push({
+      type: "investigate-anomaly",
+      message:
+        `Cluster ${clusterId ?? "?"}: license-confidence varies by ${anomaly.maxConfidenceDelta.toFixed(2)} ` +
+        `(high: ${anomaly.highestConfidenceLicense} @ ${(anomaly.meanConfidence + anomaly.stdDevConfidence).toFixed(2)}, ` +
+        `low: ${anomaly.lowestConfidenceLicense}). ` +
+        `Verify license metadata from the low-confidence provider before publishing.`,
+      relatedClusterId: clusterId,
+    });
+  }
+
+  // Threshold tuning: look for a better threshold
+  const currentEntry = tuningGuide.find((e) => e.threshold === currentThreshold);
+  if (currentEntry && tuningGuide.length > 0) {
+    // If raising threshold to 10 or 12 collapses more clusters without losing too many uniques
+    const higherEntries = tuningGuide.filter((e) => e.threshold > currentThreshold);
+    for (const higher of higherEntries) {
+      const collapsedExtra = currentEntry.clusterCount - higher.clusterCount;
+      if (collapsedExtra >= 2 && collapsedExtra <= 10) {
+        recs.push({
+          type: "raise-threshold",
+          message:
+            `Raise Hamming threshold from ${currentThreshold} → ${higher.threshold} to collapse ` +
+            `${collapsedExtra} additional cluster(s) (currently treated as false-positive duplicates). ` +
+            `This reduces unique count from ${currentEntry.uniqueCount} → ${higher.uniqueCount}.`,
+          relatedClusterId: null,
+        });
+        break; // Only emit the first actionable suggestion
+      }
+    }
+
+    // If lowering threshold would split clusters and reduce false positives
+    const lowerEntries = tuningGuide.filter((e) => e.threshold < currentThreshold);
+    for (const lower of [...lowerEntries].reverse()) {
+      const newClusters = lower.clusterCount - currentEntry.clusterCount;
+      if (newClusters >= 2 && newClusters <= 10) {
+        recs.push({
+          type: "lower-threshold",
+          message:
+            `Lower Hamming threshold from ${currentThreshold} → ${lower.threshold} to split ` +
+            `${newClusters} over-merged cluster(s) (potential false positives). ` +
+            `Unique count would increase from ${currentEntry.uniqueCount} → ${lower.uniqueCount}.`,
+          relatedClusterId: null,
+        });
+        break;
+      }
+    }
+  }
+
+  return recs;
 }

@@ -11,6 +11,8 @@
  */
 
 import { dedupeByUrl, dedupeImagesByPhash } from "./dedupe.ts";
+import { buildFederationPhashAuditReport } from "./phash-analytics.ts";
+import type { FederationPhashAuditReport } from "./phash-analytics.ts";
 import { decayProviderCandidateConfidence } from "./perceptual-hash.ts";
 import {
   emitProviderEvent,
@@ -355,6 +357,19 @@ export async function searchImages(
   }
 
   // -------------------------------------------------------------------------
+  // Optional federation-wide pHash audit (opt-in via opts.phashFederationAudit)
+  // Runs on the phash-deduped candidates so the audit sees the final set.
+  // -------------------------------------------------------------------------
+  let phashFederationAuditResult: FederationPhashAuditReport | undefined;
+  if (opts.phashFederationAudit) {
+    phashFederationAuditResult = buildFederationPhashAuditReport(
+      query,
+      phashDedupedCandidates,
+      opts.phashFederationAuditOptions ?? {},
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Optional post-ranking semantic clustering
   // -------------------------------------------------------------------------
   let candidateClusters: ClusterGroup[] | undefined;
@@ -418,6 +433,7 @@ export async function searchImages(
     ...(semanticDedupeResult !== undefined ? { semanticDedupeResult } : {}),
     ...(phashDedupeResult !== undefined ? { phashDedupeResult } : {}),
     ...(repairPlan !== undefined ? { repairPlan } : {}),
+    ...(phashFederationAuditResult !== undefined ? { phashFederationAudit: phashFederationAuditResult } : {}),
   };
 }
 
