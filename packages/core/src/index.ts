@@ -121,6 +121,11 @@ export type {
   ProviderRecommendation,
   ProviderRecommendations,
   FederationHealthReport,
+  PerformanceInsight,
+  LicenseCoverageEntry,
+  LicenseCoverageHeatmap,
+  PerQueryAdvice,
+  CostBenefitEntry,
 } from "./federation-telemetry.ts";
 export {
   recordSearchEvent,

@@ -178,6 +178,16 @@ export const refineSearchResultsSchema = z.object({
     ),
 });
 
+export const providerRecommendationsSchema = z.object({
+  windowMs: z
+    .number()
+    .int()
+    .min(1000)
+    .max(3_600_000)
+    .optional()
+    .describe("Sliding window size in ms (default 300000 = 5 minutes)"),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -190,6 +200,7 @@ export const schemas = {
   compare_phashes: comparePhashesSchema,
   compare_candidates: compareCandidatesSchema,
   refine_search_results: refineSearchResultsSchema,
+  provider_recommendations: providerRecommendationsSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;

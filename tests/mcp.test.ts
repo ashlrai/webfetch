@@ -44,6 +44,7 @@ describe("mcp tools", () => {
       "get_federation_health_report",
       "inspect_cache",
       "probe_page",
+      "provider_recommendations",
       "refine_search_results",
       "search_album_cover",
       "search_artist_images",

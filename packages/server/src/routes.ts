@@ -17,6 +17,7 @@ import {
   DEFAULT_PROVIDERS,
   batchFindSimilar,
   clearCacheEntry,
+  computeProviderRecommendations,
   downloadImage,
   exportCache,
   fetchWithLicense,
@@ -270,6 +271,7 @@ export function getProviders(): Response {
           "/batch-find-similar",
           "/federation-diagnostics",
           "/federation-strategy",
+          "/provider-recommendations",
           "/compare-phashes",
           "/cache-analytics",
           "/cache/stats",
@@ -354,6 +356,17 @@ export function getFederationDiagnosticsResponse(req: Request): Response {
   }
   const diag = getFederationDiagnostics(windowMs);
   return jsonOk(diag);
+}
+
+export function getProviderRecommendationsResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const windowMsParam = url.searchParams.get("windowMs");
+  const windowMs = windowMsParam ? Number(windowMsParam) : undefined;
+  if (windowMs !== undefined && (isNaN(windowMs) || windowMs < 1000 || windowMs > 3_600_000)) {
+    return jsonErr("windowMs must be between 1000 and 3600000", 422);
+  }
+  const recs = computeProviderRecommendations(windowMs);
+  return jsonOk(recs);
 }
 
 export function getFederationStrategyResponse(req: Request): Response {

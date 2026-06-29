@@ -8,6 +8,7 @@
 import {
   batchFindSimilar,
   compareCandidates,
+  computeProviderRecommendations,
   downloadImage,
   exportCache,
   fetchWithLicense,
@@ -34,6 +35,7 @@ import {
   fetchWithLicenseSchema,
   findSimilarSchema,
   probePageSchema,
+  providerRecommendationsSchema,
   refineSearchResultsSchema,
   searchAlbumCoverSchema,
   searchArtistImagesSchema,
@@ -211,6 +213,48 @@ export const TOOLS: ToolDef[] = [
     async handler(args) {
       const report = getFederationHealthReport(args.windowMs);
       return renderJson(report);
+    },
+  },
+  {
+    name: "provider_recommendations",
+    description:
+      "Returns actionable per-provider recommendations with four enhanced diagnostics surfaces: " +
+      "(1) Comparative performance ranking — narrative insights per provider (e.g. 'Unsplash consistently fastest at p50=120ms; Bing has 15% error rate'). " +
+      "(2) License-coverage heatmap — which providers return the most OPEN vs UNKNOWN results, ranked by openness, based on each provider's known license profile. " +
+      "(3) Per-query-category provider selection advice — e.g. for 'portraits' prioritize wikimedia + spotify; for 'album_art' use musicbrainz-caa + itunes. " +
+      "(4) Cost-benefit analysis — free vs paid tiers, license profiles, gap-coverage verdicts with current health context. " +
+      "Also includes ranked provider list by composite score and suggested fallback chain. " +
+      "Use this tool when deciding which providers to use for a specific query type, optimizing federation routing, or diagnosing license coverage gaps.",
+    inputSchema: providerRecommendationsSchema,
+    async handler(args) {
+      const recs = computeProviderRecommendations(args.windowMs);
+      // Build a human-readable digest
+      const lines: string[] = [];
+
+      if (recs.performanceInsights.length > 0) {
+        lines.push("Performance insights:");
+        for (const p of recs.performanceInsights) {
+          lines.push(`  ${p.summary}`);
+        }
+      } else {
+        lines.push("Performance insights: no provider data in window yet.");
+      }
+
+      if (recs.licenseCoverageHeatmap.mostOpen) {
+        lines.push(`License coverage: most open = ${recs.licenseCoverageHeatmap.mostOpen}` +
+          (recs.licenseCoverageHeatmap.mostUnknown
+            ? `; most UNKNOWN = ${recs.licenseCoverageHeatmap.mostUnknown}`
+            : ""));
+      }
+
+      if (recs.suggestedFallbackChain.length > 0) {
+        lines.push(`Suggested fallback chain: ${recs.suggestedFallbackChain.join(" → ")}`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: recs,
+      };
     },
   },
   {
