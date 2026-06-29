@@ -38,6 +38,7 @@ describe("mcp tools", () => {
       "batch_find_similar_with_distances",
       "compare_candidates",
       "compare_phashes",
+      "compute_federation_fallback",
       "download_image",
       "export_cache_for_replay",
       "fetch_with_license",

@@ -273,6 +273,60 @@ export const batchClusterByPhashSchema = z.object({
     ),
 });
 
+/** Inline ProviderReport shape accepted by compute_federation_fallback. */
+const providerReportInputSchema = z.object({
+  provider: providerIdSchema,
+  ok: z.boolean(),
+  count: z.number().int().min(0),
+  timeMs: z.number().min(0),
+  error: z.string().optional(),
+  skipped: z.enum(["missing-auth", "disabled", "rate-limited", "not-enabled"]).optional(),
+  errorKind: z
+    .enum(["ok", "timeout", "http-4xx", "http-5xx", "network", "decode", "rate-limited"])
+    .optional(),
+});
+
+/** Inline FederationRepairPlan shape accepted by compute_federation_fallback. */
+const repairPlanInputSchema = z.object({
+  detectedPatterns: z.array(z.string()),
+  recommendations: z.array(z.any()),
+  healthy: z.boolean(),
+  generatedAt: z.string(),
+});
+
+export const computeFederationFallbackSchema = z.object({
+  repairPlan: repairPlanInputSchema.describe(
+    "FederationRepairPlan from a prior searchImages call with repairPlan:true",
+  ),
+  originalLicensePolicy: z
+    .enum(LICENSE_POLICIES)
+    .describe("License policy that was active during the original query"),
+  query: z.string().min(1).describe("The original search query string"),
+  detectedPatterns: z
+    .array(
+      z.enum([
+        "all-timeout",
+        "all-unknown-license",
+        "auth-missing",
+        "low-confidence",
+        "no-results",
+        "all-failed",
+        "partial-failure",
+        "rate-limited",
+        "no-browser-provider",
+      ]),
+    )
+    .describe(
+      "Failure patterns to address — typically repairPlan.detectedPatterns cast to FailurePattern[]",
+    ),
+  providerReports: z
+    .array(providerReportInputSchema)
+    .optional()
+    .describe(
+      "ProviderReport array from the original federation run — used to identify failed/healthy providers",
+    ),
+});
+
 export const schemas = {
   search_images: searchImagesSchema,
   search_artist_images: searchArtistImagesSchema,
@@ -288,6 +342,7 @@ export const schemas = {
   refine_search_results: refineSearchResultsSchema,
   provider_recommendations: providerRecommendationsSchema,
   batch_cluster_by_phash: batchClusterByPhashSchema,
+  compute_federation_fallback: computeFederationFallbackSchema,
 } as const;
 
 export type ToolName = keyof typeof schemas;

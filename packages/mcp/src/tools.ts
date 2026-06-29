@@ -9,6 +9,7 @@ import {
   batchClusterByPhash,
   batchFindSimilar,
   compareCandidates,
+  computeFederationFallback,
   computeProviderRecommendations,
   downloadImage,
   exportCache,
@@ -35,6 +36,7 @@ import {
   batchFindSimilarWithDistancesSchema,
   compareCandidatesSchema,
   comparePhashesSchema,
+  computeFederationFallbackSchema,
   downloadImageSchema,
   fetchWithLicenseSchema,
   findSimilarSchema,
@@ -476,6 +478,43 @@ export const TOOLS: ToolDef[] = [
       return {
         content: [{ type: "text", text: digest }],
         structuredContent: report,
+      };
+    },
+  },
+  {
+    name: "compute_federation_fallback",
+    description:
+      "Given a FederationRepairPlan (from a prior searchImages call with repairPlan:true) and the detected failure patterns, compute an ordered list of concrete fallback provider substitutions that match the original license policy. " +
+      "Patterns handled: all-unknown-license (switches to providers with structured license metadata, filtered by open-only vs safe-only policy), " +
+      "auth-missing (auto-disables paid/credentialed providers, suggests free alternatives), " +
+      "all-timeout (adds managed-browser opt-in and lower-latency providers), " +
+      "partial-failure (promotes healthy providers, adds backup providers for the failed subset), " +
+      "low-confidence (prioritises authoritative open-license providers with structured metadata). " +
+      "Returns: fallbackProviders (ordered best-first), rationale (explains each substitution), estimatedLiftPercent (0..1 — expected fraction of original failure resolved), costBenefitRatio (higher = more worth it; free providers >> 1). " +
+      "Use this after detecting a non-healthy repairPlan to automatically recover from federation failures without manual intervention.",
+    inputSchema: computeFederationFallbackSchema,
+    async handler(args) {
+      const result = computeFederationFallback({
+        repairPlan: args.repairPlan as any,
+        originalLicensePolicy: args.originalLicensePolicy,
+        query: args.query,
+        detectedPatterns: new Set(args.detectedPatterns as any[]),
+        providerReports: args.providerReports as any[] | undefined,
+      });
+
+      const lines: string[] = [];
+      if (result.fallbackProviders.length === 0) {
+        lines.push("No actionable fallback providers found for the detected patterns under the active license policy.");
+      } else {
+        lines.push(`Fallback providers (${result.fallbackProviders.length}): ${result.fallbackProviders.join(", ")}`);
+        lines.push(`Estimated lift: ${(result.estimatedLiftPercent * 100).toFixed(0)}%`);
+        lines.push(`Cost/benefit ratio: ${result.costBenefitRatio.toFixed(2)} (≥1.0 is worthwhile)`);
+        lines.push(`Rationale: ${result.rationale}`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: result,
       };
     },
   },

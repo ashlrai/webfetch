@@ -9,6 +9,12 @@ export * from "./types.ts";
 export { searchImages } from "./federation.ts";
 export { getFederationRepairPlan, detectPatterns, generateRecommendations } from "./federation-repair.ts";
 export type { FederationContext, FailurePattern } from "./federation-repair.ts";
+export { computeFederationFallback } from "./federation-fallback.ts";
+export type {
+  FallbackStrategyInput,
+  FallbackStrategyResult,
+  SearchOptionsWithFallback,
+} from "./federation-fallback.ts";
 export {
   clusterCandidates,
   levenshteinSimilarity,
