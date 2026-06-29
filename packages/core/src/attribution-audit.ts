@@ -446,8 +446,9 @@ async function checkUrl(
           issue: `URL "${url}" redirects to plain HTTP "${loc}".`,
         };
       }
-      // HTTPS redirect is fine — follow once to check final status
-      const final = await fetcher(url, {
+      // HTTPS redirect is fine — follow once to check final status.
+      // Fetch the redirect target (`loc`), not the original `url`.
+      const final = await fetcher(loc, {
         method: "HEAD",
         signal: AbortSignal.timeout(5000),
       });
@@ -984,8 +985,12 @@ export function getMetadataQualityScore(candidate: ImageCandidate): number {
     const w = FIELD_WEIGHTS[field];
     totalWeight += w;
     if (value && value.trim().length > 0) {
-      // Presence with no source info → fallback confidence grade (0.4)
-      weightedSum += w * METADATA_SOURCE_CONFIDENCE.fallback;
+      // Presence with no source info → moderate "field present, source unknown"
+      // confidence grade (0.4). Deliberately a literal, not
+      // METADATA_SOURCE_CONFIDENCE.fallback (0.1): a field that is present but
+      // whose source we cannot identify is more trustworthy than a true
+      // last-resort fallback, and this keeps the metaQuality tiebreaker alive.
+      weightedSum += w * 0.4;
     }
   }
 
