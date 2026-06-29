@@ -54,7 +54,9 @@ export type LicenseAuditSource =
 export type LicenseAuditFlag =
   | "url-inferred"
   | "incomplete-author"
-  | "deprecated-cc-url";
+  | "deprecated-cc-url"
+  /** License was derived from a heuristic (e.g. HTML scrape) rather than structured API metadata. */
+  | "heuristic-only";
 
 /**
  * Full provenance record for a single license determination.
@@ -985,12 +987,13 @@ export function getMetadataQualityScore(candidate: ImageCandidate): number {
     const w = FIELD_WEIGHTS[field];
     totalWeight += w;
     if (value && value.trim().length > 0) {
-      // Presence with no source info → moderate "field present, source unknown"
-      // confidence grade (0.4). Deliberately a literal, not
-      // METADATA_SOURCE_CONFIDENCE.fallback (0.1): a field that is present but
-      // whose source we cannot identify is more trustworthy than a true
-      // last-resort fallback, and this keeps the metaQuality tiebreaker alive.
-      weightedSum += w * 0.4;
+      // Presence with no resolved source → fallback-grade confidence. A field we
+      // can see but whose provenance we cannot identify is scored at the
+      // documented last-resort grade (METADATA_SOURCE_CONFIDENCE.fallback = 0.1).
+      // This still keeps the metaQuality tie-breaker alive (present > absent)
+      // while staying consistent with the metadata confidence model and the
+      // pre-computed audit-trail path.
+      weightedSum += w * METADATA_SOURCE_CONFIDENCE.fallback;
     }
   }
 
