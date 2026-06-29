@@ -250,6 +250,7 @@ export {
   scoreLicenseConsensus,
   recommendLicenseUpgrade,
   reconcileLicensesBatch,
+  auditLicenseConflict,
 } from "./license-reconciliation.ts";
 
 export {
@@ -273,6 +274,7 @@ export type {
   LicenseUpgradeRecommendation,
   BatchReconciliationEntry,
   BatchReconciliationResult,
+  LicenseConflictAudit,
 } from "./license-reconciliation.ts";
 
 export {

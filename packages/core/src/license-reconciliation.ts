@@ -794,6 +794,131 @@ export function recommendLicenseUpgrade(
 }
 
 // ---------------------------------------------------------------------------
+// Conflict audit
+// ---------------------------------------------------------------------------
+
+/**
+ * A structured audit report for a single license conflict between providers.
+ *
+ * - `conflictingProviders`  — providers whose asserted licenses differ from
+ *   the consensus.
+ * - `consensusLicense`      — the chosen consensus license.
+ * - `conflictSeverity`      — `"none"` | `"minor"` | `"major"` | `"critical"`.
+ *   `"none"` when all providers agree; `"minor"` when only UNKNOWN vs. a known
+ *   license; `"major"` when two valid license camps exist; `"critical"` when
+ *   restrictive licenses (EDITORIAL_LICENSED, PRESS_KIT_ALLOWLIST) appear in a
+ *   pool that also contains open licenses.
+ * - `auditNarrative`        — human-readable summary of the conflict, suitable
+ *   for embedding in a legal review ticket.
+ * - `legalReviewRequired`   — true when severity is `"major"` or `"critical"`.
+ */
+export interface LicenseConflictAudit {
+  conflictingProviders: string[];
+  consensusLicense: License;
+  conflictSeverity: "none" | "minor" | "major" | "critical";
+  auditNarrative: string;
+  legalReviewRequired: boolean;
+}
+
+/**
+ * Produce a structured conflict audit for a group of `ImageCandidate` objects.
+ *
+ * This is a higher-level wrapper around `reconcileLicenses` that adds a
+ * severity classification and legal-review flag, making it suitable for
+ * routing into automated compliance pipelines.
+ *
+ * Severity classification:
+ *  - `"none"`     — all providers agree on the same license.
+ *  - `"minor"`    — only conflict is UNKNOWN vs. a single known license.
+ *  - `"major"`    — two or more distinct known licenses are asserted.
+ *  - `"critical"` — any provider asserts EDITORIAL_LICENSED or
+ *    PRESS_KIT_ALLOWLIST while another asserts an open license (CC0, CC_BY, etc.).
+ *
+ * @param candidates - Non-empty array of `ImageCandidate` objects.
+ * @returns `LicenseConflictAudit`
+ */
+export function auditLicenseConflict(candidates: ImageCandidate[]): LicenseConflictAudit {
+  if (candidates.length === 0) {
+    return {
+      conflictingProviders: [],
+      consensusLicense: "UNKNOWN",
+      conflictSeverity: "none",
+      auditNarrative: "No candidates provided; nothing to audit.",
+      legalReviewRequired: false,
+    };
+  }
+
+  const reconciled = reconcileLicenses(candidates);
+  const { consensusLicense, conflictCount, conflictLog } = reconciled;
+
+  const conflictingProviders = conflictLog
+    .filter((e) => e.assertedLicense !== consensusLicense)
+    .map((e) => e.provider);
+
+  const distinctLicenses = new Set(candidates.map((c) => c.license));
+
+  // Severity classification.
+  let conflictSeverity: LicenseConflictAudit["conflictSeverity"] = "none";
+
+  if (conflictCount > 0) {
+    const OPEN_SET: ReadonlySet<License> = new Set(["CC0", "PUBLIC_DOMAIN", "CC_BY", "CC_BY_SA"]);
+    const RESTRICTIVE_SET: ReadonlySet<License> = new Set(["EDITORIAL_LICENSED", "PRESS_KIT_ALLOWLIST"]);
+
+    const hasOpenLicense = [...distinctLicenses].some((l) => OPEN_SET.has(l));
+    const hasRestrictiveLicense = [...distinctLicenses].some((l) => RESTRICTIVE_SET.has(l));
+
+    if (hasOpenLicense && hasRestrictiveLicense) {
+      conflictSeverity = "critical";
+    } else {
+      // Count distinct known (non-UNKNOWN) licenses.
+      const knownLicenses = [...distinctLicenses].filter((l) => l !== "UNKNOWN");
+      if (knownLicenses.length >= 2) {
+        conflictSeverity = "major";
+      } else {
+        // Only conflict is UNKNOWN vs. one known license.
+        conflictSeverity = "minor";
+      }
+    }
+  }
+
+  const legalReviewRequired = conflictSeverity === "major" || conflictSeverity === "critical";
+
+  // Build audit narrative.
+  let auditNarrative: string;
+  if (conflictSeverity === "none") {
+    auditNarrative =
+      `All ${candidates.length} provider(s) unanimously assert "${consensusLicense}". No conflict detected.`;
+  } else if (conflictSeverity === "minor") {
+    auditNarrative =
+      `Minor conflict: ${conflictCount} provider(s) [${conflictingProviders.join(", ")}] returned ` +
+      `UNKNOWN while the majority asserts "${consensusLicense}". ` +
+      `Re-query the conflicting providers to obtain structured metadata.`;
+  } else if (conflictSeverity === "major") {
+    const licenseList = [...distinctLicenses].join(", ");
+    auditNarrative =
+      `Major conflict: ${candidates.length} provider(s) split across licenses [${licenseList}]. ` +
+      `Consensus defaulted to "${consensusLicense}" by majority/rank, but ${conflictingProviders.length} ` +
+      `provider(s) [${conflictingProviders.join(", ")}] disagreed. ` +
+      `Legal review is required before publishing.`;
+  } else {
+    const licenseList = [...distinctLicenses].join(", ");
+    auditNarrative =
+      `CRITICAL conflict: open and restrictive licenses coexist in the provider pool [${licenseList}]. ` +
+      `Conflicting providers: [${conflictingProviders.join(", ")}]. ` +
+      `Do NOT publish without explicit legal clearance. Consensus license "${consensusLicense}" ` +
+      `may not be safe to apply without a full rights audit.`;
+  }
+
+  return {
+    conflictingProviders,
+    consensusLicense,
+    conflictSeverity,
+    auditNarrative,
+    legalReviewRequired,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Batch reconciliation
 // ---------------------------------------------------------------------------
 
