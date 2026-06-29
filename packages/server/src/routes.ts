@@ -16,11 +16,16 @@ import {
   ALL_PROVIDERS,
   DEFAULT_PROVIDERS,
   batchFindSimilar,
+  clearCacheEntry,
   downloadImage,
+  exportCache,
   fetchWithLicense,
   findSimilar,
+  getCacheStats,
   getFederationDiagnostics,
   hammingDistance,
+  importCache,
+  listCacheEntries,
   perceptualHashStructured,
   probePage,
   searchAlbumCover,
@@ -40,6 +45,31 @@ import {
   searchArtistImagesSchema,
   searchImagesSchema,
 } from "./schema.ts";
+
+// ---------------------------------------------------------------------------
+// Cache endpoint schemas
+// ---------------------------------------------------------------------------
+const cacheStatsSchema = z.object({
+  cacheDir: z.string().optional(),
+});
+
+const cacheEntriesSchema = z.object({
+  cacheDir: z.string().optional(),
+  limit: z.number().int().min(1).max(500).default(100),
+  offset: z.number().int().min(0).default(0),
+});
+
+const cacheExportSchema = z.object({
+  cacheDir: z.string().optional(),
+  outputPath: z.string().optional(),
+  mimeType: z.string().optional(),
+  ageMs: z.number().int().min(0).optional(),
+});
+
+const cacheImportSchema = z.object({
+  tarPath: z.string().min(1),
+  cacheDir: z.string().optional(),
+});
 
 type Handler = (body: unknown) => Promise<unknown>;
 
@@ -161,6 +191,14 @@ const handlers: Record<string, Handler> = {
       {},
     ),
   ),
+  "/cache/export": wrap(cacheExportSchema, async (a) => {
+    const filter =
+      a.mimeType !== undefined || a.ageMs !== undefined
+        ? { mimeType: a.mimeType, ageMs: a.ageMs }
+        : undefined;
+    return exportCache(a.cacheDir, a.outputPath, filter);
+  }),
+  "/cache/import": wrap(cacheImportSchema, async (a) => importCache(a.tarPath, a.cacheDir)),
   "/compare-phashes": wrap(comparePhashesSchema, async (a) => {
     assertPublicUrl(a.urlA);
     assertPublicUrl(a.urlB);
@@ -219,11 +257,55 @@ export function getProviders(): Response {
       data: {
         all,
         defaults: DEFAULT_PROVIDERS,
-        endpoints: ["/search", "/artist", "/album", "/download", "/probe", "/license", "/similar", "/batch-find-similar", "/federation-diagnostics", "/compare-phashes"],
+        endpoints: [
+          "/search",
+          "/artist",
+          "/album",
+          "/download",
+          "/probe",
+          "/license",
+          "/similar",
+          "/batch-find-similar",
+          "/federation-diagnostics",
+          "/compare-phashes",
+          "/cache/stats",
+          "/cache/entries",
+          "/cache/export",
+          "/cache/import",
+        ],
       },
     }),
     { status: 200, headers: { "content-type": "application/json; charset=utf-8" } },
   );
+}
+
+export async function getCacheStatsResponse(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const cacheDir = url.searchParams.get("cacheDir") ?? undefined;
+  try {
+    const stats = await getCacheStats(cacheDir);
+    return jsonOk(stats);
+  } catch (e: any) {
+    return jsonErr(e?.message ?? "internal error", 500);
+  }
+}
+
+export async function getCacheEntriesResponse(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const cacheDir = url.searchParams.get("cacheDir") ?? undefined;
+  const limitParam = url.searchParams.get("limit");
+  const offsetParam = url.searchParams.get("offset");
+  const limit = limitParam ? Math.min(500, Math.max(1, parseInt(limitParam, 10))) : 100;
+  const offset = offsetParam ? Math.max(0, parseInt(offsetParam, 10)) : 0;
+  if (isNaN(limit) || isNaN(offset)) {
+    return jsonErr("limit and offset must be integers", 422);
+  }
+  try {
+    const entries = await listCacheEntries(cacheDir, limit, offset);
+    return jsonOk({ entries, limit, offset });
+  } catch (e: any) {
+    return jsonErr(e?.message ?? "internal error", 500);
+  }
 }
 
 export function getFederationDiagnosticsResponse(req: Request): Response {

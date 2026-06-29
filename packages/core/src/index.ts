@@ -47,7 +47,24 @@ export {
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
 export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
-export { defaultCacheDir } from "./cache.ts";
+export { defaultCacheDir, cachePath, readCache, writeCache, ensureCacheDir } from "./cache.ts";
+export {
+  getCacheStats,
+  queryCacheByHash,
+  listCacheEntries,
+  clearCacheEntry,
+  exportCache,
+  importCache,
+} from "./cache-inspection.ts";
+export type {
+  CacheStats,
+  CacheEntryDetail,
+  CacheEntryListing,
+  ClearCacheResult,
+  ExportCacheResult,
+  ExportFilter,
+  ImportCacheResult,
+} from "./cache-inspection.ts";
 export {
   emitProviderEvent,
   getFederationDiagnostics,

@@ -6,7 +6,13 @@
 import { renderAuthDisplay } from "./auth-display.ts";
 import { checkBearer } from "./auth.ts";
 import { evaluateCors, preflight } from "./cors.ts";
-import { dispatchPost, getFederationDiagnosticsResponse, getProviders } from "./routes.ts";
+import {
+  dispatchPost,
+  getCacheEntriesResponse,
+  getCacheStatsResponse,
+  getFederationDiagnosticsResponse,
+  getProviders,
+} from "./routes.ts";
 
 export interface ServerOptions {
   port: number;
@@ -61,6 +67,18 @@ export function startServer(opts: ServerOptions) {
           url.pathname === "/v1/federation-diagnostics")
       ) {
         return withHeaders(getFederationDiagnosticsResponse(req), cors);
+      }
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/cache/stats" || url.pathname === "/v1/cache/stats")
+      ) {
+        return withHeaders(await getCacheStatsResponse(req), cors);
+      }
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/cache/entries" || url.pathname === "/v1/cache/entries")
+      ) {
+        return withHeaders(await getCacheEntriesResponse(req), cors);
       }
       if (req.method === "POST") {
         return withHeaders(await dispatchPost(url.pathname, req), cors);

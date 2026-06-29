@@ -8,10 +8,13 @@
 import {
   batchFindSimilar,
   downloadImage,
+  exportCache,
   fetchWithLicense,
   findSimilar,
+  getCacheStats,
   getFederationDiagnostics,
   hammingDistance,
+  listCacheEntries,
   perceptualHashStructured,
   probePage,
   searchAlbumCover,
@@ -182,6 +185,58 @@ export const TOOLS: ToolDef[] = [
     async handler(args) {
       const diag = getFederationDiagnostics(args.windowMs);
       return renderJson(diag);
+    },
+  },
+  {
+    name: "inspect_cache",
+    description:
+      "Return cache statistics (total entries, bytes, content-type breakdown, oldest/newest sha) plus the most recent cache entries. Use to debug cache state, understand what is cached locally, and confirm that prior downloads are available for replay without network calls.",
+    inputSchema: z.object({
+      cacheDir: z.string().optional().describe("Override the default ~/.webfetch/cache directory"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(500)
+        .default(20)
+        .describe("Number of recent entries to include in the listing (default 20)"),
+    }),
+    async handler(args) {
+      const [stats, entries] = await Promise.all([
+        getCacheStats(args.cacheDir),
+        listCacheEntries(args.cacheDir, args.limit ?? 20, 0),
+      ]);
+      return renderJson({ stats, recentEntries: entries });
+    },
+  },
+  {
+    name: "export_cache_for_replay",
+    description:
+      "Export cached images as a tar archive suitable for CI test fixtures and local-first development. Optionally filter by mimeType prefix (e.g. 'image/jpeg') or ageMs (only include entries younger than this many ms). The tarball can be imported later with importCache / POST /v1/cache/import to restore a deterministic cache state without network calls.",
+    inputSchema: z.object({
+      cacheDir: z.string().optional().describe("Override the default ~/.webfetch/cache directory"),
+      outputPath: z
+        .string()
+        .optional()
+        .describe("Destination path for the .tar file (default: <cacheDir>/cache-export-<ts>.tar)"),
+      mimeType: z
+        .string()
+        .optional()
+        .describe("Only export entries whose sniffed MIME type starts with this string"),
+      ageMs: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Only export entries modified within the last ageMs milliseconds"),
+    }),
+    async handler(args) {
+      const filter =
+        args.mimeType !== undefined || args.ageMs !== undefined
+          ? { mimeType: args.mimeType, ageMs: args.ageMs }
+          : undefined;
+      const result = await exportCache(args.cacheDir, args.outputPath, filter);
+      return renderJson(result);
     },
   },
 ];
