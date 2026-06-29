@@ -23,7 +23,7 @@ export {
   providerRankScore,
   computeClusterMetrics,
 } from "./semantic-clustering.ts";
-export { pickBest, rankAll, refineSearchResults } from "./pick.ts";
+export { pickBest, rankAll, refineSearchResults, extractPhashDedupeMetrics } from "./pick.ts";
 export { assertPublicHttpUrl, downloadImage, DownloadError } from "./download.ts";
 export { fetchWithLicense, parseHtmlLicense } from "./fetch-with-license.ts";
 export { probePage, extractImages } from "./probe-page.ts";
@@ -57,6 +57,7 @@ export {
   findDuplicates,
   compareCandidates,
   dedupeWithPhashGrouping,
+  dedupeImagesByPhash,
 } from "./dedupe.ts";
 export type { CompareCandidatesOptions, DedupeByHashOptions } from "./dedupe.ts";
 export {
@@ -346,6 +347,27 @@ export type {
   TelemetryPayload,
   Fetcher as TelemetryFetcher,
 } from "./telemetry.ts";
+
+export {
+  validatePluginManifest,
+} from "./provider-plugin-manifest.ts";
+export type {
+  PluginCapability,
+  PluginAuth,
+  PluginManifest,
+  PluginManifestValidationResult,
+} from "./provider-plugin-manifest.ts";
+
+export {
+  loadPluginFromPath,
+  watchPluginDirectory,
+  bootstrapPluginDirectory,
+} from "./provider-plugin-loader.ts";
+export type {
+  PluginLoadResult,
+  PluginWatcher,
+  WatchPluginDirectoryOptions,
+} from "./provider-plugin-loader.ts";
 
 export {
   clusterCandidatesBySemantic,

@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { FederationRepairPlan, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode } from "webfetch-core";
-import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata } from "webfetch-core";
+import { analyzePhashQuality, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
   BUILTIN_DEFAULTS,
@@ -129,6 +129,15 @@ function buildSearchOptions(
         ? "default"
         : undefined;
 
+  const semanticDedupe = getBool(args.flags, "semantic-dedupe");
+
+  // --phash-dedup is ON by default; --no-phash-dedup or WEBFETCH_PHASH_DEDUP=0 disables it.
+  // We only explicitly set phashDedup:false when the user wants to disable; otherwise
+  // federation.ts respects the default (true) so we don't need to set true explicitly.
+  const noPhashDedup =
+    getBool(args.flags, "no-phash-dedup") ||
+    env.WEBFETCH_PHASH_DEDUP === "0";
+
   return {
     opts: {
       providers,
@@ -140,6 +149,8 @@ function buildSearchOptions(
       auth: authFromEnv(env),
       dryRun: getBool(args.flags, "dry-run"),
       ...(scorecardSelection !== undefined ? { scorecardSelection } : {}),
+      ...(semanticDedupe ? { semanticDedupe: true } : {}),
+      ...(noPhashDedup ? { phashDedup: false } : {}),
     },
     limit,
     verbose: getBool(args.flags, "verbose"),
@@ -1342,6 +1353,152 @@ export async function cmdPhashDiagnostics(
   return 0;
 }
 
+// ---------- `webfetch plugin` ---------------------------------------------
+
+/**
+ * `webfetch plugin add <git-url-or-path>`  — clone (if git URL) or load from
+ *   a local path and register the plugin into the provider registry for this
+ *   session. Saves the path to the config file for future bootstrap.
+ *
+ * `webfetch plugin list`  — show all runtime-registered plugin providers.
+ *
+ * `webfetch plugin test <id>`  — run a smoke-search through the plugin and
+ *   print results (or errors).
+ */
+export async function cmdPlugin(args: ParsedArgs, io: CommandIO = DEFAULT_IO): Promise<number> {
+  const sub = args.positional[0];
+  const json = getBool(args.flags, "json");
+
+  // --- `webfetch plugin list` ---
+  if (!sub || sub === "list") {
+    const plugins = listPluginProviders();
+    if (json) {
+      io.stdout(JSON.stringify(plugins, null, 2));
+      return 0;
+    }
+    if (plugins.length === 0) {
+      io.stdout(c.dim("No plugin providers registered."));
+      io.stdout(c.dim("Use 'webfetch plugin add <path>' to load one."));
+      return 0;
+    }
+    const cols = [
+      { header: "ID", width: 28 },
+      { header: "Display Name", width: 30 },
+      { header: "License", width: 18 },
+      { header: "Auth env vars", width: 30 },
+    ];
+    const rows = plugins.map((p) => [
+      p.id,
+      p.displayName,
+      p.licenseDefault ?? c.dim("UNKNOWN"),
+      p.authRequired?.length ? p.authRequired.join(", ") : c.dim("none"),
+    ]);
+    io.stdout(c.bold(`Plugin Providers (${plugins.length})`));
+    io.stdout(renderTable(cols, rows));
+    return 0;
+  }
+
+  // --- `webfetch plugin add <path>` ---
+  if (sub === "add") {
+    const target = args.positional[1];
+    if (!target) {
+      io.stderr(c.red("usage: webfetch plugin add <path-to-plugin>"));
+      io.stderr(c.dim("  Example: webfetch plugin add ./my-plugin/index.ts"));
+      return 2;
+    }
+
+    // Resolve path relative to cwd
+    const pluginPath = resolve(target);
+
+    io.stdout(c.dim(`Loading plugin from ${pluginPath} …`));
+
+    const result = await loadPluginFromPath(pluginPath, { replace: false });
+
+    if (!result.success) {
+      io.stderr(c.red(`plugin add failed: ${result.error}`));
+      return 1;
+    }
+
+    const m = result.manifest!;
+    io.stdout(`${c.green("✓")} Loaded plugin ${c.bold(m.id)} (${m.name} v${m.version})`);
+    if (result.warnings?.length) {
+      for (const w of result.warnings) io.stderr(c.yellow(`  warning: ${w}`));
+    }
+
+    if (json) {
+      io.stdout(JSON.stringify({ id: m.id, name: m.name, version: m.version, path: pluginPath }, null, 2));
+    }
+    return 0;
+  }
+
+  // --- `webfetch plugin test <id>` ---
+  if (sub === "test") {
+    const pluginId = args.positional[1];
+    if (!pluginId) {
+      io.stderr(c.red("usage: webfetch plugin test <plugin-id>"));
+      return 2;
+    }
+
+    const provider = providerRegistry.get(pluginId);
+    if (!provider) {
+      io.stderr(c.red(`plugin "${pluginId}" is not registered. Load it first with 'webfetch plugin add'.`));
+      return 1;
+    }
+
+    const meta = providerRegistry.getMetadata(pluginId);
+    if (!json) io.stdout(c.dim(`Testing plugin "${pluginId}" …`));
+
+    // Health-check URL if available (always to stderr so it never pollutes JSON)
+    if (meta?.healthCheckUrl && !json) {
+      try {
+        const resp = await fetch(meta.healthCheckUrl, { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) {
+          io.stdout(`${c.green("✓")} Health check passed (${resp.status}): ${meta.healthCheckUrl}`);
+        } else {
+          io.stdout(c.yellow(`⚠ Health check returned ${resp.status}: ${meta.healthCheckUrl}`));
+        }
+      } catch (e) {
+        io.stdout(c.yellow(`⚠ Health check failed: ${(e as Error).message}`));
+      }
+    }
+
+    // Smoke search
+    const testQuery = getString(args.flags, "query", "q") ?? "test";
+    const startMs = Date.now();
+    try {
+      const results = await provider.search(testQuery, {
+        maxPerProvider: 3,
+        timeoutMs: 10_000,
+      });
+      const elapsed = Date.now() - startMs;
+      if (json) {
+        io.stdout(JSON.stringify({ pluginId, query: testQuery, count: results.length, timeMs: elapsed, results }, null, 2));
+        return 0;
+      }
+      io.stdout(`${c.green("✓")} search("${testQuery}") → ${results.length} result(s) in ${elapsed}ms`);
+      for (const r of results.slice(0, 3)) {
+        io.stdout(`  ${c.dim(r.license)} ${r.url}`);
+      }
+      if (results.length === 0) {
+        io.stdout(c.yellow("  (no results — plugin may require auth or different query)"));
+      }
+      return 0;
+    } catch (e) {
+      const elapsed = Date.now() - startMs;
+      if (json) {
+        io.stdout(JSON.stringify({ pluginId, query: testQuery, error: (e as Error).message, timeMs: elapsed }, null, 2));
+        return 1;
+      }
+      io.stderr(c.red(`plugin search failed (${elapsed}ms): ${(e as Error).message}`));
+      return 1;
+    }
+  }
+
+  io.stderr(c.red(`unknown plugin subcommand: ${sub}`));
+  io.stderr(c.dim("Available: list, add, test"));
+  return 2;
+}
+
 export function cmdHelp(_args: ParsedArgs, io: CommandIO = DEFAULT_IO): number {
   io.stdout(USAGE);
   return 0;
@@ -1381,6 +1538,7 @@ ${c.bold("COMMANDS")}
   cache-analytics [--since 7d]          Query-replay stats, cache-hit diagnostics, provider ranking
   diagnose <query>                      Run search + show ranked repair steps for provider failures
   phash-diagnostics <query>            Inspect pHash algorithm mix + dedup confidence for a query
+  plugin <list|add|test>               Manage runtime provider plugins (third-party image sources)
   help                                  Show this message
   version                               Print version
 
@@ -1398,6 +1556,8 @@ ${c.bold("COMMON SEARCH FLAGS")}
   --pick                Interactive picker (TTY only); choose a candidate to download
   --no-sidecar          Skip writing the .xmp attribution sidecar on download
   --phash-diagnostics   After results, print pHash algorithm mix + dedup confidence summary
+  --semantic-dedupe     Cluster results by pHash distance; emit one representative per unique image
+  --no-phash-dedup      Disable multi-provider pHash similarity dedup (default: enabled; also WEBFETCH_PHASH_DEDUP=0)
 
 ${c.bold("EXAMPLES")}
   webfetch search "drake portrait" --json --limit 5
@@ -1432,6 +1592,7 @@ export const COMMANDS: Record<string, Dispatcher> = {
   "cache-analytics": cmdCacheAnalytics,
   diagnose: cmdDiagnose,
   "phash-diagnostics": cmdPhashDiagnostics,
+  plugin: cmdPlugin,
   help: cmdHelp,
   "--help": cmdHelp,
   "-h": cmdHelp,
