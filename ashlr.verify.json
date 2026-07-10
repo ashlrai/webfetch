@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "mode": "replace-detected",
+  "commands": [
+    {
+      "id": "typecheck",
+      "kind": "typecheck",
+      "cmd": ["bun", "run", "typecheck"],
+      "timeoutMs": 120000,
+      "required": true,
+      "profiles": ["quick", "merge"]
+    },
+    {
+      "id": "test",
+      "kind": "test",
+      "cmd": ["bun", "test"],
+      "timeoutMs": 300000,
+      "required": true,
+      "profiles": ["merge"]
+    }
+  ]
+}
