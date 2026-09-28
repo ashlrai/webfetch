@@ -38,7 +38,7 @@ export function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   // SECURITY (SA-005): Previously returned `true` for `origin === "*"`. Combined
   // with `access-control-allow-credentials: true`, that would have been a
-  // cross-origin credentialed-read bug. See SECURITY-AUDIT-REPORT.md § HIGH.
+  // cross-origin credentialed-read bug. See docs/internal/SECURITY-AUDIT-REPORT.md § HIGH.
   try {
     const { hostname } = new URL(origin);
     // Only bare `localhost` (+ explicit dev ports) — NOT arbitrary
@@ -58,7 +58,7 @@ export function isAllowedOrigin(origin: string): boolean {
  * keys). Requires the request Origin (or, for older clients, Referer) to match
  * an allow-listed origin for any non-safe method. Bearer-auth routes are NOT
  * subject to this because attackers cannot forge an Authorization header
- * cross-origin. See SECURITY-AUDIT-REPORT.md § SA-007.
+ * cross-origin. See docs/internal/SECURITY-AUDIT-REPORT.md § SA-007.
  */
 export const csrfGuard: MiddlewareHandler<HonoEnv> = async (c, next) => {
   const method = c.req.method.toUpperCase();
