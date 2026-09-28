@@ -24,19 +24,20 @@ const PROVIDERS: Provider[] = [
   { name: "met-museum", stamp: "CC0", auth: "none", rate: "80/sec" },
   { name: "loc", stamp: "PUBLIC DOMAIN", auth: "none", rate: "generous" },
   { name: "flickr-cc", stamp: "CC-BY", auth: "key", rate: "3600/hr" },
-  { name: "rijksmuseum", stamp: "PUBLIC DOMAIN", auth: "key", rate: "10k/day" },
-  { name: "nypl", stamp: "PUBLIC DOMAIN", auth: "key", rate: "generous" },
-  { name: "harvard-art", stamp: "CC0", auth: "key", rate: "generous" },
+  { name: "internet-archive", stamp: "MIXED", auth: "none", rate: "5/sec" },
+  { name: "wellcome-collection", stamp: "CC-BY", auth: "none", rate: "5/sec" },
+  { name: "rawpixel", stamp: "CC0", auth: "none", rate: "3/sec" },
+  { name: "burst", stamp: "CC0", auth: "none", rate: "3/sec" },
   { name: "itunes", stamp: "EDITORIAL", auth: "none", rate: "20/min" },
   { name: "musicbrainz-caa", stamp: "EDITORIAL", auth: "none", rate: "1/sec" },
   { name: "spotify", stamp: "EDITORIAL", auth: "oauth", rate: "180/min" },
   { name: "youtube-thumb", stamp: "EDITORIAL", auth: "none", rate: "generous" },
-  { name: "bandcamp", stamp: "EDITORIAL", auth: "none", rate: "generous" },
-  { name: "deezer", stamp: "EDITORIAL", auth: "none", rate: "50/5sec" },
   { name: "brave", stamp: "UNKNOWN", auth: "key", rate: "2k/mo", optIn: true },
   { name: "bing", stamp: "UNKNOWN", auth: "key", rate: "3/sec", optIn: true },
   { name: "serpapi", stamp: "UNKNOWN", auth: "key", rate: "100/mo", optIn: true },
   { name: "browser", stamp: "UNKNOWN", auth: "cloud", rate: "paid", optIn: true },
+  { name: "europeana-archival", stamp: "MIXED", auth: "key", rate: "5/sec", optIn: true },
+  { name: "managed-browser", stamp: "UNKNOWN", auth: "cloud", rate: "30/min", optIn: true },
 ];
 
 function stampClass(s: Stamp) {
@@ -77,7 +78,7 @@ export function ProviderMatrix() {
         </div>
         <div className="flex items-end justify-between flex-wrap gap-4">
           <h2 className="font-mono text-[30px] md:text-[36px] font-semibold tracking-[-0.025em] leading-[1.1] max-w-3xl">
-            24 federated providers.
+            25 federated providers.
             <br />
             <span className="text-[var(--color-fg-dim)]">One ranked stream.</span>
           </h2>

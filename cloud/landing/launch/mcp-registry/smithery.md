@@ -47,7 +47,7 @@ startCommand:
 
 - **Display name:** webfetch
 - **Short description (140 char):** License-first image search for AI
-  agents. 24 licensed providers, one MCP, UNKNOWN rejected by default,
+  agents. 25 image providers, one MCP, UNKNOWN rejected by default,
   attribution on every result.
 - **Long description:** paste the devto-post.md intro + "The design"
   section.

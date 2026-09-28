@@ -6,7 +6,7 @@ canonical_url: https://getwebfetch.com/blog/shipping-webfetch
 cover_image: https://getwebfetch.com/og-image.svg
 ---
 
-Today I'm shipping **webfetch** — a federated, license-aware image search layer for AI agents (and humans). One CLI, one MCP server, 24 licensed providers, and a ranker that rejects anything with an unknown license by default.
+Today I'm shipping **webfetch** — a federated, license-aware image search layer for AI agents (and humans). One CLI, one MCP server, 25 image providers, and a ranker that rejects anything with an unknown license by default.
 
 Live at [getwebfetch.com](https://getwebfetch.com). Source: [github.com/ashlrai/webfetch](https://github.com/ashlrai/webfetch). Apache-2.0 core.
 
