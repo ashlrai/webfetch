@@ -55,8 +55,7 @@
   "dependencies": {
     "webfetch-core": "0.1.5",
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "zod": "^3.23.8",
-    "@ashlr/mcp-kit": "file:../../../ashlr-mcp-kit"
+    "zod": "^3.23.8"
   },
   "engines": {
     "node": ">=18"

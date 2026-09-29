@@ -30,6 +30,9 @@ import type {
   Fetcher,
   ImageCandidate,
   PhashCanonicalCandidate,
+  PhashDedupeMetrics,
+  PhashDedupeOptions,
+  PhashDedupeResult,
   PhashGroupingResult,
   ProviderDedupeReport,
   SearchResultBundle,
@@ -619,4 +622,173 @@ export async function dedupeWithPhashGrouping(
     groups: duplicateGroups,
     singletons: singletonList,
   };
+}
+
+// ---------------------------------------------------------------------------
+// dedupeImagesByPhash — federation-facing dedup that returns a cluster Map keyed
+// by representative URL plus aggregate metrics. Built on the same URL-collapse +
+// Hamming Union-Find machinery as dedupeWithPhashGrouping, but emits the
+// PhashDedupeResult shape consumed by federation.ts and batch-phash-dedup.ts.
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the representative ("primary") candidate of a cluster: highest pHash
+ * algorithm confidence first, then highest resolution (width×height), then best
+ * (lowest) license rank, then highest composite score, then earliest member.
+ */
+function selectPhashRepresentative(members: ImageCandidate[]): ImageCandidate {
+  return members.reduce((best, c) => {
+    const bc = phashAlgorithmConfidence(best);
+    const cc = phashAlgorithmConfidence(c);
+    if (cc !== bc) return cc > bc ? c : best;
+    const bRes = (best.width ?? 0) * (best.height ?? 0);
+    const cRes = (c.width ?? 0) * (c.height ?? 0);
+    if (cRes !== bRes) return cRes > bRes ? c : best;
+    const bRank = LICENSE_RANK[best.license] ?? 99;
+    const cRank = LICENSE_RANK[c.license] ?? 99;
+    if (cRank !== bRank) return cRank < bRank ? c : best;
+    const bScore = best.score ?? 0;
+    const cScore = c.score ?? 0;
+    return cScore > bScore ? c : best;
+  }, members[0]!);
+}
+
+/**
+ * Deduplicate `ImageCandidate[]` by perceptual-hash similarity and return a
+ * cluster Map plus aggregate metrics.
+ *
+ * - URL-equivalent variants (cache-busting params stripped) are pre-collapsed.
+ * - Candidates within `hammingThreshold` Hamming distance are grouped via
+ *   Union-Find. Candidates without a pHash are always singletons.
+ * - For each cluster the representative (primary) is elected by
+ *   `selectPhashRepresentative` and placed first in the members array.
+ * - `dedupedCandidates` is the flat list of one primary per cluster, with
+ *   multi-member cluster primaries first (sorted by score), then singletons.
+ *
+ * @example
+ * ```ts
+ * const { dedupedCandidates, clusters, metrics } = await dedupeImagesByPhash(candidates);
+ * console.log(`${metrics.clusterCount} clusters, ${metrics.totalDeduplicated} duplicates removed`);
+ * ```
+ */
+export async function dedupeImagesByPhash(
+  candidates: ImageCandidate[],
+  opts: PhashDedupeOptions = {},
+): Promise<PhashDedupeResult> {
+  const threshold = Math.max(0, Math.min(64, opts.hammingThreshold ?? 8));
+  const emptyMetrics: PhashDedupeMetrics = {
+    clusterCount: 0,
+    totalDeduplicated: 0,
+    avgClusterSize: 0,
+    avgIntraClusterHammingDistance: 0,
+  };
+
+  if (candidates.length === 0) {
+    return { clusters: new Map(), dedupedCandidates: [], metrics: emptyMetrics };
+  }
+
+  // Step 1: URL-level pre-collapse. urlGroups: first-index → all indices sharing URL.
+  const urlToFirst = new Map<string, number>();
+  const urlGroups = new Map<number, number[]>();
+  for (let i = 0; i < candidates.length; i++) {
+    const norm = normalizeUrl(candidates[i]!.url);
+    const first = urlToFirst.get(norm);
+    if (first === undefined) {
+      urlToFirst.set(norm, i);
+      urlGroups.set(i, [i]);
+    } else {
+      urlGroups.get(first)!.push(i);
+    }
+  }
+
+  const repIndices = [...urlGroups.keys()];
+  let repCandidates: ImageCandidate[] = repIndices.map((i) => candidates[i]!);
+
+  // Step 2: optionally compute missing hashes.
+  if (opts.computeHashes) {
+    repCandidates = await fillMissingHashes(repCandidates, {
+      fetcher: opts.fetcher,
+      userAgent: opts.userAgent,
+      signal: opts.signal,
+    });
+  }
+
+  // Step 3: Union-Find over pHash pairs within threshold.
+  const n = repCandidates.length;
+  const parent = repCandidates.map((_, i) => i);
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]!]!;
+      x = parent[x]!;
+    }
+    return x;
+  }
+  function union(a: number, b: number): void {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[rb] = ra;
+  }
+  for (const [i, j] of findDuplicates(repCandidates, threshold)) union(i, j);
+
+  // Step 4: collect rep-index groups by root.
+  const rootGroups = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!rootGroups.has(root)) rootGroups.set(root, []);
+    rootGroups.get(root)!.push(i);
+  }
+
+  // Step 5: expand to full original members + build clusters/singletons.
+  const clusters = new Map<string, ImageCandidate[]>();
+  const singletonPrimaries: ImageCandidate[] = [];
+  const clusterPrimaries: ImageCandidate[] = [];
+  let totalDeduplicated = 0;
+  let intraClusterPairCount = 0;
+  let intraClusterHammingSum = 0;
+
+  for (const [, memberRepIndices] of rootGroups) {
+    const allMembers: ImageCandidate[] = [];
+    for (const ri of memberRepIndices) {
+      const origIdx = repIndices[ri]!;
+      for (const oi of urlGroups.get(origIdx)!) allMembers.push(candidates[oi]!);
+    }
+
+    if (allMembers.length === 1) {
+      singletonPrimaries.push(allMembers[0]!);
+      continue;
+    }
+
+    // Multi-member cluster: elect primary, place first.
+    const primary = selectPhashRepresentative(allMembers);
+    const ordered = [primary, ...allMembers.filter((m) => m !== primary)];
+    clusters.set(primary.url, ordered);
+    clusterPrimaries.push(primary);
+    totalDeduplicated += allMembers.length - 1;
+
+    // Accumulate intra-cluster Hamming distances for members that have hashes.
+    const hashed = ordered.filter((m) => m.phash);
+    for (let a = 0; a < hashed.length; a++) {
+      for (let b = a + 1; b < hashed.length; b++) {
+        intraClusterHammingSum += hammingDistance(hashed[a]!.phash!, hashed[b]!.phash!);
+        intraClusterPairCount++;
+      }
+    }
+  }
+
+  // dedupedCandidates: cluster primaries (by score desc) then singletons (by score desc).
+  clusterPrimaries.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  singletonPrimaries.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const dedupedCandidates = [...clusterPrimaries, ...singletonPrimaries];
+
+  const clusterCount = clusters.size;
+  const clusteredMemberCount = [...clusters.values()].reduce((s, m) => s + m.length, 0);
+  const metrics: PhashDedupeMetrics = {
+    clusterCount,
+    totalDeduplicated,
+    avgClusterSize: clusterCount > 0 ? clusteredMemberCount / clusterCount : 0,
+    avgIntraClusterHammingDistance:
+      intraClusterPairCount > 0 ? intraClusterHammingSum / intraClusterPairCount : 0,
+  };
+
+  return { clusters, dedupedCandidates, metrics };
 }

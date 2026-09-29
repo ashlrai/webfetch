@@ -412,3 +412,340 @@ export function _resetAnalytics(): void {
   _head = 0;
   _size = 0;
 }
+
+// ---------------------------------------------------------------------------
+// 24h sliding-window default
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------------------
+// cacheHitRateByProvider — per-provider hit-rate summary
+// ---------------------------------------------------------------------------
+
+/** Per-provider hit-rate summary returned by `cacheHitRateByProvider()`. */
+export interface ProviderHitRateSummary {
+  provider: ProviderId;
+  /** Cache-hit rate in [0,1]; NaN when the provider had zero candidates in window. */
+  hitRate: number;
+  /** Total candidate count (hits + misses) from this provider in the window. */
+  count: number;
+  /** Unix-ms timestamp of the most recent cache hit, or null if none. */
+  lastHit: number | null;
+}
+
+/** Return per-provider cache-hit rates for the last 24 hours (default). */
+export function cacheHitRateByProvider(windowMs: number = DAY_MS): ProviderHitRateSummary[] {
+  const events = windowedEvents(windowMs);
+  const agg = new Map<ProviderId, { hits: number; count: number; lastHit: number | null }>();
+  for (const evt of events) {
+    for (const c of evt.candidates) {
+      let a = agg.get(c.providerId);
+      if (!a) {
+        a = { hits: 0, count: 0, lastHit: null };
+        agg.set(c.providerId, a);
+      }
+      a.count += 1;
+      if (c.cacheHit) {
+        a.hits += 1;
+        if (a.lastHit === null || evt.startedAt > a.lastHit) a.lastHit = evt.startedAt;
+      }
+    }
+  }
+  return [...agg.entries()]
+    .map(([provider, a]) => ({
+      provider,
+      hitRate: a.count > 0 ? a.hits / a.count : Number.NaN,
+      count: a.count,
+      lastHit: a.lastHit,
+    }))
+    .sort((x, y) => y.count - x.count);
+}
+
+// ---------------------------------------------------------------------------
+// getHotQueries — top queries by cache-hit count
+// ---------------------------------------------------------------------------
+
+/** A hot-query entry returned by `getHotQueries()`. */
+export interface HotQueryEntry {
+  query: string;
+  cacheHits: number;
+  cacheMisses: number;
+  /** cacheHits / (cacheHits + cacheMisses); NaN when none observed. */
+  hitRate: number;
+  /** How many times this query appeared in the event buffer. */
+  eventCount: number;
+  byProvider: Array<{ provider: ProviderId; hits: number; misses: number; hitRate: number }>;
+}
+
+/** Return the top `limit` queries ranked by total cache-hit count (default 20). */
+export function getHotQueries(windowMs: number = DAY_MS, limit = 20): HotQueryEntry[] {
+  const events = windowedEvents(windowMs);
+  type QAgg = {
+    hits: number;
+    misses: number;
+    eventCount: number;
+    byProvider: Map<ProviderId, { hits: number; misses: number }>;
+  };
+  const byQuery = new Map<string, QAgg>();
+  for (const evt of events) {
+    const q = normaliseQuery(evt.query);
+    let qa = byQuery.get(q);
+    if (!qa) {
+      qa = { hits: 0, misses: 0, eventCount: 0, byProvider: new Map() };
+      byQuery.set(q, qa);
+    }
+    qa.eventCount += 1;
+    for (const c of evt.candidates) {
+      let p = qa.byProvider.get(c.providerId);
+      if (!p) {
+        p = { hits: 0, misses: 0 };
+        qa.byProvider.set(c.providerId, p);
+      }
+      if (c.cacheHit) {
+        qa.hits += 1;
+        p.hits += 1;
+      } else {
+        qa.misses += 1;
+        p.misses += 1;
+      }
+    }
+  }
+  return [...byQuery.entries()]
+    .map(([query, qa]) => {
+      const denom = qa.hits + qa.misses;
+      return {
+        query,
+        cacheHits: qa.hits,
+        cacheMisses: qa.misses,
+        hitRate: denom > 0 ? qa.hits / denom : Number.NaN,
+        eventCount: qa.eventCount,
+        byProvider: [...qa.byProvider.entries()]
+          .map(([provider, p]) => {
+            const d = p.hits + p.misses;
+            return { provider, hits: p.hits, misses: p.misses, hitRate: d > 0 ? p.hits / d : Number.NaN };
+          })
+          .sort((a, b) => b.hits - a.hits),
+      };
+    })
+    .sort((a, b) => b.cacheHits - a.cacheHits)
+    .slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// recomputeProviderRecommendations — cache-boosted provider priorities
+// ---------------------------------------------------------------------------
+
+/** A single entry in the cache-boosted provider recommendation list. */
+export interface CacheAwareProviderRec {
+  provider: ProviderId;
+  /** Composite priority in [0,1] blending hit-rate (60%) and avg confidence (40%). */
+  priorityScore: number;
+  cacheHitRate: number;
+  avgConfidence: number;
+  totalCandidates: number;
+  /** True when boosted (+0.1) for hitRate > 0.5. */
+  cacheBoosted: boolean;
+  /** Rank position (1 = highest priority). */
+  rank: number;
+}
+
+/** Recompute provider recommendations by blending cache-hit analytics. */
+export function recomputeProviderRecommendations(windowMs: number = DAY_MS): CacheAwareProviderRec[] {
+  const events = windowedEvents(windowMs);
+  const agg = new Map<ProviderId, { hits: number; total: number; sumConf: number }>();
+  for (const evt of events) {
+    for (const c of evt.candidates) {
+      let a = agg.get(c.providerId);
+      if (!a) {
+        a = { hits: 0, total: 0, sumConf: 0 };
+        agg.set(c.providerId, a);
+      }
+      a.total += 1;
+      a.sumConf += c.confidence;
+      if (c.cacheHit) a.hits += 1;
+    }
+  }
+  return [...agg.entries()]
+    .map(([provider, a]) => {
+      const cacheHitRate = a.total > 0 ? a.hits / a.total : 0;
+      const avgConfidence = a.total > 0 ? a.sumConf / a.total : 0;
+      const base = cacheHitRate * 0.6 + avgConfidence * 0.4;
+      const cacheBoosted = cacheHitRate > 0.5;
+      const priorityScore = cacheBoosted ? Math.min(base + 0.1, 1.0) : base;
+      return { provider, priorityScore, cacheHitRate, avgConfidence, totalCandidates: a.total, cacheBoosted };
+    })
+    .sort((x, y) => y.priorityScore - x.priorityScore)
+    .map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
+// ---------------------------------------------------------------------------
+// exportCacheMetrics — raw rows for external BI tooling
+// ---------------------------------------------------------------------------
+
+/** A single row in the cache-metrics export. */
+export interface CacheMetricsRow {
+  query: string;
+  timestamp: number;
+  provider: ProviderId;
+  hit: boolean;
+  confidence: number;
+  resolution: "cache" | "live";
+}
+
+/** Top-level shape returned by `exportCacheMetrics()`. */
+export interface CacheMetricsExport {
+  generatedAt: number;
+  windowMs: number;
+  totalEvents: number;
+  totalCandidates: number;
+  rows: CacheMetricsRow[];
+}
+
+/** Export raw cache metrics as a JSON-serialisable object for external BI tooling. */
+export function exportCacheMetrics(windowMs: number = DAY_MS): CacheMetricsExport {
+  const events = windowedEvents(windowMs);
+  const rows: CacheMetricsRow[] = [];
+  for (const evt of events) {
+    const q = normaliseQuery(evt.query);
+    for (const c of evt.candidates) {
+      rows.push({
+        query: q,
+        timestamp: evt.startedAt,
+        provider: c.providerId,
+        hit: c.cacheHit,
+        confidence: c.confidence,
+        resolution: c.cacheHit ? "cache" : "live",
+      });
+    }
+  }
+  return {
+    generatedAt: Date.now(),
+    windowMs,
+    totalEvents: events.length,
+    totalCandidates: rows.length,
+    rows,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// predictCacheHits — Beta-Binomial Bayesian cache-hit prediction
+// ---------------------------------------------------------------------------
+
+const PRIOR_ALPHA = 1;
+const PRIOR_BETA = 1;
+
+/** Map: `${normQuery}::${provider}` → { alpha, beta } Beta posterior parameters. */
+let _predictionModel = new Map<string, { alpha: number; beta: number }>();
+
+function predictionKey(query: string, provider: ProviderId): string {
+  return `${normaliseQuery(query)}::${provider}`;
+}
+
+/** A single provider recommendation from `predictCacheHits`. */
+export interface CacheHitPrediction {
+  provider: ProviderId;
+  /** Estimated probability of a cache hit (Beta posterior mean α/(α+β)). */
+  pCacheHit: number;
+  /** Expected number of cached results = pCacheHit × estimatedResultCount. */
+  expectedCacheHits: number;
+  /** Average license confidence for this provider in the window. */
+  avgConfidence: number;
+  /** Combined ranking score = pCacheHit×0.7 + avgConfidence×0.3. */
+  rankScore: number;
+  /** Whether the model has ≥2 real observations for this (query, provider). */
+  hasData: boolean;
+}
+
+/** Options for `predictCacheHits`. */
+export interface PredictCacheHitsOptions {
+  /** Window (ms) for pulling avgConfidence from the analytics buffer. Default 24h. */
+  historyWindow?: number;
+  /** Minimum pCacheHit to include a provider. Default 0. */
+  confidenceThreshold?: number;
+}
+
+/**
+ * Record the outcome of a cache-hit prediction, updating the Beta posterior so
+ * future `predictCacheHits` calls improve. A cache hit increments alpha; a miss
+ * increments beta.
+ */
+export function recordCacheHitPrediction(
+  query: string,
+  provider: ProviderId,
+  _predicted: boolean,
+  actual: boolean,
+): void {
+  const key = predictionKey(query, provider);
+  let m = _predictionModel.get(key);
+  if (!m) {
+    m = { alpha: PRIOR_ALPHA, beta: PRIOR_BETA };
+    _predictionModel.set(key, m);
+  }
+  if (actual) m.alpha += 1;
+  else m.beta += 1;
+}
+
+/**
+ * Predict which providers are most likely to yield cache hits for a query using
+ * a Beta-Binomial model seeded from the analytics ring buffer and refined by
+ * `recordCacheHitPrediction`. Returns providers sorted by `rankScore` desc.
+ */
+export function predictCacheHits(
+  query: string,
+  providers: ProviderId[],
+  options: PredictCacheHitsOptions = {},
+): CacheHitPrediction[] {
+  const historyWindow = options.historyWindow ?? DAY_MS;
+  const confidenceThreshold = options.confidenceThreshold ?? 0;
+
+  // Seed per-provider observed (hit, total, confidence) from the analytics buffer.
+  const events = windowedEvents(historyWindow);
+  const observed = new Map<ProviderId, { hits: number; total: number; sumConf: number; queryHits: number; queryTotal: number }>();
+  const normQ = normaliseQuery(query);
+  for (const evt of events) {
+    const sameQuery = normaliseQuery(evt.query) === normQ;
+    for (const c of evt.candidates) {
+      let o = observed.get(c.providerId);
+      if (!o) {
+        o = { hits: 0, total: 0, sumConf: 0, queryHits: 0, queryTotal: 0 };
+        observed.set(c.providerId, o);
+      }
+      o.total += 1;
+      o.sumConf += c.confidence;
+      if (c.cacheHit) o.hits += 1;
+      if (sameQuery) {
+        o.queryTotal += 1;
+        if (c.cacheHit) o.queryHits += 1;
+      }
+    }
+  }
+
+  const out: CacheHitPrediction[] = [];
+  for (const provider of providers) {
+    const o = observed.get(provider);
+    const model = _predictionModel.get(predictionKey(query, provider));
+
+    // Posterior parameters: priors + recorded outcomes + query-specific buffer hits.
+    const alpha = PRIOR_ALPHA + (model ? model.alpha - PRIOR_ALPHA : 0) + (o?.queryHits ?? 0);
+    const beta =
+      PRIOR_BETA + (model ? model.beta - PRIOR_BETA : 0) + ((o?.queryTotal ?? 0) - (o?.queryHits ?? 0));
+
+    const pCacheHit = alpha / (alpha + beta);
+    const estimatedResultCount = o && o.total > 0 ? o.total / Math.max(1, o.queryTotal || 1) : 1;
+    const expectedCacheHits = pCacheHit * estimatedResultCount;
+    const avgConfidence = o && o.total > 0 ? o.sumConf / o.total : 0;
+    const rankScore = pCacheHit * 0.7 + avgConfidence * 0.3;
+    const hasData = alpha + beta > PRIOR_ALPHA + PRIOR_BETA + 2;
+
+    if (pCacheHit >= confidenceThreshold) {
+      out.push({ provider, pCacheHit, expectedCacheHits, avgConfidence, rankScore, hasData });
+    }
+  }
+  return out.sort((a, b) => b.rankScore - a.rankScore);
+}
+
+/** Reset the Bayesian prediction model. For tests only. */
+export function _resetPredictionModel(): void {
+  _predictionModel = new Map();
+}
