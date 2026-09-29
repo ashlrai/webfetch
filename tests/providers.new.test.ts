@@ -95,16 +95,19 @@ describe("provider auth contracts", () => {
         });
 
         expect(out.candidates).toEqual([]);
-        expect(out.providerReports).toEqual([
-          {
-            provider: provider.id,
-            ok: false,
-            count: 0,
-            timeMs: 0,
-            skipped: "missing-auth",
-            errorKind: "network",
-          },
-        ]);
+        expect(out.providerReports).toHaveLength(1);
+        const report = out.providerReports[0]!;
+        expect(report).toMatchObject({
+          provider: provider.id,
+          ok: false,
+          count: 0,
+          timeMs: 0,
+          skipped: "missing-auth",
+          errorKind: "network",
+        });
+        // The skip must say which env var(s) to set.
+        for (const name of provider.auth?.env ?? []) expect(report.error).toContain(name);
+        expect(report.errorContext?.missingEnv).toEqual(provider.auth?.env);
       }
     });
 

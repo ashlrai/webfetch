@@ -23,7 +23,12 @@ import { getFederationRepairPlan } from "./federation-repair.ts";
 import { buildAttribution } from "./license.ts";
 import { rankAll } from "./pick.ts";
 import { healthCheckProvider } from "./provider-health-check.ts";
-import { ALL_PROVIDERS, DEFAULT_PROVIDERS } from "./providers/index.ts";
+import {
+  ALL_PROVIDERS,
+  DEFAULT_PROVIDERS,
+  missingAuthMessage,
+  missingProviderEnv,
+} from "./providers/index.ts";
 import { providerRegistry } from "./provider-registry.ts";
 import { clusterCandidates } from "./semantic-clustering.ts";
 import { clusterCandidatesBySemantic } from "./semantic-dedupe.ts";
@@ -332,6 +337,14 @@ export async function searchImages(
   const warnings: string[] = [...piiWarning];
   if (enriched.some((c) => c.viaBrowserFallback)) {
     warnings.push("Results include browser-sourced fallback items. Verify ToS/license before use.");
+  }
+  // Providers the caller asked for by name but that can't run without a key:
+  // say exactly which env var to set instead of silently returning nothing.
+  if (opts.providers?.length) {
+    const asked = new Set(opts.providers);
+    for (const r of reports) {
+      if (r.skipped === "missing-auth" && asked.has(r.provider) && r.error) warnings.push(r.error);
+    }
   }
   if ((opts.licensePolicy ?? "safe-only") === "any") {
     warnings.push(
@@ -682,7 +695,18 @@ async function runProvider(
     return [];
   }
   if (!providerCanRun(provider, opts)) {
-    reports.push({ provider: id, ok: false, count: 0, timeMs: 0, skipped: "missing-auth", errorKind: "network" });
+    const missing = missingProviderEnv(id, opts.auth);
+    const missingEnv = missing.length ? missing : (provider.auth?.env ?? []);
+    reports.push({
+      provider: id,
+      ok: false,
+      count: 0,
+      timeMs: 0,
+      skipped: "missing-auth",
+      errorKind: "network",
+      error: missingAuthMessage(id, missingEnv),
+      errorContext: { missingEnv, ...(provider.auth?.signupUrl ? { signupUrl: provider.auth.signupUrl } : {}) },
+    });
     return [];
   }
 
