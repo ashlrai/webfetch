@@ -3,6 +3,9 @@ name: MCP Registry
 on:
   workflow_dispatch:
   push:
+    # Only main publishes. Without this, any feature-branch push that touched
+    # packages/mcp/package.json tried to publish to the public MCP registry.
+    branches: [main]
     paths:
       - 'packages/mcp/package.json'
       - 'packages/mcp/server.json'
@@ -27,10 +30,28 @@ jobs:
         run: ../../mcp-publisher validate
         working-directory: packages/mcp
 
+      - name: Skip if this version is already in the registry
+        id: exists
+        working-directory: packages/mcp
+        run: |
+          name="$(jq -r .name server.json)"
+          version="$(jq -r .version server.json)"
+          code="$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://registry.modelcontextprotocol.io/v0.1/servers/${name//\//%2F}/versions/${version}")"
+          echo "registry returned $code for $name@$version"
+          if [ "$code" = "200" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$name@$version is already published; bump server.json version to publish again."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Authenticate to MCP Registry
+        if: steps.exists.outputs.published != 'true'
         run: ../../mcp-publisher login github-oidc
         working-directory: packages/mcp
 
       - name: Publish server
+        if: steps.exists.outputs.published != 'true'
         run: ../../mcp-publisher publish
         working-directory: packages/mcp
