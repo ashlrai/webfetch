@@ -24,8 +24,12 @@ pricing, and hosted usage live at **[getwebfetch.com](https://getwebfetch.com)**
 | Docker        | `docker run --rm ghcr.io/ashlrai/webfetch cli help` |
 | curl \| bash  | `curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh \| bash` |
 
-The `curl | bash` installer also wires webfetch into Claude Code's
-`~/.claude/settings.json` idempotently. Re-run any time to update.
+The `curl | bash` installer also registers the MCP server with Claude Code
+(`~/.claude.json`) idempotently. Re-run any time to update.
+
+**MCP only?** No install needed. Point Claude Desktop, Claude Code, or Cursor at
+`npx -y getwebfetch-mcp`. Copy-paste configs are in
+[docs/QUICKSTART.md](./docs/QUICKSTART.md#mcp-in-60-seconds-no-clone-no-api-keys).
 
 ## Surfaces
 

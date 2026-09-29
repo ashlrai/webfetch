@@ -2,10 +2,10 @@
 # webfetch one-line installer.
 #
 # Installs the webfetch CLI + MCP server into $HOME/.webfetch and
-# (optionally) wires it into Claude Code's settings.json.
+# (optionally) registers the MCP server with Claude Code (~/.claude.json).
 #
 # Idempotent: re-running updates the clone, rebuilds the CLI, and re-applies
-# the Claude Code settings merge without duplicating keys.
+# the Claude Code MCP registration without duplicating keys.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install/install.sh | bash
@@ -13,7 +13,7 @@
 #
 # Flags:
 #   --yes          answer "yes" to every prompt (non-interactive installs)
-#   --no-claude    skip the Claude Code settings merge
+#   --no-claude    skip registering the MCP server with Claude Code
 #   --no-symlink   skip creating the /usr/local/bin/webfetch symlink
 #   --repo URL     override the repo URL (default: https://github.com/ashlrai/webfetch.git)
 #   --ref REF      git ref to check out (default: main)
@@ -171,44 +171,21 @@ EOF
   say "installed launcher: $LINK"
 fi
 
-# ---------- Claude Code settings merge ----------
+# ---------- Claude Code MCP registration ----------
+# Claude Code reads user-scoped MCP servers from ~/.claude.json. It ignores
+# mcpServers in ~/.claude/settings.json, where older versions of this script
+# wrote the entry.
 merge_claude_settings() {
-  local settings="$HOME/.claude/settings.json"
-  mkdir -p "$HOME/.claude"
-  if [ ! -f "$settings" ]; then
-    echo '{}' > "$settings"
-  fi
   local bun_bin
   bun_bin="$(command -v bun)"
-  local mcp_entry="$REPO_DIR/packages/mcp/src/index.ts"
-
-  bun - <<EOF
-import { readFileSync, writeFileSync, copyFileSync, existsSync } from "node:fs";
-const path = "$settings";
-let raw = "{}";
-try { raw = readFileSync(path, "utf8") || "{}"; } catch {}
-let json;
-try { json = JSON.parse(raw); } catch (e) {
-  console.error("existing settings.json is not valid JSON; refusing to overwrite. Path:", path);
-  process.exit(1);
-}
-if (existsSync(path)) copyFileSync(path, path + ".bak." + Date.now());
-json.mcpServers = json.mcpServers || {};
-json.mcpServers.webfetch = {
-  command: "$bun_bin",
-  args: ["run", "$mcp_entry"],
-  ...(json.mcpServers.webfetch?.env ? { env: json.mcpServers.webfetch.env } : {}),
-};
-writeFileSync(path, JSON.stringify(json, null, 2) + "\n");
-console.log("merged webfetch into", path);
-EOF
+  bun "$REPO_DIR/install/merge-claude-config.ts" "$bun_bin" run "$REPO_DIR/packages/mcp/src/index.ts"
 }
 
 if [ "$DO_CLAUDE" = "1" ]; then
-  if confirm "Wire webfetch into ~/.claude/settings.json (Claude Code MCP config)?"; then
+  if confirm "Register webfetch as a Claude Code MCP server in ~/.claude.json?"; then
     merge_claude_settings
   else
-    say "skipped Claude Code settings merge (you can run it later with --yes)"
+    say "skipped Claude Code MCP registration (you can run it later with --yes)"
   fi
 fi
 

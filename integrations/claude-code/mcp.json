@@ -1,9 +1,8 @@
 {
-  "//": "Merge this into ~/.claude/settings.json. Only the mcpServers.webfetch key is required.",
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"],
       "env": {
         "UNSPLASH_ACCESS_KEY": "",
         "PEXELS_API_KEY": "",

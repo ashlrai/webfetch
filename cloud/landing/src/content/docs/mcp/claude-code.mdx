@@ -9,14 +9,14 @@ Claude Code is Anthropic's official CLI. It's the reference client for MCP and t
 ## One-command setup
 
 ```bash
-claude mcp add webfetch -- npx -y getwebfetch-mcp
+claude mcp add --scope user webfetch -- npx -y getwebfetch-mcp
 ```
 
 That's it. Claude reloads the config automatically. New sessions can call the webfetch tools immediately.
 
 ## Manual setup
 
-Edit `~/.claude/settings.json` and merge:
+Claude Code reads MCP servers from `~/.claude.json` (user scope, top-level `mcpServers`) or `.mcp.json` in a project root. It ignores `mcpServers` in `~/.claude/settings.json`. Merge:
 
 ```json
 {
@@ -63,7 +63,7 @@ Claude will call `search_images` with `licensePolicy: "safe-only"` and `minWidth
 
 - **"Failed to connect to MCP server 'webfetch'"** — check that `npx` is on PATH. Use the absolute path (`which npx`) if needed.
 - **"Tool returned no candidates"** — most commonly a too-strict `licensePolicy` on a niche query. Ask Claude to "try again with licensePolicy prefer-safe".
-- **Tool not appearing at all** — restart Claude Code. Check `~/.claude/logs/*.log` for startup errors from the MCP subprocess.
+- **Tool not appearing at all**: restart Claude Code and run `claude mcp list`. If you put the entry in `~/.claude/settings.json`, move it to `~/.claude.json`, because Claude Code doesn't read MCP servers from settings.json.
 - **"Cannot find module 'webfetch-mcp'"** — first invocation downloads via npx. If your machine is offline, install globally: `npm install -g getwebfetch-mcp`.
 
 ## Next steps
