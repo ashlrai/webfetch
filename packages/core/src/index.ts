@@ -142,7 +142,6 @@ export type {
 export { searchArtistImages, searchAlbumCover, searchEventPhotos } from "./hints/index.ts";
 export type { ArtistImageKind } from "./hints/index.ts";
 export { ALL_PROVIDERS, DEFAULT_PROVIDERS, PROVIDER_IDS } from "./providers/index.ts";
-export { DEFAULT_USER_AGENT, defaultUserAgent } from "./user-agent.ts";
 export {
   providerRegistry,
   createProviderRegistry,
@@ -480,3 +479,6 @@ export type {
   BatchDeduplicateWithPhashClusterResult,
   BatchDeduplicateWithPhashClusterOptions,
 } from "./batch-phash-dedup.ts";
+
+// Default outbound User-Agent (Wikimedia/MusicBrainz policy compliant).
+export { DEFAULT_USER_AGENT, defaultUserAgent } from "./user-agent.ts";
