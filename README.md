@@ -114,7 +114,7 @@ license-first, and exposing the result as a single MCP tool.
 | library-of-congress | US historical archive                 | PUBLIC_DOMAIN        | —                            | no     |
 | wellcome-collection | medical/historical imagery            | CC_BY (metadata)     | —                            | no     |
 | rawpixel         | CC0 stock slice                          | CC0                  | `RAWPIXEL_API_KEY` optional  | no     |
-| burst            | Shopify Burst stock photos               | CC0                  | —                            | no     |
+| burst            | Shopify Burst stock photos (endpoint retired 2026) | CC0        | —                            | yes    |
 | europeana-archival | Europeana text/manuscript records      | CC_BY (metadata)     | `EUROPEANA_API_KEY`          | yes    |
 
 See [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) for gotchas, rate limits, and

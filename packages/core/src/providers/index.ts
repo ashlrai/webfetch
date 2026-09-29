@@ -105,7 +105,7 @@ export const DEFAULT_PROVIDERS: ProviderId[] = [
   "library-of-congress",
   "wellcome-collection",
   "rawpixel",
-  "burst",
+  // "burst" removed from defaults 2026-09: its JSON endpoint returns 406 on every call (see providers/burst.ts).
 ];
 
 export {

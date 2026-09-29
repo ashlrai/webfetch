@@ -9,6 +9,7 @@
 import { coerceLicense } from "../license.ts";
 import { getBucket } from "../rate-limit.ts";
 import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
+import { defaultUserAgent } from "../user-agent.ts";
 
 export const wikimedia: Provider = {
   id: "wikimedia",
@@ -33,7 +34,7 @@ export const wikimedia: Provider = {
     })}`;
 
     const resp = await fetcher(url, {
-      headers: { "User-Agent": opts.auth?.userAgent ?? "webfetch-mcp/0.1" },
+      headers: { "User-Agent": opts.auth?.userAgent ?? defaultUserAgent() },
       signal: opts.signal,
     });
     if (!resp.ok) throw new Error(`wikimedia http ${resp.status}`);

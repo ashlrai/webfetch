@@ -13,6 +13,7 @@ async function getToken(
   clientId: string,
   clientSecret: string,
   fetcher: typeof fetch,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (tokenCache && tokenCache.expiresAt > Date.now() + 30_000) return tokenCache.token;
   const body = new URLSearchParams({ grant_type: "client_credentials" });
@@ -24,6 +25,7 @@ async function getToken(
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body,
+    signal,
   });
   if (!resp.ok) throw new Error(`spotify token http ${resp.status}`);
   const json = (await resp.json()) as any;
@@ -41,7 +43,7 @@ export const spotify: Provider = {
     if (!id || !secret) throw new Error("SPOTIFY_CLIENT_ID/SECRET missing");
     const fetcher = opts.fetcher ?? fetch;
     await getBucket("spotify").take();
-    const token = await getToken(id, secret, fetcher);
+    const token = await getToken(id, secret, fetcher, opts.signal);
     const url = `https://api.spotify.com/v1/search?${new URLSearchParams({
       q: query,
       type: "artist,album",

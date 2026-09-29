@@ -4,7 +4,7 @@
  * used by `webfetch providers`.
  */
 
-import type { ProviderAuth, ProviderId } from "webfetch-core";
+import { DEFAULT_USER_AGENT, type ProviderAuth, type ProviderId } from "webfetch-core";
 import { core } from "./core.ts";
 
 export interface ProviderEnvRow {
@@ -60,7 +60,7 @@ export function authFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderAuth 
     rawpixelApiKey: env.RAWPIXEL_API_KEY,
     brightDataApiToken: env.BRIGHTDATA_API_TOKEN,
     brightDataZone: env.BRIGHTDATA_ZONE,
-    userAgent: env.WEBFETCH_USER_AGENT ?? "webfetch-cli/0.1 (+https://github.com/)",
+    userAgent: env.WEBFETCH_USER_AGENT || DEFAULT_USER_AGENT,
   };
 }
 

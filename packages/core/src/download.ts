@@ -10,6 +10,7 @@
 
 import { defaultCacheDir, readCache, writeCache } from "./cache.ts";
 import type { Fetcher } from "./types.ts";
+import { defaultUserAgent } from "./user-agent.ts";
 
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
 
@@ -85,7 +86,7 @@ export async function downloadImage(
   }
 
   const headers: Record<string, string> = {
-    "User-Agent": opts.userAgent ?? "webfetch-mcp/0.1 (+https://github.com/)",
+    "User-Agent": opts.userAgent ?? defaultUserAgent(),
     Accept: "image/*,*/*;q=0.8",
   };
 
