@@ -1,7 +1,12 @@
 import { FadeUp } from "./FadeUp";
 
 type Auth = "none" | "key" | "oauth" | "cloud";
-type Stamp = "CC0" | "CC-BY" | "CC-BY-SA" | "PUBLIC DOMAIN" | "EDITORIAL" | "MIXED" | "UNKNOWN";
+type Stamp =
+  | "CC0"
+  | "UNSPLASH LICENSE"
+  | "PEXELS LICENSE"
+  | "PIXABAY LICENSE"
+  | "CC-BY" | "CC-BY-SA" | "PUBLIC DOMAIN" | "EDITORIAL" | "MIXED" | "UNKNOWN";
 
 type Provider = {
   name: string;
@@ -15,15 +20,15 @@ type Provider = {
 const PROVIDERS: Provider[] = [
   { name: "wikimedia", stamp: "CC-BY-SA", auth: "none", rate: "generous" },
   { name: "openverse", stamp: "CC-BY", auth: "none", rate: "generous" },
-  { name: "unsplash", stamp: "CC0", auth: "key", rate: "50/hr" },
-  { name: "pexels", stamp: "CC0", auth: "key", rate: "200/hr" },
-  { name: "pixabay", stamp: "CC0", auth: "key", rate: "100/min" },
+  { name: "unsplash", stamp: "UNSPLASH LICENSE", auth: "key", rate: "50/hr" },
+  { name: "pexels", stamp: "PEXELS LICENSE", auth: "key", rate: "200/hr" },
+  { name: "pixabay", stamp: "PIXABAY LICENSE", auth: "key", rate: "100/min" },
   { name: "nasa", stamp: "PUBLIC DOMAIN", auth: "key", rate: "1000/hr" },
   { name: "smithsonian", stamp: "CC0", auth: "key", rate: "generous" },
   { name: "europeana", stamp: "MIXED", auth: "key", rate: "generous" },
   { name: "met-museum", stamp: "CC0", auth: "none", rate: "80/sec" },
   { name: "loc", stamp: "PUBLIC DOMAIN", auth: "none", rate: "generous" },
-  { name: "flickr-cc", stamp: "CC-BY", auth: "key", rate: "3600/hr" },
+  { name: "flickr", stamp: "CC-BY", auth: "key", rate: "3600/hr" },
   { name: "internet-archive", stamp: "MIXED", auth: "none", rate: "5/sec" },
   { name: "wellcome-collection", stamp: "CC-BY", auth: "none", rate: "5/sec" },
   { name: "rawpixel", stamp: "CC0", auth: "none", rate: "3/sec" },

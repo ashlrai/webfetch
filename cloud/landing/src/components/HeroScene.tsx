@@ -57,7 +57,7 @@ type Tile = {
 
 // Federated result tiles — 11 unique Drake images, each tagged with the
 // "provider" that surfaced it. Deliberately mixed providers to sell the
-// "24-source federated search" pitch.
+// "25-source federated search" pitch.
 const TILES: Tile[] = [
   { src: DRAKE.july2016, pos: "50% 18%", provider: "wikimedia", license: "CC", score: "0.97" },
   { src: DRAKE.twentySeventeen, pos: "50% 22%", provider: "openverse", license: "CC", score: "0.94" },
