@@ -1,23 +1,26 @@
 # Installing into Cursor
 
-Run the one-line installer first so the CLI and repo are on disk:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash -s -- --no-claude
-```
-
-Then, Cursor loads MCP servers from `~/.cursor/mcp.json`:
+Cursor loads MCP servers from `~/.cursor/mcp.json` (global) or
+`.cursor/mcp.json` (per project). No clone needed:
 
 ```json
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"]
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "",
+        "BRAVE_API_KEY": ""
+      }
     }
   }
 }
 ```
 
-Reload Cursor. Then in Composer/Chat, tools are available under the
-`webfetch` namespace.
+Reload Cursor and check Settings → MCP for a green dot next to `webfetch`.
+The tools are then available in Composer/Chat.
+
+To run from a clone instead, use `"command": "bun"` and
+`"args": ["run", "<clone>/packages/mcp/src/index.ts"]`. The installer clones
+to `~/.webfetch/repo`.

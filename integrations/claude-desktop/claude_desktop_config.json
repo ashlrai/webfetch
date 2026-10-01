@@ -3,16 +3,10 @@
     "webfetch": {
       "command": "npx",
       "args": ["-y", "getwebfetch-mcp"],
-      "disabled": false,
-      "autoApprove": [
-        "search_images",
-        "search_artist_images",
-        "search_album_cover",
-        "probe_page",
-        "fetch_with_license"
-      ],
       "env": {
         "UNSPLASH_ACCESS_KEY": "",
+        "PEXELS_API_KEY": "",
+        "PIXABAY_API_KEY": "",
         "BRAVE_API_KEY": ""
       }
     }

@@ -7,7 +7,7 @@ On macOS, Cline's MCP settings live at:
 ```
 
 1. Merge `cline_mcp_settings.json` here into that file.
-2. Replace `REPLACE_WITH_REPO_PATH` with your clone (default `~/.webfetch/repo`).
+2. It launches `npx -y getwebfetch-mcp`, so no clone is needed.
 3. `autoApprove` lists read-only tools that do not write to disk — safe to
    auto-approve. `download_image` is intentionally excluded.
 4. Restart VS Code / Cline.
