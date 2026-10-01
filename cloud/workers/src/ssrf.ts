@@ -1,6 +1,6 @@
 /**
  * SSRF guard — reject URLs that target private, link-local, or loopback hosts,
- * or use non-http(s) schemes. Added per SECURITY-AUDIT-REPORT.md § SA-001.
+ * or use non-http(s) schemes. Added per docs/internal/SECURITY-AUDIT-REPORT.md § SA-001.
  *
  * This is a best-effort hostname-literal filter. It does NOT defend against
  * DNS rebinding (where a public hostname resolves to a private IP at fetch

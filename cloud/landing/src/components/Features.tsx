@@ -364,7 +364,7 @@ const FEATURES = [
     ill: <IllStamps />,
   },
   {
-    title: "24 federated providers",
+    title: "25 federated providers",
     body: "Wikimedia, Openverse, Unsplash, Pexels, Pixabay, NASA, Smithsonian, Met Museum, LOC, iTunes, MusicBrainz CAA, Spotify — one interface.",
     ill: <IllOrbit />,
   },

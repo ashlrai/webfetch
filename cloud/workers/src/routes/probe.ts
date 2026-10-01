@@ -24,7 +24,7 @@ probeRouter.post("/", async (c) => {
   const ctx = c.get("ctx");
 
   // SECURITY (SA-002 / CWE-918): Block SSRF via private/internal hostnames.
-  // See SECURITY-AUDIT-REPORT.md § HIGH.
+  // See docs/internal/SECURITY-AUDIT-REPORT.md § HIGH.
   const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
 

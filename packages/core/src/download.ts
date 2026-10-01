@@ -68,7 +68,7 @@ export async function downloadImage(
 
   // SECURITY (SA-010 / CWE-918): Reject non-http(s) schemes and private /
   // link-local hosts to prevent SSRF against internal services + cloud
-  // metadata endpoints (e.g. 169.254.169.254). See SECURITY-AUDIT-REPORT.md.
+  // metadata endpoints (e.g. 169.254.169.254). See docs/internal/SECURITY-AUDIT-REPORT.md.
   const publicUrl = assertPublicHttpUrl(url);
   if (!publicUrl.ok) throw new DownloadError(publicUrl.error, "blocked-host");
   let currentUrl = url;

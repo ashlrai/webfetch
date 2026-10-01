@@ -17,7 +17,7 @@ const QA = [
   },
   {
     q: "How is this different from Unsplash or Google Images?",
-    a: "Unsplash is one source under one platform license. Google Images has no usable API and zero license metadata. webfetch federates 24 sources, ranks them license-first, and falls through to a human-like browser only when you opt in — with attribution sidecars on everything it returns.",
+    a: "Unsplash is one source under one platform license. Google Images has no usable API and zero license metadata. webfetch federates 25 sources, ranks them license-first, and falls through to a human-like browser only when you opt in — with attribution sidecars on everything it returns.",
   },
   {
     q: "What about copyright on browser-sourced images?",

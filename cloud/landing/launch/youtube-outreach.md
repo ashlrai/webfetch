@@ -10,7 +10,7 @@ Hey [First name],
 
 Big fan of your [specific video title / series]. I saw [specific detail — the MCP recap, the Cursor walkthrough, the Claude Code deep dive] and thought you might want to look at what I just shipped.
 
-It's called webfetch. One MCP + CLI that replaces the "agent hallucinates image URLs" problem with one tool call that federates 24 image sources, ranks them license-first, and ships attribution on every result. Install is one line for Claude Code / Cursor / Cline / Continue / Roo Code.
+It's called webfetch. One MCP + CLI that replaces the "agent hallucinates image URLs" problem with one tool call that federates 25 image sources, ranks them license-first, and ships attribution on every result. Install is one line for Claude Code / Cursor / Cline / Continue / Roo Code.
 
 If you want to try it: one config line, no signup required.
 
