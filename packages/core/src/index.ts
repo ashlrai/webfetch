@@ -479,3 +479,6 @@ export type {
   BatchDeduplicateWithPhashClusterResult,
   BatchDeduplicateWithPhashClusterOptions,
 } from "./batch-phash-dedup.ts";
+
+// Default outbound User-Agent (Wikimedia/MusicBrainz policy compliant).
+export { DEFAULT_USER_AGENT, defaultUserAgent } from "./user-agent.ts";

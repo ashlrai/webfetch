@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { FederationRepairPlan, FederationPhashAuditReport, ImageCandidate, PhashDiagnosticsResult, ProviderId, SearchOptions, SearchResultBundle, ExportFormat, ProviderSelectionMode, BatchReverseImageOutput, BatchConflictAuditResult, BatchConflictResolutionResult, MetadataProvenanceExport } from "webfetch-core";
-import { analyzePhashQuality, auditLicenseConflictBatch, batchReverseImageSearch, buildFederationPhashAuditReport, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS, buildMetadataProvenanceExport, formatProvenanceReport } from "webfetch-core";
+import { analyzePhashQuality, auditLicenseConflictBatch, checkAllProviders, batchReverseImageSearch, buildFederationPhashAuditReport, getCacheAnalyticsSnapshot, getFederationRepairPlan, providerRegistry, exportImageMetadata, loadPluginFromPath, listPluginProviders, reconcileLicenseConflictsBatch, generateDeduplicationReport, exportClusteringMetrics, predictCacheHits, DEFAULT_PROVIDERS, buildMetadataProvenanceExport, formatProvenanceReport } from "webfetch-core";
 import type { CacheHitPrediction } from "webfetch-core";
 import { type ParsedArgs, getBool, getInt, getString, parseArgs } from "./args.ts";
 import {
@@ -583,6 +583,8 @@ export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO)
     return 0;
   }
 
+  if (getBool(args.flags, "check")) return cmdProvidersCheck(args, env, json, io);
+
   // Default: existing compact table (auth + default/opt-in status)
   const rows = listProviders(env);
   if (json) {
@@ -614,8 +616,95 @@ export async function cmdProviders(args: ParsedArgs, io: CommandIO = DEFAULT_IO)
   io.stdout(renderTable(cols, tableRows));
   io.stdout("");
   io.stdout(c.dim("Default-on providers run when no --providers flag is given."));
-  io.stdout(c.dim("Opt-in providers (serpapi, browser, bing) run only when explicitly requested."));
+  io.stdout(c.dim("Opt-in providers (serpapi, browser, bing, burst, ...) run only when explicitly requested."));
   io.stdout(c.dim("Run 'webfetch providers list --details' for capability + rate-limit details."));
+  io.stdout(c.dim("Run 'webfetch providers --check' for a live reachability + latency check."));
+  return 0;
+}
+
+/**
+ * `webfetch providers --check`: live reachability check per provider, with
+ * latency and key status. Exits 1 when a default-on provider that has its
+ * keys configured (or needs none) is down, so it can gate CI or cron.
+ */
+async function cmdProvidersCheck(
+  args: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+  json: boolean,
+  io: CommandIO,
+): Promise<number> {
+  const timeoutMs = getInt(args.flags, "timeout") ?? 5_000;
+  const rows = listProviders(env);
+  const only = getString(args.flags, "providers", "p");
+  const wanted = only ? new Set(only.split(",").map((s) => s.trim())) : undefined;
+  const targets = rows.filter((r) => (wanted ? wanted.has(r.id) : true));
+  const results = await checkAllProviders(
+    targets.map((r) => r.id),
+    { timeoutMs, noCache: true },
+  );
+  const merged = targets.map((r, i) => {
+    const h = results[i]!;
+    return {
+      provider: r.id,
+      status: h.status,
+      latencyMs: h.metrics.httpLatencyMs,
+      httpStatus: h.metrics.statusCode,
+      defaultOn: r.defaultOn,
+      // requiresAuth=false with env vars (smithsonian DEMO_KEY, rawpixel) runs without a key.
+      auth:
+        r.envVars.length === 0
+          ? "none-required"
+          : r.authed
+            ? "configured"
+            : r.requiresAuth
+              ? "missing"
+              : "optional",
+      missingEnv: r.envVars.filter((v) => !env[v]),
+      ...(h.reason ? { reason: h.reason } : {}),
+    };
+  });
+  const failing = merged.filter((m) => m.status === "down" && m.defaultOn && m.auth !== "missing");
+  if (json) {
+    io.stdout(JSON.stringify(merged, null, 2));
+    return failing.length ? 1 : 0;
+  }
+  const cols = [
+    { header: "provider", width: 22 },
+    { header: "status", width: 10 },
+    { header: "latency", width: 9 },
+    { header: "http", width: 5 },
+    { header: "auth", width: 14 },
+    { header: "note", width: 60 },
+  ];
+  const statusColor = (s: string) => (s === "up" ? c.green(s) : s === "degraded" ? c.yellow(s) : c.red(s));
+  io.stdout(
+    renderTable(
+      cols,
+      merged.map((m) => [
+        m.provider,
+        statusColor(m.status),
+        `${m.latencyMs}ms`,
+        m.httpStatus ? String(m.httpStatus) : "-",
+        m.auth === "missing"
+          ? c.red("missing")
+          : m.auth === "configured"
+            ? c.green("configured")
+            : c.dim(m.auth === "optional" ? "optional" : "none"),
+        m.auth === "missing" ? `set ${m.missingEnv.join(", ")}` : (m.reason ?? ""),
+      ]),
+    ),
+  );
+  io.stdout("");
+  io.stdout(
+    c.dim(
+      `${merged.filter((m) => m.status === "up").length}/${merged.length} reachable (timeout ${timeoutMs}ms). ` +
+        "401/403 from a keyed endpoint counts as reachable.",
+    ),
+  );
+  if (failing.length) {
+    io.stderr(c.red(`down: ${failing.map((f) => f.provider).join(", ")}`));
+    return 1;
+  }
   return 0;
 }
 
@@ -2449,6 +2538,7 @@ ${c.bold("COMMANDS")}
   probe <url>                           List every <img> on a page with per-image license
   license <url> [--probe]               Determine license for an arbitrary URL
   providers [list] [--details]          List providers; --details adds capabilities, rate-limits
+  providers --check [--timeout ms]      Live health check: status, latency, key status per provider
   batch [--file path | <stdin>]         Run many queries; one per line (query\\tproviders optional)
   batch-reverse [--file path | <stdin>] Reverse-image search many URLs; one per line (JSONL out)
   watch <query> [--interval 1h]         Poll a query; emit only new candidates per tick

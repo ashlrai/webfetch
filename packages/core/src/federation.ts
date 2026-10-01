@@ -696,8 +696,17 @@ async function runProvider(
   outerAbort?.addEventListener("abort", onAbort);
   const providerOpts: SearchOptions = { ...opts, signal: ctl.signal };
 
+  // Enforce the deadline here as well: a provider whose fetcher ignores
+  // AbortSignal, or that is stuck in a rate-limit wait or a token request,
+  // must not hold the whole federated search past timeoutMs.
+  const deadline = new Promise<never>((_, reject) => {
+    const fire = () => reject(new Error(`${id} timed out after ${timeoutMs}ms`));
+    if (ctl.signal.aborted) fire();
+    else ctl.signal.addEventListener("abort", fire, { once: true });
+  });
+
   try {
-    const out = await provider.search(query, providerOpts);
+    const out = await Promise.race([provider.search(query, providerOpts), deadline]);
     const elapsed = Date.now() - started;
     reports.push({ provider: id, ok: true, count: out.length, timeMs: elapsed, errorKind: "ok" });
     emitProviderEvent({

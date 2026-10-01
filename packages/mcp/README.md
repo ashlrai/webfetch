@@ -2,7 +2,7 @@
 
 License-first image search and download for any MCP-speaking agent.
 
-Every result ships with a structured license tag (`CC0`, `CC_BY`, `CC_BY_SA`, platform-license tags, `EDITORIAL_LICENSED`, ...), a confidence score, and a ready-to-render attribution line. Covers 25 providers, with 19 in the default set — no API key needed for Wikimedia Commons, Openverse, iTunes, MusicBrainz CAA, NASA, The Met, Library of Congress, Internet Archive, Wellcome Collection, and Burst.
+Every result ships with a structured license tag (`CC0`, `CC_BY`, `CC_BY_SA`, platform-license tags, `EDITORIAL_LICENSED`, ...), a confidence score, and a ready-to-render attribution line. Covers 25 providers, 18 of them in the default set. Wikimedia Commons, Openverse, iTunes, MusicBrainz CAA, NASA, The Met, Library of Congress, Internet Archive, and Wellcome Collection need no API key.
 
 ---
 
@@ -10,7 +10,7 @@ Every result ships with a structured license tag (`CC0`, `CC_BY`, `CC_BY_SA`, pl
 
 Most image-search tools give you URLs. webfetch gives you URLs **plus** the legal metadata needed to classify them as open/commercial reusable, platform-license, editorial-only, or exploration-only. The MCP layer exposes seven composable tools — search, specialize by artist/album, download with a hash, resolve an arbitrary URL's license, reverse-image-search, and triage a source page — so an agent can go from prompt to attributed asset in a single conversation turn.
 
-- **25 providers**, 19 in the default set and many requiring no key at all
+- **25 providers**, 18 in the default set, many with no key needed
 - **License-first ranking**: CC0 floats to the top; heuristic-only results stay below 0.5 confidence
 - **Attribution always included**: one `attributionLine` string, ready for a tooltip or credits footer
 - **Free tier needs no API key** for Wikimedia and Openverse; full provider coverage adds optional keys per provider

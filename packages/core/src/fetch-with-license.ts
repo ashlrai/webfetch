@@ -14,6 +14,7 @@ import { assertPublicHttpUrl, downloadImage } from "./download.ts";
 import { buildAttribution, coerceLicense, heuristicLicenseFromUrl } from "./license.ts";
 import { type EmbeddedMetadata, readImageMetadata } from "./metadata-reader.ts";
 import type { Fetcher, License } from "./types.ts";
+import { defaultUserAgent } from "./user-agent.ts";
 
 export interface FetchWithLicenseOptions {
   probe?: boolean; // if true, also attempt to fetch bytes
@@ -42,7 +43,7 @@ export async function fetchWithLicense(
   opts: FetchWithLicenseOptions = {},
 ): Promise<FetchWithLicenseResult> {
   const fetcher = opts.fetcher ?? fetch;
-  const ua = opts.userAgent ?? "webfetch-mcp/0.1";
+  const ua = opts.userAgent ?? defaultUserAgent();
   const publicUrl = assertPublicHttpUrl(url);
   if (!publicUrl.ok) throw new Error(publicUrl.error);
   // Probe the URL shallowly to see if it's an image.

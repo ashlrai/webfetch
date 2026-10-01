@@ -5,6 +5,7 @@
 
 import { getBucket } from "../rate-limit.ts";
 import type { ImageCandidate, Provider, SearchOptions } from "../types.ts";
+import { defaultUserAgent } from "../user-agent.ts";
 
 export const musicbrainzCaa: Provider = {
   id: "musicbrainz-caa",
@@ -13,7 +14,7 @@ export const musicbrainzCaa: Provider = {
   async search(query: string, opts: SearchOptions): Promise<ImageCandidate[]> {
     await getBucket("musicbrainz-caa").take();
     const fetcher = opts.fetcher ?? fetch;
-    const ua = opts.auth?.userAgent ?? "webfetch-mcp/0.1 ( https://github.com/ )";
+    const ua = opts.auth?.userAgent ?? defaultUserAgent();
     const mbUrl = `https://musicbrainz.org/ws/2/release/?${new URLSearchParams({
       query,
       fmt: "json",

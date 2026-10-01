@@ -4,7 +4,7 @@ description: The 25 image sources webfetch federates — auth, rate limits, lice
 section: Core concepts
 ---
 
-webfetch ships with 25 provider adapters. Each one normalizes a different source into the same `ImageCandidate` shape, tagged with a license and a confidence score. The `DEFAULT_PROVIDERS` set — 19 of the 25 — rejects `UNKNOWN` results by default and prioritizes sources with usable provenance. The other six are opt-in for ToS-grey, paid, managed, or variant use cases.
+webfetch ships with 25 provider adapters. Each one normalizes a different source into the same `ImageCandidate` shape, tagged with a license and a confidence score. The `DEFAULT_PROVIDERS` set (18 of the 25) rejects `UNKNOWN` results by default and prioritizes sources with usable provenance. The other seven are opt-in. They cover ToS-grey, paid, managed, and variant use cases, plus Burst, whose public JSON search endpoint was retired in 2026.
 
 ## Provider matrix
 
@@ -32,7 +32,7 @@ webfetch ships with 25 provider adapters. Each one normalizes a different source
 | library-of-congress | US historical archive | PUBLIC_DOMAIN | none | 10/s | no |
 | wellcome-collection | medical/historical imagery | CC_BY (from meta) | none | 5/s | no |
 | rawpixel | CC0 slice of Rawpixel library | CC0 | optional | 3/s | no |
-| burst | Shopify Burst (100% CC0) | CC0 | none | 3/s | no |
+| burst | Shopify Burst (100% CC0). JSON endpoint retired 2026, opt-in | CC0 | none | 3/s | yes |
 | europeana-archival | Europeana TEXT records | CC_BY (from meta) | `EUROPEANA_API_KEY` | 5/s | yes |
 | managed-browser | hosted browser fallback | UNKNOWN (+heuristic) | cloud entitlement | 0.25/s | yes |
 
@@ -43,7 +43,7 @@ webfetch ships with 25 provider adapters. Each one normalizes a different source
 ```text
 wikimedia, openverse, itunes, musicbrainz-caa, unsplash, pexels, pixabay,
 spotify, brave, internet-archive, smithsonian, nasa, met-museum, flickr,
-europeana, library-of-congress, wellcome-collection, rawpixel, burst
+europeana, library-of-congress, wellcome-collection, rawpixel
 ```
 
 Providers that need auth gracefully skip when their keys are missing, so the default set always produces results — it just produces more results when you provision keys.
