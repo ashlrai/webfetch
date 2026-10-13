@@ -449,6 +449,8 @@ export interface ProviderAuthRequirement {
   env: string[];
   /** ProviderAuth fields accepted by the provider. All fields listed here are required. */
   keys: (keyof ProviderAuth)[];
+  /** Where to get a key. Included in the missing-key message. */
+  signupUrl?: string;
 }
 
 export interface SearchResultBundle {

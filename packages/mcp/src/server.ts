@@ -32,6 +32,23 @@ function formatZodError(tool: string, err: ZodError): string {
   return `Invalid arguments for ${tool}:\n${issues}`;
 }
 
+/**
+ * Stderr notices printed once at startup. stdout is the JSON-RPC channel, so
+ * these never go there. Clients such as Claude Desktop and Cursor show stderr
+ * in their MCP logs.
+ */
+export function startupNotices(env: Record<string, string | undefined> = process.env): string[] {
+  const notes: string[] = [];
+  if (env.WEBFETCH_API_KEY) {
+    notes.push(
+      "webfetch-mcp: WEBFETCH_API_KEY is set, but the MCP server runs providers locally and does not use it. " +
+        "Set provider keys (UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, BRAVE_API_KEY, ...) in this server's env instead, " +
+        "or use the CLI with --cloud for hosted search.",
+    );
+  }
+  return notes;
+}
+
 export function createServer(opts: CreateServerOptions = {}): Server {
   const tools = opts.tools ?? TOOLS;
   const byName = new Map(tools.map((t) => [t.name, t]));

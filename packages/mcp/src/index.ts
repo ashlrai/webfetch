@@ -11,7 +11,7 @@
 
 import { readFileSync } from "node:fs";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.ts";
+import { createServer, startupNotices } from "./server.ts";
 
 function packageVersion(): string {
   try {
@@ -23,6 +23,8 @@ function packageVersion(): string {
     return "0.0.0";
   }
 }
+
+for (const note of startupNotices()) console.error(note);
 
 const server = createServer({ name: "webfetch", version: packageVersion() });
 await server.connect(new StdioServerTransport());

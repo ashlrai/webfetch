@@ -1,4 +1,4 @@
-import type { Provider, ProviderAuthRequirement, ProviderId } from "../types.ts";
+import type { Provider, ProviderAuth, ProviderAuthRequirement, ProviderId } from "../types.ts";
 export { PROVIDER_IDS } from "../types.ts";
 import { bing } from "./bing.ts";
 import { brave } from "./brave.ts";
@@ -55,22 +55,82 @@ export const ALL_PROVIDERS: Record<ProviderId, Provider> = {
 };
 
 export const PROVIDER_AUTH: Partial<Record<ProviderId, ProviderAuthRequirement>> = {
-  unsplash: { keys: ["unsplashAccessKey"], env: ["UNSPLASH_ACCESS_KEY"] },
-  pexels: { keys: ["pexelsApiKey"], env: ["PEXELS_API_KEY"] },
-  pixabay: { keys: ["pixabayApiKey"], env: ["PIXABAY_API_KEY"] },
+  unsplash: {
+    keys: ["unsplashAccessKey"],
+    env: ["UNSPLASH_ACCESS_KEY"],
+    signupUrl: "https://unsplash.com/developers",
+  },
+  pexels: { keys: ["pexelsApiKey"], env: ["PEXELS_API_KEY"], signupUrl: "https://www.pexels.com/api/" },
+  pixabay: {
+    keys: ["pixabayApiKey"],
+    env: ["PIXABAY_API_KEY"],
+    signupUrl: "https://pixabay.com/api/docs/",
+  },
   spotify: {
     keys: ["spotifyClientId", "spotifyClientSecret"],
     env: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
+    signupUrl: "https://developer.spotify.com/dashboard",
   },
-  brave: { keys: ["braveApiKey"], env: ["BRAVE_API_KEY"] },
+  brave: { keys: ["braveApiKey"], env: ["BRAVE_API_KEY"], signupUrl: "https://brave.com/search/api/" },
   bing: { keys: ["bingApiKey"], env: ["BING_API_KEY"] },
-  serpapi: { keys: ["serpApiKey"], env: ["SERPAPI_KEY"] },
-  flickr: { keys: ["flickrApiKey"], env: ["FLICKR_API_KEY"] },
-  smithsonian: { keys: ["smithsonianApiKey"], env: ["SMITHSONIAN_API_KEY"] },
-  europeana: { keys: ["europeanaApiKey"], env: ["EUROPEANA_API_KEY"] },
-  "europeana-archival": { keys: ["europeanaApiKey"], env: ["EUROPEANA_API_KEY"] },
-  "managed-browser": { keys: ["brightDataApiToken"], env: ["BRIGHTDATA_API_TOKEN"] },
+  serpapi: { keys: ["serpApiKey"], env: ["SERPAPI_KEY"], signupUrl: "https://serpapi.com/manage-api-key" },
+  flickr: {
+    keys: ["flickrApiKey"],
+    env: ["FLICKR_API_KEY"],
+    signupUrl: "https://www.flickr.com/services/apps/create/",
+  },
+  smithsonian: {
+    keys: ["smithsonianApiKey"],
+    env: ["SMITHSONIAN_API_KEY"],
+    signupUrl: "https://api.data.gov/signup/",
+  },
+  europeana: {
+    keys: ["europeanaApiKey"],
+    env: ["EUROPEANA_API_KEY"],
+    signupUrl: "https://pro.europeana.eu/page/get-api",
+  },
+  "europeana-archival": {
+    keys: ["europeanaApiKey"],
+    env: ["EUROPEANA_API_KEY"],
+    signupUrl: "https://pro.europeana.eu/page/get-api",
+  },
+  "managed-browser": {
+    keys: ["brightDataApiToken"],
+    env: ["BRIGHTDATA_API_TOKEN"],
+    signupUrl: "https://brightdata.com/",
+  },
 };
+
+/**
+ * Env vars a provider still needs, given opts.auth and the environment.
+ * Empty when the provider needs no auth or is fully configured.
+ */
+export function missingProviderEnv(
+  id: ProviderId,
+  auth: ProviderAuth | undefined,
+  env: Record<string, string | undefined> = process.env,
+): string[] {
+  const req = PROVIDER_AUTH[id];
+  if (!req) return [];
+  return req.env.filter((name, i) => {
+    const key = req.keys[i];
+    const fromOpts = key ? auth?.[key] : undefined;
+    if (typeof fromOpts === "string" && fromOpts.length > 0) return false;
+    return !env[name];
+  });
+}
+
+/**
+ * Human/agent-readable reason a provider was skipped for missing auth,
+ * e.g. "unsplash needs an API key: set UNSPLASH_ACCESS_KEY (free key: https://unsplash.com/developers)".
+ */
+export function missingAuthMessage(id: ProviderId, missing: string[]): string {
+  const signup = PROVIDER_AUTH[id]?.signupUrl;
+  const vars = missing.join(" and ");
+  return `${id} needs an API key: set ${vars} in the environment of the process running webfetch${
+    signup ? ` (get one: ${signup})` : ""
+  }`;
+}
 
 for (const id of Object.keys(PROVIDER_AUTH) as ProviderId[]) {
   const provider = ALL_PROVIDERS[id];

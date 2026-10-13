@@ -198,7 +198,7 @@ function emitBundle(
       if (r.ok) {
         io.stderr(c.dim(`  ${r.provider}: ${r.count} results in ${r.timeMs}ms`));
       } else {
-        const why = r.skipped ?? r.error ?? "failed";
+        const why = r.skipped === "missing-auth" && r.error ? r.error : (r.skipped ?? r.error ?? "failed");
         io.stderr(c.dim(`  ${r.provider}: ${why}`));
       }
     }
@@ -206,6 +206,13 @@ function emitBundle(
 
   if (sliced.length === 0) {
     io.stdout(c.yellow("No results."));
+    // Nothing ran because every provider needs a key: say which ones, even
+    // without --verbose, instead of a bare "No results."
+    if (!opts.verbose && providerReports.length > 0 && !providerReports.some((r) => r.ok)) {
+      for (const r of providerReports) {
+        if (r.skipped === "missing-auth" && r.error) io.stderr(c.yellow(`warning: ${r.error}`));
+      }
+    }
     if (!opts.verbose && warnings.length > 0) {
       io.stdout(c.dim("(re-run with --verbose to see provider warnings)"));
     }
