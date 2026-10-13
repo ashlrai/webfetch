@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -123,6 +123,13 @@ describe("integration manifests", () => {
 // ---------------------------------------------------------------------------
 
 describe("provider_recommendations — shape and actionability", () => {
+  // Reset BEFORE each test too: this suite asserts on an empty telemetry window,
+  // so it must not inherit events recorded by earlier test files in the run.
+  beforeEach(() => {
+    _resetTelemetry();
+    _resetBuckets();
+  });
+
   afterEach(() => {
     _resetTelemetry();
     _resetBuckets();

@@ -136,6 +136,20 @@ export const compareCandidatesSchema = z.object({
     ),
 });
 
+export const auditLicenseConsensusSchema = z.object({
+  candidates: z
+    .array(candidateInputSchema.passthrough())
+    .min(1)
+    .max(500)
+    .describe(
+      "ImageCandidate objects (possibly the same image from multiple providers) to reconcile licenses across",
+    ),
+  allGroups: z
+    .boolean()
+    .optional()
+    .describe("When true, reconcile every detected pHash/URL cluster independently"),
+});
+
 /** Inline ImageCandidate shape used by refine_search_results. */
 const refineCandidateInputSchema = z.object({
   url: z.string().url(),
@@ -372,6 +386,7 @@ export const schemas = {
   probe_page: probePageSchema,
   compare_phashes: comparePhashesSchema,
   compare_candidates: compareCandidatesSchema,
+  audit_license_consensus: auditLicenseConsensusSchema,
   refine_search_results: refineSearchResultsSchema,
   provider_recommendations: providerRecommendationsSchema,
   batch_cluster_by_phash: batchClusterByPhashSchema,

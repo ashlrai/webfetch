@@ -25,29 +25,40 @@ import type { LicenseAuditSource, LicenseAuditTrail } from "./attribution-audit.
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Loose fetch-mock signature: the audit functions accept a `Fetcher`
+ * (`typeof fetch`), but mock fetchers don't implement `preconnect`. This shape
+ * is structurally assignable to the `Fetcher` parameters while omitting the
+ * runtime-only `preconnect` method.
+ */
+type MockFetch = (
+  input: URL | RequestInfo,
+  init?: RequestInit,
+) => Promise<Response>;
+
 /** A no-op fetcher that always returns HTTP 200. */
-const ok200Fetcher: typeof fetch = async (_input, _init) =>
-  new Response(null, { status: 200 });
+const ok200Fetcher = (async (_input: URL | RequestInfo, _init?: RequestInit) =>
+  new Response(null, { status: 200 })) as MockFetch as typeof fetch;
 
 /** A fetcher that always returns HTTP 404. */
-const notFoundFetcher: typeof fetch = async (_input, _init) =>
-  new Response(null, { status: 404 });
+const notFoundFetcher = (async (_input: URL | RequestInfo, _init?: RequestInit) =>
+  new Response(null, { status: 404 })) as MockFetch as typeof fetch;
 
 /** A fetcher that simulates a redirect to HTTP (302 → http://). */
-const httpRedirectFetcher: typeof fetch = async (_input, init) => {
-  if ((init as RequestInit | undefined)?.redirect === "manual") {
+const httpRedirectFetcher = (async (_input: URL | RequestInfo, init?: RequestInit) => {
+  if (init?.redirect === "manual") {
     return new Response(null, {
       status: 302,
       headers: { location: "http://insecure.example.com/license" },
     });
   }
   return new Response(null, { status: 200 });
-};
+}) as MockFetch as typeof fetch;
 
 /** A fetcher that always throws a network error. */
-const networkErrorFetcher: typeof fetch = async () => {
+const networkErrorFetcher = (async () => {
   throw new TypeError("Network request failed");
-};
+}) as MockFetch as typeof fetch;
 
 // ---------------------------------------------------------------------------
 // 1. coerceLicenseWithTrail — basic license classification + audit trail
@@ -463,12 +474,12 @@ describe("validateAttributionLine — author and format validation", () => {
   test("multiple HTTPS URLs: each is checked independently", async () => {
     // First URL 200, second 404 — second should produce an issue.
     let callCount = 0;
-    const mixedFetcher: typeof fetch = async (input) => {
+    const mixedFetcher = (async (input: URL | RequestInfo) => {
       callCount++;
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.includes("good")) return new Response(null, { status: 200 });
       return new Response(null, { status: 404 });
-    };
+    }) as MockFetch as typeof fetch;
     const result = await validateAttributionLine(
       "Photo by Jane Doe — https://good.example.com/license, https://bad.example.com/page",
       { fetcher: mixedFetcher, checkLicenseUrl: true, checkSourcePageUrl: true },

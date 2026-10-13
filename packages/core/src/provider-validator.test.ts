@@ -52,9 +52,10 @@ const VALID_ERROR_KINDS: ErrorKind[] = [
 describe("Provider interface shape", () => {
   for (const [id, provider] of Object.entries(ALL_PROVIDERS)) {
     it(`${id}: has required fields and search() method`, () => {
-      // id field
+      // id field — Object.entries() widens the key to string; the registry key
+      // is the provider id by construction, so narrow it back for the matcher.
       expect(typeof provider.id).toBe("string");
-      expect(provider.id).toBe(id);
+      expect(provider.id).toBe(id as typeof provider.id);
 
       // defaultLicense field
       expect(typeof provider.defaultLicense).toBe("string");
