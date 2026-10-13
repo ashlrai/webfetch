@@ -81,7 +81,7 @@ export default function AboutPage() {
             name="webfetch"
             status="live"
             tagline="License-first image layer"
-            body="One API, CLI, and MCP federating 24 licensed image providers with attribution baked in and a browser fallback when APIs miss."
+            body="One API, CLI, and MCP federating 25 licensed image providers with attribution baked in and a browser fallback when APIs miss."
             href="/"
             highlight
           />

@@ -5,7 +5,6 @@ Thanks for using webfetch. Here's how to get help, ranked by speed.
 ## Community support (free)
 
 - **GitHub Discussions** — questions, ideas, show-and-tell, and "is this a bug?" triage: <https://github.com/ashlrai/webfetch/discussions>
-- **Discord** — chat with maintainers and other users: <https://getwebfetch.com/discord>
 - **Issues** — for confirmed bugs and concrete feature requests, use the [issue templates](.github/ISSUE_TEMPLATE/). Please search existing issues first.
 
 We try to respond to community questions within a few business days, but there is no SLA on community channels.
@@ -19,7 +18,7 @@ We try to respond to community questions within a few business days, but there i
 
 ## Security issues
 
-Do **not** use issues, Discussions, or Discord for security reports. See [SECURITY.md](./SECURITY.md).
+Do **not** use issues or Discussions for security reports. See [SECURITY.md](./SECURITY.md).
 
 ## Commercial support
 

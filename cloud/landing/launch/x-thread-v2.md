@@ -16,7 +16,7 @@ Live today: getwebfetch.com
 ---
 
 ## Tweet 2 — What it does (241 chars)
-Attach: `provider-matrix.png` (the 24-provider grid from /docs/providers)
+Attach: `provider-matrix.png` (the 25-provider grid from /docs/providers)
 
 One CLI + HTTP API + MCP that federates 24 licensed image sources — Wikimedia, Openverse, The Met, NASA, LOC, Unsplash, Spotify, and 17 more.
 
@@ -30,7 +30,7 @@ No image.
 What makes it not-just-another-scraper:
 
 1. License-first ranker. `UNKNOWN` is rejected by default.
-2. 24 federated providers, each a try/catch so one outage never cascades.
+2. 25 federated providers, each a try/catch so one outage never cascades.
 3. Consent-gated "like a human" browser fallback — flagged UNKNOWN, never shipped by accident.
 
 ---

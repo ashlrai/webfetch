@@ -28,7 +28,7 @@ I built webfetch because every AI agent I'd ever used invented image URLs out of
 
 Two weeks later, it's a product:
 
-- 4 npm packages (Apache-2.0 core), 24 federated providers, 117 passing tests
+- 4 npm packages (Apache-2.0 core), 25 federated providers, 117 passing tests
 - Native MCP support for Claude Code / Cursor / Cline / Continue / Roo Code / Codex
 - Chrome extension + VS Code extension + GitHub Action + Homebrew + Docker
 - License-first ranker; UNKNOWN rejected by default

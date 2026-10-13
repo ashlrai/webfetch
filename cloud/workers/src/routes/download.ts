@@ -36,7 +36,7 @@ downloadRouter.post("/", async (c) => {
 
   // SECURITY (SA-001 / CWE-918): Reject non-http(s) schemes and private/link-local
   // hosts to prevent SSRF against cloud metadata endpoints + internal services.
-  // See SECURITY-AUDIT-REPORT.md § HIGH.
+  // See docs/internal/SECURITY-AUDIT-REPORT.md § HIGH.
   const ssrfCheck = assertPublicHttpUrl(parsed.data.url);
   if (!ssrfCheck.ok) return err(c, ssrfCheck.error, 400);
 

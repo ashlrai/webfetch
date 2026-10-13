@@ -6,7 +6,7 @@ In short: we expect contributors to be respectful, welcoming, and professional. 
 
 ## Scope
 
-This code applies to all project spaces — the repository, issue tracker, pull requests, Discussions, Discord, and any public event where you represent the project.
+This code applies to all project spaces — the repository, issue tracker, pull requests, Discussions, and any public event where you represent the project.
 
 ## Enforcement
 

@@ -11,7 +11,7 @@ Show HN: Webfetch – license-first image search for AI agents (MCP, 25 provider
 
 ## Body (under 750 chars)
 
-I'm Mason. I kept watching Claude Code / Cursor agents invent image URLs and hallucinate license metadata, so I built webfetch: one MCP + CLI that fans out across 24 licensed providers (Wikimedia, Openverse, NASA, Smithsonian, Met, LOC, Europeana, Unsplash, Pexels, Flickr-CC, Spotify, YouTube, Brave, Bing, SerpAPI, +9), ranks license-first (CC0 > PD > CC-BY > CC-BY-SA > editorial), rejects UNKNOWN by default, and returns a render-ready attribution string.
+I'm Mason. I kept watching Claude Code / Cursor agents invent image URLs and hallucinate license metadata, so I built webfetch: one MCP + CLI that fans out across 25 image providers (Wikimedia, Openverse, NASA, Smithsonian, Met, LOC, Europeana, Unsplash, Pexels, Flickr-CC, Spotify, YouTube, Brave, Bing, SerpAPI, +9), ranks license-first (CC0 > PD > CC-BY > CC-BY-SA > editorial), rejects UNKNOWN by default, and returns a render-ready attribution string.
 
 Add to any agent with one config line: `"webfetch": { "command": "npx", "args": ["-y", "getwebfetch-mcp"] }`.
 

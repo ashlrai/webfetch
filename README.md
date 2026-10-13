@@ -4,7 +4,6 @@
 [![CI](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml/badge.svg)](https://github.com/ashlrai/webfetch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![webfetch MCP server](https://glama.ai/mcp/servers/ashlrai/webfetch/badges/score.svg)](https://glama.ai/mcp/servers/ashlrai/webfetch)
-[![Discord](https://img.shields.io/badge/discord-join-5865F2)](https://getwebfetch.com/discord)
 [![GitHub stars](https://img.shields.io/github/stars/ashlrai/webfetch?style=social)](https://github.com/ashlrai/webfetch)
 
 **The license-first image layer for AI agents and humans.**

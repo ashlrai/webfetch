@@ -62,4 +62,4 @@ and opens `http://127.0.0.1:7600/auth/display` so you can copy it. Then set
 
 ## License
 
-MIT © Ashlar AI
+MIT © AshlrAI, Inc.
