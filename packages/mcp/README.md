@@ -19,39 +19,44 @@ Most image-search tools give you URLs. webfetch gives you URLs **plus** the lega
 
 ## Install
 
-### One-line (recommended)
+No clone is needed. Agents launch the server with `npx -y getwebfetch-mcp`
+(or `bunx getwebfetch-mcp`). The tested, step-by-step version is in
+[docs/QUICKSTART.md](https://github.com/ashlrai/webfetch/blob/main/docs/QUICKSTART.md#mcp-in-60-seconds-no-clone-no-api-keys).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
-```
+### Claude Desktop
 
-Installs bun if missing, builds the server, symlinks `webfetch` onto `$PATH`, and merges the MCP block into `~/.claude/settings.json`.
-
-### Claude Desktop / Claude Code
-
-Add to `~/.claude/settings.json`:
+`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or
+`%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/path/to/webfetch/packages/mcp/src/index.ts"]
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"]
     }
   }
 }
 ```
 
+### Claude Code
+
+```bash
+claude mcp add --scope user webfetch -- npx -y getwebfetch-mcp
+```
+
+(Claude Code reads `~/.claude.json` / `.mcp.json` and ignores `mcpServers` in `~/.claude/settings.json`.)
+
 ### Cursor
 
-Add to `~/.cursor/mcp.json`:
+`~/.cursor/mcp.json` or `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/path/to/webfetch/packages/mcp/src/index.ts"]
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"]
     }
   }
 }
@@ -65,8 +70,8 @@ Paste into Cline's MCP settings JSON (VSCode sidebar → Cline → MCP Servers):
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/path/to/webfetch/packages/mcp/src/index.ts"],
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"],
       "disabled": false,
       "autoApprove": ["search_images", "search_artist_images", "search_album_cover", "probe_page"]
     }
@@ -74,7 +79,17 @@ Paste into Cline's MCP settings JSON (VSCode sidebar → Cline → MCP Servers):
 }
 ```
 
-Replace `/path/to/webfetch` with your clone path (default after installer: `~/.webfetch/repo`).
+Provider keys (`UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`, `BRAVE_API_KEY`, ...)
+go in an `"env": { ... }` block on the same entry. They're all optional.
+
+### From source
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
+```
+
+This clones to `~/.webfetch/repo`, builds, and registers
+`bun run ~/.webfetch/repo/packages/mcp/src/index.ts` with Claude Code in `~/.claude.json`.
 
 ---
 
@@ -160,7 +175,7 @@ Probe the page at https://commons.wikimedia.org/wiki/File:Miles_Davis.jpg and te
 ## Links
 
 - Landing site + docs: [getwebfetch.com](https://getwebfetch.com)
-- One-line install guide: [docs/QUICKSTART.md](../../docs/QUICKSTART.md)
+- One-line install guide: [docs/QUICKSTART.md](https://github.com/ashlrai/webfetch/blob/main/docs/QUICKSTART.md)
 - Provider coverage matrix: [docs/PROVIDERS.md](../../docs/PROVIDERS.md)
 - License policy details: [docs/LICENSE_POLICY.md](../../docs/LICENSE_POLICY.md)
 - Per-agent install guides: [Claude Code](../../docs/INSTALL_CLAUDE_CODE.md) · [Cursor](../../docs/INSTALL_CURSOR.md) · [Cline](../../docs/INSTALL_CLINE.md)

@@ -1,14 +1,13 @@
 # Claude Code
 
-1. Run `install/install.sh` — it will merge the `webfetch` MCP entry into
-   `~/.claude/settings.json` automatically and idempotently.
-2. Or copy `settings.snippet.json` by hand into `~/.claude/settings.json`,
-   replacing `REPLACE_WITH_REPO_PATH` with your clone (the installer uses
-   `~/.webfetch/repo`).
-3. Restart Claude Code.
+Claude Code reads MCP servers from `~/.claude.json` (user/local scope) or
+`.mcp.json` in a project root. It ignores `mcpServers` in `~/.claude/settings.json`.
 
-Verify:
+1. Easiest: `claude mcp add --scope user webfetch -- npx -y getwebfetch-mcp`
+2. Or run `install/install.sh`. It registers the from-source server in
+   `~/.claude.json`, idempotently.
+3. Or merge `mcp.json` by hand into `~/.claude.json` or a project `.mcp.json`.
+   Fill in only the provider keys you have. Empty keys are skipped.
 
-```
-In Claude Code, run "/mcp list" or ask the agent to call `search_images`.
-```
+Verify with `claude mcp list` or `/mcp` inside Claude Code, or ask the agent to
+call `search_images`.

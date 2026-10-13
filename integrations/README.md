@@ -4,7 +4,8 @@ Pre-baked configs for every MCP-speaking IDE / agent.
 
 | Tool         | Config file                                | Notes                                                     |
 | ------------ | ------------------------------------------ | --------------------------------------------------------- |
-| Claude Code  | `claude-code/settings.snippet.json`        | The installer wires this up automatically.                |
+| Claude Desktop | `claude-desktop/claude_desktop_config.json` | Merge into Claude Desktop's config (see README).       |
+| Claude Code  | `claude-code/mcp.json`                     | Or `claude mcp add --scope user webfetch -- npx -y getwebfetch-mcp`. |
 | Cursor       | `cursor/mcp.json`                          | Drop into `~/.cursor/mcp.json`.                           |
 | Cline        | `cline/cline_mcp_settings.json`            | VS Code globalStorage path; includes safe `autoApprove`.  |
 | Continue     | `continue/config.json`                     | Under `experimental.modelContextProtocolServers`.         |
@@ -14,18 +15,20 @@ Pre-baked configs for every MCP-speaking IDE / agent.
 
 ## Recommended starting point
 
-- **If you use Claude Code:** run `install/install.sh` — it's the fastest path.
-- **If you use Cursor or Cline:** run the installer (for the CLI), then copy
-  the relevant snippet from this directory.
+- **Any MCP client:** the snippets launch the published server with
+  `npx -y getwebfetch-mcp` (Node 18+). No clone is needed.
+- **Claude Code:** `claude mcp add --scope user webfetch -- npx -y getwebfetch-mcp`.
 - **If you're shipping content from GitHub Actions:** use the composite
-  action in `github-action/` — no local install needed.
+  action in `github-action/`. No local install is needed.
 
-Every config above refers to the same MCP server entry point
-(`packages/mcp/src/index.ts`) and shares the same on-disk cache at
-`~/.webfetch/cache/`, so moving between tools is stateless.
+Every snippet starts the same MCP server and uses the same on-disk cache at
+`~/.webfetch/cache/`, so switching between tools keeps no separate state.
 
-## Replacing `REPLACE_WITH_REPO_PATH`
+## Running from a clone instead
 
-The snippets contain `REPLACE_WITH_REPO_PATH` as a placeholder for the
-directory you cloned webfetch into. The default installer path is
-`~/.webfetch/repo`. If you installed elsewhere, substitute that path.
+Replace `"command": "npx", "args": ["-y", "getwebfetch-mcp"]` with
+`"command": "bun", "args": ["run", "<clone>/packages/mcp/src/index.ts"]`.
+The installer clones to `~/.webfetch/repo`.
+
+`packages/mcp/test/quickstart.test.ts` checks that every snippet here parses
+and launches a real bin.

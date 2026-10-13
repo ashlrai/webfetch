@@ -8,8 +8,8 @@ on macOS):
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"],
       "disabled": false,
       "autoApprove": ["search_images", "search_artist_images", "search_album_cover", "probe_page"]
     }

@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 const SNIPPETS: Array<{ agent: string; path: string; snippet: string }> = [
   {
     agent: "Claude Code",
-    path: "~/.claude/settings.json",
+    path: "~/.claude.json",
     snippet: `{
   "mcpServers": {
     "webfetch": {

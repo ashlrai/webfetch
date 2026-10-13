@@ -100,14 +100,14 @@ npx -y getwebfetch-mcp
 curl -fsSL https://raw.githubusercontent.com/ashlrai/webfetch/main/install/install.sh | bash
 ```
 
-Or add manually to `~/.claude/settings.json`:
+Or add manually to `~/.claude.json` (user scope) or a project `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "/path/to/webfetch/packages/mcp/src/index.ts"]
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"]
     }
   }
 }

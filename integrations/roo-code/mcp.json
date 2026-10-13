@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "webfetch": {
-      "command": "bun",
-      "args": ["run", "REPLACE_WITH_REPO_PATH/packages/mcp/src/index.ts"],
+      "command": "npx",
+      "args": ["-y", "getwebfetch-mcp"],
       "disabled": false,
       "alwaysAllow": [
         "search_images",
