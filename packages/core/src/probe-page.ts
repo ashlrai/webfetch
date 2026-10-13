@@ -6,6 +6,7 @@
 import { assertPublicHttpUrl } from "./download.ts";
 import { heuristicLicenseFromUrl } from "./license.ts";
 import type { Fetcher, ImageCandidate } from "./types.ts";
+import { defaultUserAgent } from "./user-agent.ts";
 
 export interface ProbePageOptions {
   fetcher?: Fetcher;
@@ -20,7 +21,7 @@ export async function probePage(
   opts: ProbePageOptions = {},
 ): Promise<{ page: string; images: ImageCandidate[]; warnings: string[] }> {
   const fetcher = opts.fetcher ?? fetch;
-  const ua = opts.userAgent ?? "webfetch-mcp/0.1";
+  const ua = opts.userAgent ?? defaultUserAgent();
   const warnings: string[] = [];
   const publicUrl = assertPublicHttpUrl(url);
   if (!publicUrl.ok) throw new Error(publicUrl.error);

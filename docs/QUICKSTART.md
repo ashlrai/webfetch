@@ -65,7 +65,7 @@ unless `WEBFETCH_BASE_URL` or config `baseUrl` overrides it.
    [`integrations/`](../integrations/) into your agent's MCP config.
 2. Restart the agent.
 3. Verify: ask the agent to call `search_images` for a simple query, or run
-   `webfetch providers` locally. The registry has 25 providers and 19 defaults.
+   `webfetch providers` locally. The registry has 25 providers and 18 defaults.
 
 Per-agent details:
 

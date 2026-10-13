@@ -156,7 +156,7 @@ Every provider gracefully skips when its auth is missing. Run
 | library-of-congress | -                                            | yes     | no     |
 | wellcome-collection | -                                            | yes     | no     |
 | rawpixel          | `RAWPIXEL_API_KEY`                             | yes     | no     |
-| burst             | -                                              | yes     | no     |
+| burst             | -                                              | no      | yes    |
 | europeana-archival | `EUROPEANA_API_KEY`                          | no      | yes    |
 
 Other env vars:

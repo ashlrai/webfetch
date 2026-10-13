@@ -12,7 +12,7 @@
 | spotify          | artist + album images                   | EDITORIAL_LICENSED   | SPOTIFY_CLIENT_ID/SECRET               | 10/s                      | no     |
 | youtube-thumb    | video thumbnail given id/URL            | EDITORIAL_LICENSED   | none                                   | 20/s                      | **yes** (narrow-source provider) |
 | brave            | general web image search                | UNKNOWN (+heuristic) | BRAVE_API_KEY                          | 1/s                       | no     |
-| bing             | general web image search                | UNKNOWN (+heuristic) | BING_API_KEY                           | 3/s                       | **yes** (API deprecation risk) |
+| bing             | general web image search                | UNKNOWN (+heuristic) | BING_API_KEY                           | 3/s                       | **yes** (Microsoft retired the Bing Search APIs 2025-08-11; returns 410) |
 | serpapi          | Google Images wrapper, reverse-image    | UNKNOWN (+heuristic) | SERPAPI_KEY                            | 2/s                       | **yes** |
 | browser          | headless fallback vs images.google.com  | UNKNOWN (+heuristic) | none (requires `playwright` installed) | 0.25/s                    | **yes** (ToS-grey) |
 | managed-browser  | Bright Data managed browser fallback    | UNKNOWN (+heuristic) | BRIGHTDATA_API_TOKEN (+ optional BRIGHTDATA_ZONE) | 0.5/s              | **yes** (server/cloud fallback) |
@@ -25,7 +25,7 @@
 | library-of-congress | US historical photos/film archive    | PUBLIC_DOMAIN        | none                                    | 10/s                      | no     |
 | wellcome-collection | medical/historical imagery (CC + PDM) | CC_BY (from meta)   | none                                    | 5/s                       | no     |
 | rawpixel         | CC0 slice of Rawpixel's free library    | CC0                  | none (RAWPIXEL_API_KEY optional)        | 3/s                       | no     |
-| burst            | Shopify Burst — 100% CC0 stock photos   | CC0                  | none                                    | 3/s                       | no     |
+| burst            | Shopify Burst: CC0 stock photos (endpoint retired 2026) | CC0  | none                                    | 3/s                       | yes    |
 | europeana-archival | Europeana TEXT records (editorial)    | CC_BY (from meta)    | EUROPEANA_API_KEY (same as `europeana`) | 5/s                       | **yes** (variant of `europeana`) |
 
 ## Gotchas
@@ -81,7 +81,7 @@
   `cc-by` → CC_BY. `cc-by-nc-nd` results are dropped (not commercially safe).
 - **Rawpixel** (`rawpixel`): Query is pinned with `freecc0=1` so every result
   is CC0 by construction. `RAWPIXEL_API_KEY` optional today.
-- **Burst** (`burst`): Shopify's free stock library — 100% CC0 by policy.
+- **Burst** (`burst`): Shopify's free stock library, CC0 by policy. **Opt-in since 2026-09.** `burst.shopify.com/photos/search.json` now 301s to `shopify.com/stock-photos`, which returns HTTP 406 to JSON requests, and that site's robots.txt disallows search. The adapter stays in case the JSON endpoint comes back.
 - **Europeana Archival** (`europeana-archival`): Opt-in variant of
   `europeana` that targets `TYPE:TEXT` records (manuscripts, newspapers,
   book scans) and surfaces their `edmPreview` thumbnails. Useful for

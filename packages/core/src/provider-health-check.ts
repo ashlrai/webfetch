@@ -12,6 +12,7 @@
 
 import type { ProviderId } from "./types.ts";
 import { getBucket, _resetBuckets as _rb } from "./rate-limit.ts";
+import { defaultUserAgent } from "./user-agent.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +70,7 @@ export interface HealthCheckOptions {
  * Chosen to be lightweight (search or API root) so we don't hammer production.
  */
 const PROVIDER_ENDPOINTS: Record<ProviderId, string> = {
-  wikimedia: "https://commons.wikimedia.org/w/api.php?action=query&format=json&list=search&gsrsearch=cat&gsrlimit=1&origin=*",
+  wikimedia: "https://commons.wikimedia.org/w/api.php?action=query&format=json&list=search&srsearch=cat&srlimit=1&origin=*",
   openverse: "https://api.openverse.org/v1/images/?q=test&page_size=1",
   unsplash: "https://api.unsplash.com/photos?per_page=1",
   pexels: "https://api.pexels.com/v1/search?query=test&per_page=1",
@@ -348,7 +349,7 @@ export async function healthCheckProvider(
       // HEAD would be lighter but some APIs return 405 on HEAD
       method: "GET",
       headers: {
-        "User-Agent": "webfetch-healthcheck/1.0",
+        "User-Agent": `${defaultUserAgent()} healthcheck`,
         Accept: "application/json, text/*, */*",
       },
     });

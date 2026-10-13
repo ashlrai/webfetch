@@ -30,6 +30,11 @@ export const bing: Provider = {
       headers: { "Ocp-Apim-Subscription-Key": key },
       signal: opts.signal,
     });
+    if (resp.status === 410) {
+      throw new Error(
+        "bing http 410: Microsoft retired the Bing Search APIs on 2025-08-11. Use brave or serpapi instead",
+      );
+    }
     if (!resp.ok) throw new Error(`bing http ${resp.status}`);
     const json = (await resp.json()) as any;
     return (json.value ?? []).map((r: any): ImageCandidate => {
